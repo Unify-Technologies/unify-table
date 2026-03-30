@@ -1,0 +1,29 @@
+{
+  "name": "@unify/unify-table",
+  "author": "Unify",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DuckDB-native data table & charts. Simple, fast, composable.",
+  "engines": {
+    "node": ">=21.0.0"
+  },
+  "scripts": {
+    "build": "tsgo -b tsconfig.build.json && cp packages/react/src/panels/panel.css packages/react/dist/panel.css && cp packages/react/src/styles/themes.css packages/react/dist/themes.css && cp packages/react/src/displays/display.css packages/react/dist/displays/display.css",
+    "lint": "pnpm -r run lint",
+    "lint:fix": "pnpm -r run lint:fix",
+    "format": "pnpm -r run format",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "type:check": "tsgo -p tsconfig.build.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@typescript/native-preview": "7.0.0-dev.20260325.1",
+    "@vitest/coverage-v8": "^4.1.1",
+    "oxfmt": "^0.42.0",
+    "oxlint": "^1.57.0",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.1"
+  }
+}

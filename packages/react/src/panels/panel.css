@@ -1,0 +1,480 @@
+/* ── Theme tokens ─────────────────────────────────────── */
+.utbl-panel {
+  --utbl-surface: var(--utbl-color-surface, #fdf6e3);
+  --utbl-surface-alt: var(--utbl-color-surface-alt, #eee8d5);
+  --utbl-border: var(--utbl-color-border, #d3cbb7);
+  --utbl-text: var(--utbl-color-text, #073642);
+  --utbl-text-secondary: var(--utbl-color-text-secondary, #586e75);
+  --utbl-text-muted: var(--utbl-color-text-muted, #93a1a1);
+  --utbl-accent: var(--utbl-color-accent, #268bd2);
+  --utbl-input-bg: var(--utbl-color-input-bg, #fdf6e3);
+  --utbl-input-border: var(--utbl-color-input-border, #c9c1ad);
+  --utbl-positive: var(--utbl-color-positive, #10b981);
+  --utbl-negative: var(--utbl-color-negative, #ef4444);
+  --utbl-panel-width: 200px;
+  --utbl-tab-width: 28px;
+  --utbl-radius: 3px;
+
+  display: flex;
+  border-left: 1px solid var(--utbl-border);
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: var(--utbl-text);
+  overflow: visible;
+  position: relative;
+}
+
+/* ── Tab strip ────────────────────────────────────────── */
+.utbl-tab-strip {
+  display: flex;
+  flex-direction: column;
+  width: var(--utbl-tab-width);
+  background: var(--utbl-surface-alt);
+  flex-shrink: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--utbl-text-muted) transparent;
+}
+
+.utbl-tab-strip::-webkit-scrollbar {
+  width: 3px;
+}
+
+.utbl-tab-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.utbl-tab-strip::-webkit-scrollbar-thumb {
+  background: var(--utbl-text-muted);
+  border-radius: 3px;
+}
+
+.utbl-tab-strip::-webkit-scrollbar-thumb:hover {
+  background: var(--utbl-text-secondary);
+}
+
+.utbl-tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--utbl-text-secondary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--utbl-border);
+  padding: 8px 0;
+  transition: background 0.15s, color 0.15s;
+  line-height: 0;
+  overflow: visible;
+  position: relative;
+}
+
+.utbl-tab-btn > svg {
+  display: block;
+}
+
+.utbl-tab-btn:hover {
+  background: var(--utbl-border);
+}
+
+.utbl-tab-btn[data-active="true"] {
+  background: var(--utbl-accent);
+  color: #fff;
+}
+
+/* ── Tab badges ──────────────────────────────────────── */
+.utbl-tab-badge {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  pointer-events: none;
+}
+
+.utbl-tab-badge--dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--utbl-accent);
+}
+
+.utbl-tab-badge--count {
+  min-width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--utbl-accent);
+  color: #fff;
+  font-size: 0.5rem;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.utbl-tab-btn[data-active="true"] .utbl-tab-badge--dot {
+  background: #fff;
+  opacity: 0.9;
+}
+
+.utbl-tab-btn[data-active="true"] .utbl-tab-badge--count {
+  background: #fff;
+  color: var(--utbl-accent);
+}
+
+
+/* ── Panel content area ───────────────────────────────── */
+.utbl-panel-content {
+  width: var(--utbl-panel-width);
+  overflow-y: auto;
+  background: var(--utbl-surface-alt);
+  border-left: 1px solid var(--utbl-border);
+}
+
+.utbl-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--utbl-text-secondary);
+}
+
+.utbl-panel-header > svg {
+  display: block;
+}
+
+.utbl-panel-header-clear {
+  margin-left: auto;
+}
+
+.utbl-panel-search {
+  padding: 6px;
+  border-bottom: 1px solid var(--utbl-border);
+}
+
+.utbl-panel-section {
+  padding: 8px;
+}
+
+.utbl-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.utbl-panel-title {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--utbl-text-secondary);
+}
+
+.utbl-panel-clear {
+  font-size: 0.5625rem;
+  color: var(--utbl-accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.utbl-panel-clear:hover {
+  text-decoration: underline;
+}
+
+/* ── Inputs ───────────────────────────────────────────── */
+.utbl-input {
+  width: 100%;
+  font-size: 0.625rem;
+  padding: 3px 6px;
+  border-radius: var(--utbl-radius);
+  border: 1px solid var(--utbl-input-border);
+  background: var(--utbl-input-bg);
+  color: var(--utbl-text);
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.utbl-input:focus {
+  border-color: var(--utbl-accent);
+}
+
+.utbl-input::placeholder {
+  color: var(--utbl-text-muted);
+}
+
+/* ── Checkbox rows ────────────────────────────────────── */
+.utbl-check-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+  font-size: 0.625rem;
+  color: var(--utbl-text);
+}
+
+.utbl-checkbox {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--utbl-accent);
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ── Select / dropdown ────────────────────────────────── */
+.utbl-select {
+  font-size: 0.5rem;
+  padding: 1px 2px;
+  border-radius: var(--utbl-radius);
+  border: 1px solid var(--utbl-input-border);
+  background: var(--utbl-input-bg);
+  color: var(--utbl-text);
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.utbl-select:focus {
+  border-color: var(--utbl-accent);
+}
+
+/* ── Field label ──────────────────────────────────────── */
+.utbl-field-label {
+  display: block;
+  font-size: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--utbl-text-muted);
+  margin-bottom: 2px;
+}
+
+.utbl-field {
+  margin-bottom: 6px;
+}
+
+/* ── Columns grid ─────────────────────────────────────── */
+.utbl-col-grid {
+  display: grid;
+  grid-template-columns: 14px 1fr 36px 42px;
+  gap: 3px 4px;
+  align-items: center;
+  font-size: 0.65rem;
+}
+
+.utbl-col-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--utbl-text);
+}
+
+.utbl-col-format {
+  font-size: 0.5rem;
+  font-family: monospace;
+  color: var(--utbl-text-muted);
+  text-align: right;
+}
+
+/* ── Radio / toggle group ─────────────────────────────── */
+.utbl-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  cursor: pointer;
+  font-size: 0.625rem;
+  color: var(--utbl-text);
+}
+
+.utbl-radio-row[data-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.utbl-radio {
+  accent-color: var(--utbl-accent);
+  margin: 0;
+  cursor: pointer;
+}
+
+.utbl-radio-dims {
+  margin-left: auto;
+  font-size: 0.5rem;
+  font-family: monospace;
+  color: var(--utbl-text-muted);
+}
+
+/* ── Toggle buttons (export format) ───────────────────── */
+.utbl-toggle-group {
+  display: flex;
+  gap: 4px;
+}
+
+.utbl-toggle-btn {
+  padding: 4px 8px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  border-radius: var(--utbl-radius);
+  border: 1px solid var(--utbl-input-border);
+  background: var(--utbl-input-bg);
+  color: var(--utbl-text);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+
+.utbl-toggle-btn[data-active="true"] {
+  background: var(--utbl-accent);
+  color: #fff;
+  border-color: var(--utbl-accent);
+}
+
+/* ── Action button ────────────────────────────────────── */
+.utbl-btn {
+  width: 100%;
+  padding: 6px;
+  border-radius: var(--utbl-radius);
+  border: none;
+  background: var(--utbl-accent);
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+}
+
+.utbl-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Segmented toggle ────────────────────────────────── */
+.utbl-segmented {
+  display: flex;
+  background: var(--utbl-input-bg);
+  border: 1px solid var(--utbl-border);
+  border-radius: var(--utbl-radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.utbl-segmented-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  border-radius: calc(var(--utbl-radius) - 1px);
+  border: none;
+  background: transparent;
+  color: var(--utbl-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.utbl-segmented-btn__content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.utbl-segmented-btn:hover {
+  color: var(--utbl-text);
+}
+
+.utbl-segmented-btn[data-active="true"] {
+  background: var(--utbl-accent);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.utbl-segmented-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  border-radius: 2px;
+  line-height: 1;
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.utbl-segmented-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Tooltip ──────────────────────────────────────────── */
+.utbl-tooltip {
+  position: relative;
+  --utbl-text: var(--utbl-color-text, #073642);
+  --utbl-surface: var(--utbl-color-surface, #fdf6e3);
+}
+
+.utbl-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--utbl-text, #073642);
+  color: var(--utbl-surface, #fdf6e3);
+  font-size: 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+
+.utbl-tooltip:hover::after {
+  opacity: 1;
+}
+
+.utbl-tooltip--bottom::after {
+  bottom: auto;
+  top: calc(100% + 4px);
+}
+
+.utbl-tooltip--fixed {
+  position: fixed;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--utbl-text, #073642);
+  color: var(--utbl-surface, #fdf6e3);
+  font-size: 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+/* ── Spacing helpers ──────────────────────────────────── */
+.utbl-space-y > * + * {
+  margin-top: 6px;
+}
+
+.utbl-space-y-sm > * + * {
+margin-top: 4px;
+}

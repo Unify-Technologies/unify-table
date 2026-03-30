@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* Scan workspace packages for Tailwind classes */
+@source "../../../packages/react/src";
+@source "../../../packages/charts/src";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  --color-surface: #fdf6e3;
+  --color-surface-alt: #eee8d5;
+  --color-surface-hover: #e6dfcb;
+  --color-border: #d3cbb7;
+  --color-text: #073642;
+  --color-text-secondary: #586e75;
+  --color-text-muted: #93a1a1;
+  --color-accent: #268bd2;
+  --color-accent-hover: #1e7ab8;
+  --color-positive: #859900;
+  --color-negative: #dc322f;
+  --color-warning: #b58900;
+
+  --color-dark-surface: #0c0e14;
+  --color-dark-surface-alt: #12151e;
+  --color-dark-surface-hover: #1a1e2b;
+  --color-dark-border: #252a38;
+  --color-dark-text: #e8eaef;
+  --color-dark-text-secondary: #8b92a5;
+  --color-dark-text-muted: #5c6478;
+  --color-dark-accent: #3b82f6;
+  --color-dark-positive: #34d399;
+  --color-dark-negative: #f87171;
+}
+
+/* ── Dockview custom themes ─────────────────────────────── */
+
+.dockview-theme-unify-dark {
+  --dv-background-color: var(--color-dark-surface);
+  --dv-group-view-background-color: var(--color-dark-surface);
+  --dv-tabs-and-actions-container-background-color: var(--color-dark-surface-alt);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-dark-surface);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-dark-surface-alt);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-dark-surface);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-dark-surface-alt);
+  --dv-tab-divider-color: var(--color-dark-border);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-dark-text);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-dark-text-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-dark-text-secondary);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-dark-text-muted);
+  --dv-separator-border: var(--color-dark-border);
+  --dv-paneview-header-border-color: var(--color-dark-border);
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-container-scrollbar-color: var(--color-dark-text-muted);
+  --dv-icon-hover-background-color: var(--color-dark-surface-hover);
+  --dv-drag-over-background-color: rgba(59, 130, 246, 0.12);
+  --dv-drag-over-border-color: var(--color-dark-accent);
+  --dv-floating-box-shadow: 8px 8px 16px 0px rgba(0, 0, 0, 0.4);
+  --dv-separator-border: transparent;
+  --dv-separator-handle-background-color: var(--color-dark-border);
+  --dv-separator-handle-hover-background-color: var(--color-dark-accent);
+}
+
+.dockview-theme-unify-light {
+  --dv-background-color: var(--color-surface);
+  --dv-group-view-background-color: var(--color-surface);
+  --dv-tabs-and-actions-container-background-color: var(--color-surface-alt);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface-alt);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-surface-alt);
+  --dv-tab-divider-color: var(--color-border);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-text);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-text-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-text-secondary);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-text-muted);
+  --dv-separator-border: var(--color-border);
+  --dv-paneview-header-border-color: var(--color-border);
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-container-scrollbar-color: var(--color-text-muted);
+  --dv-icon-hover-background-color: var(--color-surface-hover);
+  --dv-drag-over-background-color: rgba(37, 99, 235, 0.1);
+  --dv-drag-over-border-color: var(--color-accent);
+  --dv-floating-box-shadow: 8px 8px 16px 0px rgba(0, 0, 0, 0.1);
+  --dv-separator-border: transparent;
+  --dv-separator-handle-background-color: var(--color-border);
+  --dv-separator-handle-hover-background-color: var(--color-accent);
+}
+
+/* ── Dockview layout: rounded groups + spacing ──────────── */
+
+/* Only pad the outermost theme wrapper — dockview nests multiple elements with
+   the theme class and compounding padding breaks its ResizeObserver measurements. */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light):not(
+  :is(.dockview-theme-unify-dark, .dockview-theme-unify-light) *
+) {
+  padding: 6px;
+}
+
+/*
+ * Gap between panels: the .view is absolutely positioned by dockview with
+ * exact px dimensions. We inset the groupview inside it using absolute
+ * positioning + inset, leaving a visible gap around each panel.
+ */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .split-view-container > .view-container > .view {
+  overflow: visible !important;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--dv-tab-divider-color);
+  position: absolute !important;
+  inset: 4px;
+  width: auto !important;
+  height: auto !important;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light).dv-maximized .groupview {
+  border-radius: 0;
+  border: none;
+  inset: 0;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light).dv-maximized .groupview > .content-container {
+  border-radius: 0;
+}
+
+/* Bottom corners clip */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview > .content-container {
+  border-radius: 0 0 7px 7px;
+  overflow: hidden;
+}
+
+/* Tab bar: flat bottom border separating tabs from content */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container {
+  border-bottom: 1px solid var(--dv-tab-divider-color);
+}
+
+/* Tabs: no pill rounding, flat style */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container .tab {
+  border-radius: 0;
+  margin: 0;
+}
+
+/* Active tab blends into content — remove bottom border visually */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container .tab.active-tab {
+  position: relative;
+}
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container .tab.active-tab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--dv-group-view-background-color);
+}
+
+
+/* Strip table container chrome inside dockview — the group card provides it */
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) :is(.utbl-dark-container, .utbl-light-container) {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+/* Resize handle hover effect — works for both header and full-height overlay */
+[role="separator"]:hover .resize-indicator,
+[role="separator"]:active .resize-indicator {
+  opacity: 0.4 !important;
+  width: 2px !important;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  html.dark body {
+    background-color: var(--color-dark-surface);
+    color: var(--color-dark-text);
+  }
+}

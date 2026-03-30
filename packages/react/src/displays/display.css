@@ -1,0 +1,340 @@
+/* ── Theme tokens (mirrors panel.css so displays outside .utbl-panel work) ── */
+.utbl-display-bar,
+.utbl-display-renderer {
+  --utbl-surface: var(--utbl-color-surface, #fdf6e3);
+  --utbl-surface-alt: var(--utbl-color-surface-alt, #eee8d5);
+  --utbl-border: var(--utbl-color-border, #d3cbb7);
+  --utbl-text: var(--utbl-color-text, #073642);
+  --utbl-text-secondary: var(--utbl-color-text-secondary, #586e75);
+  --utbl-text-muted: var(--utbl-color-text-muted, #93a1a1);
+  --utbl-accent: var(--utbl-color-accent, #268bd2);
+  --utbl-input-bg: var(--utbl-color-input-bg, #fdf6e3);
+  --utbl-input-border: var(--utbl-color-input-border, #c9c1ad);
+}
+
+/* Display bar — tab strip above table/display area */
+
+.utbl-display-bar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 0 4px;
+  min-height: 32px;
+  background: var(--utbl-surface);
+  border-bottom: 1px solid var(--utbl-border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+/* Tab base */
+.utbl-display-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: transparent;
+  color: var(--utbl-text-secondary);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 4px 4px 0 0;
+  transition: background 0.1s, color 0.1s;
+  position: relative;
+}
+
+.utbl-display-tab:hover {
+  background: var(--utbl-surface-alt);
+  color: var(--utbl-text);
+}
+
+.utbl-display-tab--active {
+  background: var(--utbl-surface-alt);
+  color: var(--utbl-text);
+}
+
+.utbl-display-tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--utbl-accent);
+}
+
+/* Tab icon */
+.utbl-display-tab__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Tab label */
+.utbl-display-tab__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+/* Tab label in edit mode (contentEditable) */
+.utbl-display-tab__label[contenteditable="true"] {
+  outline: none;
+  border-bottom: 1px solid var(--utbl-accent);
+  cursor: text;
+}
+
+/* Tab action buttons */
+.utbl-display-tab__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.utbl-display-tab__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--utbl-text-muted);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.1s, color 0.1s;
+}
+
+.utbl-display-tab__action:hover {
+  background: var(--utbl-surface);
+  color: var(--utbl-text);
+}
+
+.utbl-display-tab__action--active {
+  color: var(--utbl-accent);
+}
+
+.utbl-display-tab__action--close:hover {
+  color: #ff4444;
+}
+
+/* Add button */
+.utbl-display-tab--add {
+  padding: 4px 6px;
+  opacity: 0.6;
+}
+
+.utbl-display-tab--add:hover {
+  opacity: 1;
+}
+
+/* Add menu dropdown */
+.utbl-display-add-wrapper {
+  position: relative;
+}
+
+.utbl-display-add-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 100;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--utbl-surface);
+  border: 1px solid var(--utbl-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.utbl-display-add-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--utbl-text);
+  font-size: 0.75rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 3px;
+  text-align: left;
+}
+
+.utbl-display-add-menu__item:hover {
+  background: var(--utbl-surface-alt);
+}
+
+/* Display renderer layout */
+.utbl-display-renderer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+  position: relative;
+}
+
+.utbl-display-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+  position: relative;
+  padding: 12px;
+}
+
+/* SQL inspector */
+.utbl-display-sql {
+  padding: 8px 12px;
+  background: var(--utbl-surface);
+  border-bottom: 1px solid var(--utbl-border);
+  max-height: 120px;
+  overflow: auto;
+}
+
+.utbl-display-sql pre {
+  margin: 0;
+  font-size: 0.7rem;
+  color: var(--utbl-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}
+
+/* Config panel */
+.utbl-display-config {
+  padding: 12px;
+  background: var(--utbl-surface-alt);
+  border-bottom: 1px solid var(--utbl-border);
+  max-height: 300px;
+  overflow: auto;
+}
+
+/* ── Pivot table ──────────────────────────────────────── */
+
+.utbl-pivot-wrap {
+  padding: 0;
+}
+
+.utbl-pivot-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.utbl-pivot-corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  background: var(--utbl-surface);
+  color: var(--utbl-text-secondary);
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--utbl-border);
+  border-right: 1px solid var(--utbl-border);
+  white-space: nowrap;
+}
+
+.utbl-pivot-col-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--utbl-surface);
+  color: var(--utbl-text-secondary);
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--utbl-border);
+  border-right: 1px solid var(--utbl-border);
+  white-space: nowrap;
+}
+
+.utbl-pivot-row-header {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--utbl-surface-alt);
+  color: var(--utbl-text);
+  font-weight: 600;
+  padding: 6px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--utbl-border);
+  border-right: 1px solid var(--utbl-border);
+  white-space: nowrap;
+}
+
+.utbl-pivot-row-even .utbl-pivot-row-header {
+  background: var(--utbl-surface);
+}
+
+.utbl-pivot-cell {
+  color: var(--utbl-text);
+  padding: 6px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--utbl-border);
+  border-right: 1px solid var(--utbl-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.utbl-pivot-row-even .utbl-pivot-cell {
+  background: var(--utbl-surface);
+}
+
+.utbl-pivot-total {
+  font-weight: 700;
+  color: var(--utbl-accent);
+}
+
+.utbl-pivot-total-header {
+  color: var(--utbl-accent);
+}
+
+.utbl-pivot-grand-total {
+  font-weight: 800;
+  color: var(--utbl-accent);
+}
+
+.utbl-pivot-totals-row {
+  border-top: 2px solid var(--utbl-border);
+}
+
+.utbl-pivot-totals-row .utbl-pivot-row-header {
+  background: var(--utbl-surface);
+}
+
+.utbl-pivot-totals-row .utbl-pivot-cell {
+  background: var(--utbl-surface);
+}
+
+/* Error / loading states */
+.utbl-display-error {
+  padding: 24px;
+  text-align: center;
+  color: #ff6b6b;
+  font-size: 0.8rem;
+}
+
+.utbl-display-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--utbl-text-muted);
+  font-size: 0.8rem;
+}

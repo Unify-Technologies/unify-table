@@ -62,10 +62,12 @@ export default function PluginOverview() {
   name: string;
   dependencies?: string[];
   init?(ctx: TableContext): void | (() => void);
+  transformQuery?(sql: string): string;
   transformColumns?(columns: ResolvedColumn[]): ResolvedColumn[];
   transformRows?(rows: Row[]): Row[];
   shortcuts?: Record<string, (ctx: TableContext) => void>;
   contextMenuItems?: (ctx: TableContext, cell: CellRef) => MenuItem[];
+  headerContextMenuItems?: (ctx: TableContext, column: ResolvedColumn) => MenuItem[];
   renderAbove?(ctx: TableContext): ReactNode;
   renderBelow?(ctx: TableContext): ReactNode;
   renderFooter?(ctx: TableContext): ReactNode;
@@ -101,6 +103,77 @@ export default function PluginOverview() {
         <code>clipboard()</code> declares <code>{`dependencies: ['selection']`}</code>. If you forget to
         include <code>selection()</code>, you'll see a console warning explaining which dependency is missing.
       </Callout>
+
+      <Heading level={2} id="custom">Writing a Custom Plugin</Heading>
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        A plugin is a factory function that returns a <code>TablePlugin</code> object.
+        Here's a complete example — a row counter that shows the total in the footer
+        and logs on data changes:
+      </p>
+      <CodeBlock code={`function rowCounter(): TablePlugin {
+  return {
+    name: 'rowCounter',
+
+    init(ctx) {
+      // Subscribe to data events — runs after every query
+      const unsub = ctx.on('data', () => {
+        console.log('Rows loaded:', ctx.getLatest().totalCount);
+      });
+      // Return cleanup to unsubscribe on unmount
+      return unsub;
+    },
+
+    renderFooter(ctx) {
+      return (
+        <div style={{ padding: '4px 12px', fontSize: 12, opacity: 0.7 }}>
+          {ctx.totalCount} rows{ctx.isLoading ? ' (loading...)' : ''}
+        </div>
+      );
+    },
+  };
+}
+
+// Use it like any built-in plugin
+<Table db={db} table="trades" plugins={[rowCounter(), filters()]} />`} language="tsx" />
+
+      <p className="text-[13px] mb-3 mt-6" style={{ color: "var(--doc-text-secondary)" }}>
+        Plugins can also add keyboard shortcuts and context menu items. This example adds
+        a "Copy row as JSON" option to the right-click menu:
+      </p>
+      <CodeBlock code={`function copyRowJson(): TablePlugin {
+  return {
+    name: 'copyRowJson',
+    dependencies: ['selection'],
+
+    shortcuts: {
+      'Ctrl+Shift+J': (ctx) => {
+        const { activeCell, rows } = ctx.getLatest();
+        if (activeCell) {
+          const row = rows[activeCell.rowIndex];
+          navigator.clipboard.writeText(JSON.stringify(row, null, 2));
+        }
+      },
+    },
+
+    contextMenuItems: (ctx, cell) => [
+      {
+        label: 'Copy row as JSON',
+        action: () => {
+          const row = ctx.rows[cell.rowIndex];
+          if (row) navigator.clipboard.writeText(JSON.stringify(row, null, 2));
+        },
+      },
+    ],
+  };
+}`} language="tsx" />
+
+      <Heading level={3} id="patterns">Key Patterns</Heading>
+      <ul className="text-[13px] mb-6 list-disc pl-5 space-y-1" style={{ color: "var(--doc-text-secondary)" }}>
+        <li>Always <strong style={{ color: "var(--doc-text)" }}>return a cleanup function</strong> from <code>init()</code> to prevent memory leaks on unmount.</li>
+        <li>Use <strong style={{ color: "var(--doc-text)" }}><code>ctx.getLatest()</code></strong> in async or deferred callbacks — closures capture a stale <code>ctx</code>.</li>
+        <li>Declare <strong style={{ color: "var(--doc-text)" }}><code>dependencies</code></strong> if your plugin reads state from another plugin (e.g. selection).</li>
+        <li><code>transformColumns</code> and <code>transformRows</code> must return <strong style={{ color: "var(--doc-text)" }}>new arrays</strong> — they are pure transforms, not mutations.</li>
+      </ul>
 
       <Heading level={2} id="available">Available Plugins</Heading>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">

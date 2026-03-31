@@ -21,8 +21,10 @@ export default function KeyboardPlugin() {
         <a href="#/plugins/clipboard" style={{color: "var(--doc-accent)"}}>clipboard</a> into a cohesive spreadsheet-like experience.
       </p>
 
-      <Callout type="info" title="Almost always included">
-        The keyboard plugin is included in all three presets (<code>spreadsheet()</code>, <code>dataViewer()</code>, <code>readOnly()</code>). You only need to add it manually when composing plugins individually.
+      <Callout type="info" title="Included in spreadsheet preset">
+        The keyboard plugin is included in the <code>spreadsheet()</code> preset. When
+        using <code>dataViewer()</code> or <code>readOnly()</code>, add it explicitly if you want
+        keyboard navigation.
       </Callout>
 
       <Heading level={2} id="usage">Usage</Heading>

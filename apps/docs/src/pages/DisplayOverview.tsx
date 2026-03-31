@@ -91,6 +91,117 @@ export default function DisplayOverview() {
   ]}
 />`} language="tsx" />
 
+      <Heading level={2} id="custom">Writing a Custom Display</Heading>
+      <p className="text-[13px] mb-3" style={{ color: textSec }}>
+        Custom displays follow the same two-layer pattern as built-ins. Define a core <code>DisplayType</code> (SQL
+        builder, config, validation), then a React <code>DisplayDescriptor</code> (rendering + config UI).
+      </p>
+
+      <Heading level={3} id="custom-core">Step 1 — Core type</Heading>
+      <p className="text-[13px] mb-3" style={{ color: textSec }}>
+        The core type has no React dependency — it generates SQL and defines configuration. This example
+        creates a "Top N" display that shows the highest values in a column as cards.
+      </p>
+      <CodeBlock code={`import { DisplayType, quoteIdent } from '@unify/table-core';
+
+interface TopNConfig {
+  field: string;
+  labelField: string;
+  agg: 'sum' | 'avg' | 'max';
+  limit: number;
+}
+
+const topNDisplayType: DisplayType<TopNConfig> = {
+  key: 'top-n',
+  label: 'Top N',
+  description: 'Show the N highest values',
+
+  buildSql(viewName, config) {
+    return \`SELECT \${quoteIdent(config.labelField)} AS label,
+      \${config.agg.toUpperCase()}(\${quoteIdent(config.field)}) AS value
+      FROM \${quoteIdent(viewName)}
+      GROUP BY \${quoteIdent(config.labelField)}
+      ORDER BY value DESC LIMIT \${config.limit}\`;
+  },
+
+  defaultConfig(columns) {
+    const num = columns.find(c => c.mappedType === 'number');
+    const str = columns.find(c => c.mappedType === 'string');
+    return { field: num?.name ?? '', labelField: str?.name ?? '', agg: 'sum', limit: 5 };
+  },
+
+  validate(config) {
+    if (!config.field) return ['Value field is required'];
+    if (!config.labelField) return ['Label field is required'];
+    return null;
+  },
+};`} language="tsx" />
+
+      <Heading level={3} id="custom-react">Step 2 — React descriptor</Heading>
+      <p className="text-[13px] mb-3" style={{ color: textSec }}>
+        The descriptor provides the render component and config panel. Use <code>useDisplayData(sql, engine)</code> to
+        fetch results from the SQL the core type generated.
+      </p>
+      <CodeBlock code={`import { registerDisplayType, registerDisplay, useDisplayData } from '@unify/table-react';
+import type { DisplayRenderProps, DisplayConfigProps } from '@unify/table-react';
+
+function TopNRender({ sql, engine }: DisplayRenderProps<TopNConfig>) {
+  const { rows, isLoading } = useDisplayData(sql, engine);
+  if (isLoading) return <div>Loading...</div>;
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: 12 }}>
+      {rows.map((r, i) => (
+        <div key={i} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #333' }}>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{String(r.value)}</div>
+          <div style={{ fontSize: 12, opacity: 0.6 }}>{String(r.label)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TopNConfigPanel({ config, onChange, columns }: DisplayConfigProps<TopNConfig>) {
+  const numCols = columns.filter(c => c.mappedType === 'number');
+  const strCols = columns.filter(c => c.mappedType === 'string');
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <label>Value field:
+        <select value={config.field} onChange={e => onChange({ ...config, field: e.target.value })}>
+          {numCols.map(c => <option key={c.name}>{c.name}</option>)}
+        </select>
+      </label>
+      <label>Label field:
+        <select value={config.labelField} onChange={e => onChange({ ...config, labelField: e.target.value })}>
+          {strCols.map(c => <option key={c.name}>{c.name}</option>)}
+        </select>
+      </label>
+    </div>
+  );
+}
+
+// Register both layers — call once at app startup
+registerDisplayType(topNDisplayType);
+registerDisplay({ type: topNDisplayType, render: TopNRender, renderConfig: TopNConfigPanel });`} language="tsx" />
+
+      <Heading level={3} id="custom-use">Step 3 — Use it</Heading>
+      <CodeBlock code={`<Table
+  db={db}
+  table="trades"
+  displays={[{
+    id: 'top-tickers',
+    type: 'top-n',
+    label: 'Top Tickers by PnL',
+    config: { field: 'pnl', labelField: 'ticker', agg: 'sum', limit: 5 },
+  }]}
+/>`} language="tsx" />
+
+      <p className="text-[13px] mb-3 mt-4" style={{ color: mutedText }}>
+        <strong style={{ color: textSec }}>Core layer</strong> defines the SQL — testable without React.{" "}
+        <strong style={{ color: textSec }}>React layer</strong> renders results and provides a config panel.{" "}
+        <code>useDisplayData(sql, engine)</code> handles fetching, loading state, and caching.{" "}
+        <code>validate()</code> prevents broken queries from running.
+      </p>
+
       <Heading level={2} id="choosing">Choosing a Display</Heading>
       <p className="text-[13px] mb-4" style={{ color: textSec }}>
         Each display type is designed for a specific analytical task. Use the guide below to pick the right one.

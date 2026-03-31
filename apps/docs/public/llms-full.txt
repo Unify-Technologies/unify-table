@@ -1,0 +1,2474 @@
+# Unify Table — Complete Documentation
+
+> DuckDB-native data table & charts library for React. SQL does the work — sort, filter, group, aggregate all happen in DuckDB-WASM. 16 composable plugins, 7 display types, zero-config to fully headless.
+
+Source: https://unify.sh/unify-table
+
+---
+
+# Getting Started
+
+Build your first DuckDB-powered data table in under 5 minutes.
+
+## Prerequisites
+
+Before you start, make sure you have:
+
+- **React 19+** as your UI framework
+
+- **A DuckDB-WASM connection** that
+implements the `TableConnection` interface — see
+the [Query Engine](#/query-engine) page
+for setup details
+
+- **pnpm, npm, or yarn** as your package manager
+
+## Installation
+
+The library is split into two packages you install directly: **core** (SQL
+engine and data source) and **react** (components,
+plugins, and charts). The charts package is included as a dependency of react — no separate install needed.
+
+**Terminal**
+```bash
+pnpm add @unify/table-core @unify/table-react
+```
+
+## CSS Imports
+
+Unify Table ships its own CSS rather than relying on Tailwind. Add these three imports to your
+app entry point. They cover panel layouts, theme class definitions, and display renderer styles
+(charts, stats, pivots).
+
+**main.tsx**
+```tsx
+import '@unify/table-react/styles';    // Panel layouts + base component CSS
+import '@unify/table-react/themes';    // Dark & light theme class definitions
+import '@unify/table-react/displays';  // Display renderer CSS (charts, stats, pivots)
+```
+
+## Your First Table
+
+The simplest possible table requires just two props — a DuckDB connection and a table name:
+
+```tsx
+<Table db={db} table="trades" />
+```
+
+That's it. The Table component auto-detects columns from DuckDB, virtualizes rows for
+performance, and handles scrolling. No column definitions needed — DuckDB's schema IS the
+source of truth. Here it is running live:
+
+> **Tip: Column auto-detection** When you omit the `columns` prop, the table queries DuckDB
+for `DESCRIBE` metadata and builds column definitions automatically. You can
+always pass explicit `columns` for fine-grained control over labels,
+widths, formatting, and sort behavior.
+
+## Adding Interactivity
+
+The basic table above is read-only. To add features, compose plugins — each one is an
+independent module. Start with the table you just built and layer on capabilities:
+
+```tsx
+import { Table, filters, selection, columnResize, darkTheme } from '@unify/table-react';
+
+<Table
+db={db}
+table="trades"
+plugins={[filters(), selection('multi'), columnResize()]}
+styles={darkTheme.styles}
+height={500}
+/>
+```
+
+Here's what each plugin in the example above does:
+
+- **filters()** — adds column-level filter
+dropdowns with composable predicates (equals, contains, greater than, etc.)
+
+- **selection('multi')** — enables cell
+selection with single-click, Shift+click range, and Ctrl+click multi-select
+
+- **columnResize()** — adds drag handles on
+column borders for adjusting widths
+
+There are 16 plugins in total, covering everything from inline editing and clipboard support
+to row grouping and context menus. See
+the [Plugins](#/plugins) page for the
+full list.
+
+## Using Presets
+
+Assembling plugins one by one gives you full control, but for common setups there are
+presets — curated bundles you can use as-is or spread and customize:
+
+```tsx
+import { spreadsheet, dataViewer, readOnly } from '@unify/table-react';
+
+// Full spreadsheet — editing, clipboard, keyboard nav, context menus
+plugins={spreadsheet()}
+
+// Analytics viewer — filters, grouping, sorting, column resize
+plugins={dataViewer()}
+
+// Minimal — filters, column resize, and formatting only
+plugins={readOnly()}
+```
+
+Since presets return a plain array of plugins, you can compose on top of them:
+
+```tsx
+// Start with dataViewer, add context menus
+plugins={[...dataViewer(), contextMenu()]}
+```
+
+## Choosing a Theme
+
+Unify Table ships with two built-in themes. Each theme object
+provides `styles` (CSS class names for the table), `panelVars` (CSS
+variable overrides for panels), and `containerClass` (a wrapper class for
+scoping). Apply them like this:
+
+```tsx
+import { Table, darkTheme, lightTheme } from '@unify/table-react';
+
+const theme = darkTheme; // or lightTheme
+
+<div className={theme.containerClass} style={{ ...theme.panelVars }}>
+<Table
+db={db}
+table="trades"
+styles={theme.styles}
+height={500}
+/>
+</div>
+```
+
+The `containerClass` and `panelVars` are only needed if you use panels
+(filter panel, column panel, etc.). For a standalone table, `styles` alone is
+enough. See the [Themes](#/themes) page
+for customization details.
+
+## Next Steps
+
+Now that you have a table running, here's where to go next:
+
+- [How It Works](#/how-it-works)
+— understand the architecture: how DuckDB handles sorting, filtering, and
+grouping in SQL so JavaScript only renders the visible viewport
+
+- [Plugins](#/plugins)
+— explore all 16 plugins with live examples and API reference
+
+- [Demo](#/demo)
+— see a full application with multiple tables, tabs, and all features working together
+
+---
+
+# How It Works
+
+Understand the architecture that makes Unify Table different.
+
+## The Core Idea
+
+Most data table libraries do everything in JavaScript — sorting, filtering, grouping, aggregation.
+This works for small datasets but falls apart at scale. Unify Table takes a fundamentally different
+approach: **DuckDB does the heavy lifting in SQL,
+React only renders what's visible.**
+
+This isn't just a performance optimization — it's a different mental model. Your table is a SQL view.
+Sorting is `ORDER BY`. Filtering is `WHERE`. Grouping
+is `GROUP BY`. Aggregation is `SUM`/`AVG`/`COUNT`.
+All running in a real analytical database engine, in the browser, via WebAssembly.
+
+The result: you can sort a million rows in milliseconds, filter with complex predicates, group and
+aggregate across dozens of columns — all without shipping any of that data to a server or writing
+custom comparison functions in JavaScript.
+
+## Architecture Layers
+
+The library is split into three layers, each with a clear responsibility. Dependencies only flow downward
+— the core layer has zero dependencies and can be used without React.
+
+### Core Layer
+
+`@unify/table-core` is pure TypeScript with zero dependencies. It provides three key
+primitives: the **SQL Builder** for constructing
+queries with an immutable, chainable API; the **QueryEngine** for
+executing queries against any `TableConnection`; and
+the **DataSource** for managing reactive state
+(sort, filters, groupBy) with microtask-batched updates.
+
+### React Layer
+
+`@unify/table-react` is the rendering layer. It virtualizes rows
+with TanStack Virtual so that a table with a million rows only renders the 30-50
+that are actually visible. Features are added through plugins — each one is an independent
+module with its own lifecycle.
+
+### Charts Layer
+
+`@unify/table-charts` wraps ECharts with SQL-driven chart builders. Every chart
+type — bar, line, pie, scatter, histogram, heatmap — starts as a SQL query. DuckDB aggregates the
+data into exactly the shape the chart needs, so you never ship raw data to the charting library.
+
+## Plugin Composition
+
+Features are independent plugins, not props on a mega-component. Each plugin — filtering,
+selection, editing, clipboard — is its own module with its own state, lifecycle, and bundle weight.
+You compose them as an array, paying only for what you use:
+
+```tsx
+<Table
+db={db}
+table="trades"
+plugins={[filters(), selection('multi'), editing(), keyboard()]}
+/>
+```
+
+See the [Plugins](#/plugins) page for the full architecture, lifecycle, and list of all 16 built-in plugins.
+
+## The SQL Pipeline
+
+Here's what happens when a user clicks a column header to sort:
+
+Every interaction follows this same pattern: user action, state change, SQL generation, DuckDB execution,
+viewport render. Filtering adds a `WHERE` clause. Grouping adds `GROUP BY`.
+Aggregation adds `SUM()`/`AVG()`. The JavaScript layer never touches your data
+directly — it only describes what it wants via SQL.
+
+## Zero-Config to Full Control
+
+Unify Table is designed for progressive complexity. Start simple, add sophistication only when you need it.
+
+### Zero config
+
+Two props. Auto-detects columns from the DuckDB table schema. Renders everything with sensible defaults.
+
+```tsx
+<Table db={db} table="trades" />
+```
+
+### Add features
+
+Opt into specific capabilities by adding plugins. Each one is independent — mix and match freely.
+
+```tsx
+<Table
+db={db}
+table="trades"
+plugins={[filters(), selection('multi'), columnResize()]}
+/>
+```
+
+### Use presets
+
+Presets are curated plugin bundles for common use cases. One function call instead of a dozen.
+
+```tsx
+// Full spreadsheet: editing, clipboard, keyboard, selection, context menu, ...
+plugins={spreadsheet()}
+
+// Analytics view: filters, grouping, column resize, formatting, ...
+plugins={dataViewer()}
+
+// Minimal read-only: filters, column resize, formatting
+plugins={readOnly()}
+```
+
+### Go headless
+
+Need full control? Use the headless hook to get the complete `TableContext` and render
+everything yourself.
+
+```tsx
+const ctx = useTableContext({ db, table: "trades", plugins: [...] });
+
+// You get: rows, columns, sort state, filter state, selection,
+// and every method to manipulate them. Render however you want.
+```
+
+> **Tip: Ready to build?** Start with the [Getting Started](#/getting-started) guide to set up your first table,
+or jump straight to the [Demo](#/demo) to see everything in action.
+
+---
+
+# Table Basics
+
+The Table component renders a virtualized data table backed by DuckDB.
+
+The `Table` component is the main entry point for Unify Table. It takes a DuckDB
+connection and a table name, queries the schema, and renders a virtualized grid. Everything
+else is optional — columns are auto-detected, plugins add features incrementally, and
+themes are applied through CSS. A single `&lt;Table db=&#123;db&#125; table="trades" /&gt;` call
+is all you need to get a working table.
+
+## Minimal Example
+
+With just `db` and `table`, columns are auto-detected from the DuckDB schema. Here's 10,000 trades rendered with zero configuration:
+
+## Adding Plugins
+
+The minimal table above is static. Add the `filters()` plugin to let users narrow
+down the data — notice the filter row that appears below the headers:
+
+## Table Props
+
+", description: "Initial filter input values" },
+{ name: "initialHiddenCols", type: "string[]", description: "Columns to hide on first render" },
+{ name: "initialColumnOrder", type: "string[]", description: "Initial column display order" },
+{ name: "initialColumnWidths", type: "Record", description: "Initial column widths in pixels" },
+{ name: "onSortChange", type: "(sort: SortField[]) => void", description: "Callback when sort state changes" },
+{ name: "onFilterValuesChange", type: "(values: Record) => void", description: "Callback when filter values change" },
+{ name: "onGroupByChange", type: "(cols: string[]) => void", description: "Callback when group-by columns change" },
+]}
+/>
+
+## How It Works Under the Hood
+
+When you render a `Table`, three layers work together:
+
+- **DataSource** — a reactive state manager that
+owns sort, filter, and groupBy state. When any state changes, it emits events and batches
+re-queries via `queueMicrotask` to avoid redundant work.
+
+- **QueryEngine** — a thin wrapper around the
+DuckDB connection. It translates the DataSource state into SQL, executes queries, and
+returns results. All sorting, filtering, grouping, and aggregation happens in SQL — JavaScript
+never touches the full dataset.
+
+- **TanStack Virtual** — handles row
+virtualization. Only the rows visible in the viewport are rendered to the DOM, so scrolling
+through millions of rows is as fast as scrolling through a hundred.
+
+## Table vs useTableContext
+
+The `Table` component is the standard way to render a table — it handles layout,
+virtualization, headers, and plugin rendering out of the box. For cases where you need full
+control over the rendered output, use the `useTableContext` hook instead. It returns
+the complete `TableContext` (data, state, actions) without rendering anything, so you
+can build a fully custom UI while still benefiting from the query engine and plugin system.
+
+> **Tip: When to choose which** Use `Table` when the built-in layout works for your use case. Reach
+for `useTableContext` when you need a non-standard layout, want to embed table
+data in a custom component, or need to coordinate multiple tables sharing the same data source.
+
+---
+
+# Column Definitions
+
+Control how columns are displayed, formatted, and edited.
+
+Column definitions let you customize how each column is displayed, formatted, and behaves.
+If you don't provide column definitions, the Table auto-generates them from DuckDB's
+schema — detecting types, choosing sensible defaults for alignment and width, and using
+the column name as the header label. Custom definitions let you override any of these defaults.
+
+## Auto-Detected Columns
+
+When no `columns` prop is passed, the table queries DuckDB's schema and creates
+columns automatically. This is the simplest way to get started — the table inspects every
+column in the DuckDB table, infers types, and renders them with sensible defaults.
+
+## Column Types
+
+DuckDB column types map to four rendering modes:
+
+- **string** — renders as plain text,
+left-aligned by default. Includes VARCHAR, TEXT, and similar DuckDB types.
+
+- **number** — renders right-aligned by
+default. Includes INTEGER, BIGINT, DOUBLE, DECIMAL, and other numeric types. Supports
+format strings like `currency` and `compact`.
+
+- **date** — renders as a formatted date
+string. Includes DATE, TIMESTAMP, and TIMESTAMPTZ types.
+
+- **boolean** — renders as a visual
+indicator. Maps from DuckDB's BOOLEAN type.
+
+## Custom Columns
+
+Pass an array of column definitions to control labels, widths, alignment, and formatting:
+
+```tsx
+<Table
+db={db}
+table="employees"
+columns={[
+{ field: 'name', label: 'Full Name', width: 200 },
+{ field: 'department', label: 'Dept', width: 120 },
+{ field: 'salary', label: 'Salary', align: 'right', format: 'currency' },
+{ field: 'hire_date', label: 'Hired', format: 'date' },
+]}
+/>
+```
+
+## Editable Columns
+
+## ColumnDef Props
+
+ReactNode", description: "Custom cell render function" },
+{ name: "format", type: "string", description: "Format string (currency, date, compact, etc.)" },
+{ name: "editor", type: "'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox'", description: "Editor type for inline editing" },
+{ name: "editorOptions", type: "string[]", description: "Options for select editor" },
+{ name: "validate", type: "(value) => true | string", description: "Validation function, returns error string on failure" },
+]}
+/>
+
+## Formatting: format vs formatting Plugin
+
+There are two ways to format cell values, and they serve different purposes:
+
+- **The `format` prop** on a column
+definition controls how values are displayed as text — currency symbols, date formatting,
+compact notation. It is static and applies to every cell in the column.
+
+- **The `formatting` plugin** applies
+conditional visual styles — background color, text color, bold — based on cell values.
+Use it for things like highlighting negative numbers in red or applying threshold-based
+color scales.
+
+> **Tip: Rule of thumb** Use `format` to control what text is shown. Use the `formatting` plugin
+to control how that text looks based on its value.
+
+---
+
+# Themes
+
+Built-in dark and light themes with full CSS customization.
+
+Unify Table ships with built-in dark and light themes, both available as pure CSS — no
+Tailwind required. Themes provide three things: style class names for table slots (header,
+row, cell), CSS variable overrides for panel components (filters, columns panel, etc.),
+and a container class for scoping the theme boundary. Import theme CSS through the
+package sub-paths:
+
+```tsx
+import '@unify/table-react/styles';    // panel CSS
+import '@unify/table-react/themes';    // theme class definitions
+import '@unify/table-react/displays';  // display renderer CSS
+import { darkTheme, lightTheme } from '@unify/table-react';
+```
+
+## Built-in Themes
+
+Two themes are provided out of the box: `darkTheme` and `lightTheme`.
+Pass either to the `Table` component via the `styles` prop, or
+spread the theme object to apply all three parts at once.
+
+## Theme Interface
+
+Every theme implements the `Theme` interface. The three fields correspond to
+different layers of the table UI:
+
+```tsx
+interface Theme {
+styles: TableStyles;              // CSS class names for table slots
+panelVars: Record<string, string>; // CSS custom properties for panels
+containerClass: string;           // Outer container class
+}
+```
+
+- **styles** — class names applied to the
+table header, rows, even rows, cells, and other structural elements. Use these to control
+backgrounds, borders, and hover states.
+
+- **panelVars** — CSS custom properties
+injected as inline styles on the table container. Panel components (filter panel, columns
+panel, context menus) read these variables for their colors. This is the primary
+customization mechanism for non-table UI.
+
+- **containerClass** — a class applied to
+the outermost wrapper, useful for scoping borders, rounded corners, or shadows.
+
+## CSS Variables
+
+Panel UI components use these CSS custom properties. Override them
+in `panelVars` to change colors without writing any CSS files:
+
+```css
+--utbl-color-surface        // Background
+--utbl-color-surface-alt    // Alternate background
+--utbl-color-border         // Border color
+--utbl-color-text           // Primary text
+--utbl-color-text-secondary // Secondary text
+--utbl-color-text-muted     // Muted text
+--utbl-color-accent         // Accent / primary color
+--utbl-color-input-bg       // Input background
+--utbl-color-input-border   // Input border
+```
+
+> **Tip: CSS variables are the primary customization mechanism** Rather than overriding individual class names, start by changing CSS variables
+in `panelVars`. This ensures consistent theming across all panel components —
+filters, column pickers, context menus, and display renderers all read from the same
+variable set.
+
+## Creating a Custom Theme
+
+To create a custom theme, define an object matching the `Theme` interface. You
+can start from scratch or spread one of the built-in themes and override specific fields.
+The example below creates an indigo-themed dark table:
+
+```tsx
+const customTheme: Theme = {
+styles: {
+header: 'bg-indigo-900 text-white',
+row: 'hover:bg-indigo-950/20',
+rowEven: 'bg-indigo-950/10',
+cell: 'border-b border-indigo-800/30',
+},
+panelVars: {
+'--utbl-color-surface': '#1e1b4b',
+'--utbl-color-accent': '#818cf8',
+},
+containerClass: 'rounded-lg border border-indigo-800',
+};
+```
+
+---
+
+# Density & Layout
+
+Control row height and table sizing.
+
+Density controls the vertical rhythm of the table — row height, cell padding, and font
+size all scale together. Choose a density based on how your users interact with the data:
+`compact` fits more rows on screen for scanning and comparison, `comfortable` is
+a balanced default for general use, and `spacious` gives breathing room for
+tables where readability matters more than density.
+
+## Row Density
+
+Three density options control row height: `compact` (28px), `comfortable` (36px, default), `spacious` (48px).
+
+## Height
+
+Set a fixed height with a number (pixels) or CSS string. Virtual scrolling is enabled
+automatically via TanStack Virtual. If no height is specified, the table will fill its
+parent container.
+
+## Virtual Scrolling
+
+The table uses TanStack Virtual for efficient rendering. Only visible rows are in the DOM,
+so even 1M+ rows scroll smoothly. The virtualizer calculates which rows are in view based
+on scroll position and row height, renders only those rows, and recycles DOM nodes as you scroll.
+
+> **Info: Performance** Virtual scrolling means the table only renders visible rows regardless of dataset size.
+A table with 1 million rows uses the same memory as one with 100 — the DOM footprint
+stays constant. Combined with DuckDB handling all sorting and filtering in SQL, the
+browser never needs to hold the full dataset in JavaScript memory.
+
+---
+
+# Plugins
+
+Features are composable plugins, not props on a mega-component.
+
+## Why Plugins?
+
+Traditional data tables suffer from prop explosion — hundreds of props on a single component,
+each toggling a different behavior. The result is a monolithic API that's hard to learn, hard
+to test, and impossible to tree-shake. Every user pays the bundle cost for every feature,
+whether they use it or not.
+
+Plugins flip this model. Each feature — filtering, selection, editing, clipboard — lives in its
+own isolated module with its own state, its own tests, and its own bundle weight. You compose
+the exact set of capabilities you need as an array, and the table assembles them at runtime.
+If you never import `editing()`, it never ships to your users.
+
+> **Tip: Tree-shaking by design** Because plugins are standalone functions, bundlers can eliminate unused plugins entirely.
+A read-only table with just `filters()` and `columnResize()` ships
+a fraction of the code compared to a full spreadsheet setup.
+
+## Plugin Architecture
+
+```tsx
+interface TablePlugin {
+name: string;
+dependencies?: string[];
+init?(ctx: TableContext): void | (() => void);
+transformQuery?(sql: string): string;
+transformColumns?(columns: ResolvedColumn[]): ResolvedColumn[];
+transformRows?(rows: Row[]): Row[];
+shortcuts?: Record<string, (ctx: TableContext) => void>;
+contextMenuItems?: (ctx: TableContext, cell: CellRef) => MenuItem[];
+headerContextMenuItems?: (ctx: TableContext, column: ResolvedColumn) => MenuItem[];
+renderAbove?(ctx: TableContext): ReactNode;
+renderBelow?(ctx: TableContext): ReactNode;
+renderFooter?(ctx: TableContext): ReactNode;
+renderOverlay?(ctx: TableContext): ReactNode;
+}
+```
+
+## Composition
+
+```tsx
+// Plugins are composed as an array
+<Table
+db={db}
+table="employees"
+plugins={[filters(), selection('multi'), columnResize(), contextMenu()]}
+/>
+```
+
+> **Info: Plugin Lifecycle** Each plugin's `init()` is called with the full `TableContext`.
+Return a cleanup function to run when the table unmounts.
+
+## Execution Order
+
+Plugins run in the order they appear in the array. This matters when plugins interact — for
+example, `clipboard()` reads from the current selection, so `selection()` should
+come first. Similarly, `keyboard()` relies on knowing which cell is selected to
+handle arrow-key navigation.
+
+Each plugin can declare a `dependencies` array listing the plugin names it requires.
+If a dependency is missing from the plugins list, the system logs a warning at init time so
+you can catch misconfiguration early.
+
+> **Info: Dependency example** `clipboard()` declares `dependencies: ['selection']`. If you forget to
+include `selection()`, you'll see a console warning explaining which dependency is missing.
+
+## Writing a Custom Plugin
+
+A plugin is a factory function that returns a `TablePlugin` object.
+Here's a complete example — a row counter that shows the total in the footer
+and logs on data changes:
+
+```tsx
+function rowCounter(): TablePlugin {
+return {
+name: 'rowCounter',
+
+init(ctx) {
+// Subscribe to data events — runs after every query
+const unsub = ctx.on('data', () => {
+console.log('Rows loaded:', ctx.getLatest().totalCount);
+});
+// Return cleanup to unsubscribe on unmount
+return unsub;
+},
+
+renderFooter(ctx) {
+return (
+<div style={{ padding: '4px 12px', fontSize: 12, opacity: 0.7 }}>
+{ctx.totalCount} rows{ctx.isLoading ? ' (loading...)' : ''}
+</div>
+);
+},
+};
+}
+
+// Use it like any built-in plugin
+<Table db={db} table="trades" plugins={[rowCounter(), filters()]} />
+```
+
+Plugins can also add keyboard shortcuts and context menu items. This example adds
+a "Copy row as JSON" option to the right-click menu:
+
+```tsx
+function copyRowJson(): TablePlugin {
+return {
+name: 'copyRowJson',
+dependencies: ['selection'],
+
+shortcuts: {
+'Ctrl+Shift+J': (ctx) => {
+const { activeCell, rows } = ctx.getLatest();
+if (activeCell) {
+const row = rows[activeCell.rowIndex];
+navigator.clipboard.writeText(JSON.stringify(row, null, 2));
+}
+},
+},
+
+contextMenuItems: (ctx, cell) => [
+{
+label: 'Copy row as JSON',
+action: () => {
+const row = ctx.rows[cell.rowIndex];
+if (row) navigator.clipboard.writeText(JSON.stringify(row, null, 2));
+},
+},
+],
+};
+}
+```
+
+### Key Patterns
+
+- Always **return a cleanup function** from `init()` to prevent memory leaks on unmount.
+
+- Use **`ctx.getLatest()`** in async or deferred callbacks — closures capture a stale `ctx`.
+
+- Declare **`dependencies`** if your plugin reads state from another plugin (e.g. selection).
+
+- `transformColumns` and `transformRows` must return **new arrays** — they are pure transforms, not mutations.
+
+## Available Plugins
+
+{PLUGINS.map((p) => (
+
+{p.name}()
+{p.desc}
+
+))}
+
+---
+
+# Filters
+
+Adds a filter input row below headers for column-level filtering.
+
+Filters let users narrow down visible rows using composable SQL predicates. Under the hood,
+each filter becomes a WHERE clause — DuckDB handles the actual filtering, not JavaScript.
+This means filtering scales to millions of rows with no performance cliff, and the syntax
+you type in the filter input maps directly to efficient SQL operations.
+
+> **Info** See filters in action in the [Interactive Demo](#/demo) — try filtering the trades table by ticker, region, or desk.
+
+## Usage
+
+```tsx
+import { Table, filters } from '@unify/table-react';
+
+<Table db={db} table="products" plugins={[filters()]} />
+```
+
+## Example
+
+Same `trades_sample` table as the [basic example](#/table-basics),
+now with `filters()` added. Notice the filter row below the headers.
+
+500 in notional." height={350} />
+
+## Filter Syntax
+
+Type directly in filter inputs. Supported patterns: `&gt; 100`, `50..500` (range), `A,B,C` (one of), `!value` (not equal), `*pattern*` (contains).
+
+## Built-in Predicates
+
+When building filters programmatically, the core library provides composable predicate functions
+that generate safe, parameterized SQL. These can be combined with `and()`, `or()`,
+and `not()` combinators.
+
+```tsx
+import { eq, neq, gt, gte, lt, lte, contains, startsWith,
+endsWith, oneOf, between, isNull, isNotNull,
+and, or, not, raw } from '@unify/table-core';
+
+// Comparison
+eq('status', 'active')        // status = 'active'
+neq('status', 'archived')     // status != 'archived'
+gt('price', 100)              // price > 100
+gte('price', 100)             // price >= 100
+lt('quantity', 10)            // quantity < 10
+lte('quantity', 10)           // quantity <= 10
+
+// Pattern matching
+contains('name', 'corp')     // name ILIKE '%corp%'
+startsWith('name', 'A')      // name ILIKE 'A%'
+endsWith('email', '.com')    // email ILIKE '%.com'
+
+// Set & range
+oneOf('region', ['US', 'EU']) // region IN ('US', 'EU')
+between('price', 10, 100)    // price BETWEEN 10 AND 100
+
+// Null checks
+isNull('notes')              // notes IS NULL
+isNotNull('notes')           // notes IS NOT NULL
+
+// Combinators
+and(gt('price', 50), lt('price', 200))
+or(eq('status', 'active'), eq('status', 'pending'))
+not(isNull('email'))
+```
+
+## Programmatic Filtering
+
+Set filters from code via the DataSource's `setFilters()` method, which
+accepts an array of filter predicates. This is useful for building custom filter UIs
+or applying filters based on external events.
+
+```tsx
+import { gt, between, eq, and } from '@unify/table-core';
+
+// Set filters as an array of predicates
+ctx.datasource.setFilters([
+gt('price', 100),
+eq('status', 'active'),
+]);
+
+// Combine multiple conditions on the same column
+ctx.datasource.setFilters([
+between('price', 50, 500),
+eq('status', 'active'),
+]);
+
+// Clear all filters by passing an empty array
+ctx.datasource.setFilters([]);
+```
+
+> **Tip: Debounced by default** Filter inputs in the UI are debounced to avoid firing a query on every keystroke.
+Programmatic filters applied via `setFilter()` take effect on the next
+microtask batch.
+
+---
+
+# Selection
+
+Enables single, multi, or range cell selection with keyboard and mouse support.
+
+The selection plugin supports three modes, each enabling different interaction patterns.
+** Single** mode selects one cell at a time — clicking a new cell deselects the
+previous one. ** Multi** mode lets users build up a set of individually selected
+cells using Ctrl/Cmd+click. ** Range** mode enables rectangular region selection
+via Shift+click or click-and-drag, similar to spreadsheet behavior.
+
+Selection state is used by other plugins: `clipboard()` copies from the current
+selection, `editing()` activates on the selected cell, and `statusBar()` shows
+aggregations for the selected range.
+
+> **Info** See selection in action in the [Interactive Demo](#/demo) — click, Shift+click, and Ctrl+click cells in any table panel.
+
+## Usage
+
+```tsx
+import { Table, selection } from '@unify/table-react';
+
+// Multi-select with Ctrl/Cmd click (default)
+<Table db={db} table="orders" plugins={[selection()]} />
+
+// Single cell — one cell at a time
+<Table db={db} table="orders" plugins={[selection('single')]} />
+
+// Range selection with Shift+click
+<Table db={db} table="orders" plugins={[selection('range')]} />
+```
+
+## Example
+
+Building on the same `trades_sample` data — this time with `selection('range')`,
+`keyboard()` for arrow-key navigation, and `statusBar()` to show aggregations
+of the selected cells.
+
+## Selection Modes
+
+`single` selects one cell at a time. `multi` allows toggling
+individual cells with Ctrl/Cmd+click. `range` enables rectangular selection
+via Shift+click or Shift+arrow keys.
+
+## When to Use Each Mode
+
+> **Tip: Choosing a selection mode** **single** — Best for detail panels or master-detail layouts where clicking a row
+shows its details elsewhere. Keeps the interaction simple and unambiguous.
+**multi** — Ideal for batch operations like "delete selected rows" or "tag these
+items." Users can Ctrl/Cmd+click to cherry-pick non-contiguous cells.
+**range** — The default for spreadsheet-like experiences. Supports copy/paste of
+rectangular regions and shows aggregate stats (sum, count, average) in the status bar for the
+selected area.
+
+---
+
+# Editing
+
+Inline cell editing with validation. Double-click or press Enter to start editing.
+
+The editing plugin turns your table into a spreadsheet. Double-click a cell or start typing
+to enter edit mode. Changes follow commit/cancel semantics — press Enter or Tab to confirm,
+Escape to discard. Every confirmed edit is written directly to DuckDB via an UPDATE statement,
+so your data source stays in sync without manual refresh.
+
+Column definitions can include validation rules that run before a commit. If validation
+fails, the cell reverts and the user sees the error — no bad data reaches the database.
+
+## Usage
+
+```tsx
+import { Table, editing } from '@unify/table-react';
+
+<Table db={db} table="employees" plugins={[editing()]} />
+```
+
+## Example
+
+The same trade data, now with `editing()`, `keyboard()`, and `selection('range')`.
+Column definitions specify the editor type and validation rules for each field.
+
+## Validation
+
+Column definitions can include a `validate` function that receives the new
+value and returns `true` or an error message string. Invalid edits are
+rejected and the cell reverts to its previous value.
+
+```tsx
+const columns = [
+{
+field: 'price',
+validate: (value: unknown) => {
+if (typeof value !== 'number' || value < 0)
+return 'Price must be a positive number';
+return true;
+},
+},
+{
+field: 'email',
+validate: (value: unknown) =>
+typeof value === 'string' && value.includes('@')
+? true
+: 'Invalid email address',
+},
+];
+```
+
+> **Info: Type-aware editing** The editor adapts its input to the column type. Numeric columns show a number input,
+boolean columns toggle directly, and text columns use a standard text field. Type
+coercion happens automatically before validation runs.
+
+## Controls
+
+Press `Enter` or `Tab` to confirm. Press `Escape` to
+cancel. Changes are committed to the underlying DuckDB table via an UPDATE statement.
+
+---
+
+# Keyboard
+
+Adds keyboard navigation with arrow keys, Tab, Enter, Escape, Delete, and Ctrl shortcuts.
+
+The keyboard plugin makes the table fully navigable without a mouse. Arrow keys move between cells, Tab advances
+to the next cell (wrapping to the next row), Enter starts editing, and Escape cancels. It's the glue that connects 
+[selection](#/plugins/selection), 
+[editing](#/plugins/editing), and 
+[clipboard](#/plugins/clipboard) into a cohesive spreadsheet-like experience.
+
+> **Info: Included in spreadsheet preset** The keyboard plugin is included in the `spreadsheet()` preset. When
+using `dataViewer()` or `readOnly()`, add it explicitly if you want
+keyboard navigation.
+
+## Usage
+
+```tsx
+import { Table, keyboard } from '@unify/table-react';
+
+<Table db={db} table="tasks" plugins={[keyboard()]} />
+```
+
+## Shortcuts
+
+## Custom Shortcuts
+
+Plugins can register additional keyboard shortcuts via the `shortcuts` property. Each shortcut maps a key combination to a handler that receives the table context.
+
+```tsx
+const myPlugin = {
+name: 'myPlugin',
+shortcuts: {
+'Ctrl+Shift+S': (ctx) => saveSnapshot(ctx),
+'Ctrl+Shift+E': (ctx) => exportSelection(ctx),
+},
+};
+```
+
+---
+
+# Clipboard
+
+Copy and paste cells in TSV format. Supports pasting from spreadsheets and paste-as-append.
+
+The clipboard plugin enables `Ctrl+C` / `Ctrl+V` for table cells, using tab-separated values (TSV)
+as the interchange format. This means you can copy cells from Unify Table and paste them directly into Excel,
+Google Sheets, or any spreadsheet — and vice versa. When pasting data that exceeds the current selection,
+new rows are appended to the table automatically.
+
+> **Tip: Works best with Selection + Keyboard** Clipboard reads from the current selection. Pair it with 
+[selection('multi')](#/plugins/selection) or 
+[selection('range')](#/plugins/selection) for rectangular copy/paste, and 
+[keyboard()](#/plugins/keyboard) for Ctrl+C/V shortcut handling.
+
+## Usage
+
+```tsx
+import { Table, clipboard, selection, keyboard } from '@unify/table-react';
+
+// Full spreadsheet-like copy/paste experience
+<Table
+db={db}
+table="data"
+plugins={[selection('range'), keyboard(), clipboard()]}
+/>
+```
+
+## Example
+
+Select cells below, then press `Ctrl+C` to copy. Open a spreadsheet and press `Ctrl+V` — the data
+transfers as tab-separated values.
+
+## Operations
+
+- `Ctrl+C` — copies selected cells as tab-separated values (TSV), compatible with Excel and Google Sheets
+
+- `Ctrl+V` — pastes TSV data into the selected region, matching columns by position
+
+- **Paste-as-append** — when pasted data has more rows than the selection, excess rows are appended to the table via `INSERT INTO`
+
+> **Warning: Secure context required** The Clipboard API requires HTTPS or localhost. Copy/paste will silently fail on plain HTTP connections.
+
+---
+
+# Column Resize
+
+Drag column borders to resize. Double-click to auto-fit column width to content.
+
+## Usage
+
+```tsx
+import { Table, columnResize } from '@unify/table-react';
+
+<Table db={db} table="products" plugins={[columnResize()]} />
+```
+
+## Example
+
+## Behavior
+
+- **Drag** — a handle appears on the right edge of each column header. Drag to resize in real time.
+
+- **Double-click** — auto-sizes the column to fit its widest visible content.
+
+- **Persist** — use `initialColumnWidths` and `onColumnWidthsChange` to save/restore widths.
+
+## Persisting Widths
+
+```tsx
+// Save and restore column widths
+<Table
+db={db}
+table="products"
+plugins={[columnResize()]}
+initialColumnWidths={{ name: 200, price: 120 }}
+onColumnWidthsChange={(widths) => save(widths)}
+/>
+```
+
+---
+
+# Column Pin
+
+Pin columns to the left or right edge of the table so they remain visible during horizontal scrolling.
+
+## Usage
+
+```tsx
+import { Table, columnPin } from '@unify/table-react';
+
+<Table db={db} table="trades" plugins={[columnPin()]} />
+```
+
+## Example
+
+## Pinning Columns
+
+Right-click a column header and select "Pin Left" or "Pin Right" from the context
+menu. Pinned columns stay fixed at the edge while the rest of the table scrolls.
+Select "Unpin" to restore normal scrolling behavior.
+
+> **Tip: When to pin** Pin identifier columns (name, ticker, ID) so users always see which row they're looking at while scrolling through many columns. Combine with 
+[columnResize()](#/plugins/column-resize) and 
+[columnReorder()](#/plugins/column-reorder) for full column management.
+
+## Programmatic Pinning
+
+```tsx
+// Pin columns via column definitions
+const columns = [
+{ field: 'ticker', pin: 'left' },
+{ field: 'total', pin: 'right' },
+];
+```
+
+---
+
+# Column Reorder
+
+Drag-and-drop column headers to reorder columns using the HTML5 Drag and Drop API.
+
+## Usage
+
+```tsx
+import { Table, columnReorder } from '@unify/table-react';
+
+<Table db={db} table="employees" plugins={[columnReorder()]} />
+```
+
+## Example
+
+## Behavior
+
+Click and drag any column header to move it. A visual indicator shows the drop
+position. The new column order is persisted in the table state and reflected
+immediately. Works alongside column pinning -- pinned columns maintain their
+pinned position.
+
+---
+
+# Context Menu
+
+Right-click menus with nested submenus. Other plugins can contribute menu items.
+
+The context menu plugin provides a right-click menu system for the table. It collects menu
+items from all active plugins, so the menu naturally grows as you add capabilities — include
+the clipboard plugin and you get Copy/Paste entries; include tableIO and you get Export
+options. Each plugin's items are separated visually, and items can nest into submenus for
+complex operations.
+
+You can also define fully custom menu items in your own plugins by implementing
+the `contextMenuItems` hook, which receives the table context and the cell that
+was right-clicked.
+
+## Usage
+
+```tsx
+import { Table, contextMenu } from '@unify/table-react';
+
+<Table db={db} table="orders" plugins={[contextMenu()]} />
+```
+
+## Example
+
+This example combines `contextMenu()` with `clipboard()`,
+`selection()`, `editing()`, and `keyboard()` —
+notice how the menu items change based on which plugins are active.
+
+## Custom Menu Items
+
+```tsx
+// Plugins contribute items via contextMenuItems
+const myPlugin = {
+name: 'audit',
+contextMenuItems: (ctx, cell) => [
+{ label: 'View history', action: () => showHistory(cell) },
+{
+label: 'Export',
+children: [
+{ label: 'As CSV', action: () => exportCsv(ctx) },
+{ label: 'As JSON', action: () => exportJson(ctx) },
+],
+},
+],
+};
+```
+
+Menu items from all active plugins are collected and separated automatically.
+Items can include nested `children` arrays for submenus.
+
+> **Tip: Built-in items from other plugins** You don't need to wire up common actions manually. When `clipboard()` is active, the
+context menu automatically includes Copy and Paste. When `tableIO()` is active,
+Export as CSV/JSON/Parquet appears. The context menu acts as a hub for all plugin-provided
+actions.
+
+---
+
+# Views
+
+Save and restore view presets that capture filters, sort order, and groupBy configuration.
+
+## Usage
+
+```tsx
+import { Table, views } from '@unify/table-react';
+
+<Table db={db} table="sales" plugins={[views()]} />
+```
+
+## API
+
+Views are managed through standalone functions that operate on the table context:
+
+```tsx
+import { views, saveView, applyView, listViews, serializeViews } from '@unify/table-react';
+
+// Save current state as a named view
+saveView('Q1 Summary', ctx);
+
+// List saved view names
+const names = listViews(); // ['Q1 Summary', ...]
+
+// Restore a saved view
+applyView('Q1 Summary', ctx);
+
+// Serialize all views to JSON (for persistence)
+const json = serializeViews();
+```
+
+## What Gets Saved
+
+A view preset captures:
+
+- **Filters** — all active column filters and their values
+
+- **Sort** — sort columns and directions
+
+- **Group By** — grouped columns and aggregation functions
+
+- **Column visibility** — which columns are shown or hidden
+
+- **Column order** — the current arrangement of columns
+
+> **Tip: Use case: team dashboards** Create views for common analysis patterns — "Q1 Revenue by Region", "Top Performers", "Overdue Items" — so team members
+can switch between them instantly without rebuilding filters and sorts each time.
+
+---
+
+# Table I/O
+
+Import and export table data in CSV, JSON, and Parquet formats with progress events.
+
+## Usage
+
+Add the `tableIO()` plugin to enable the Export panel and programmatic import/export.
+
+```tsx
+import { Table, tableIO, filters, selection } from '@unify/table-react';
+
+<Table
+db={db}
+table="trades"
+plugins={[tableIO(), filters(), selection("range")]}
+/>
+```
+
+## Export
+
+Export the full table or just the selection. CSV, JSON, Parquet, and XLSX formats are
+supported. Parquet uses DuckDB's native writer for maximum performance on large datasets.
+
+```tsx
+import { tableIO } from '@unify/table-react';
+
+const io = tableIO();
+// After mounting, get the handle from the plugin:
+const handle = io.getHandle(ctx);
+
+await handle.exportCSV();                          // full table
+await handle.exportCSV({ selection: true });       // selected cells only
+await handle.exportJSON({ pretty: true });
+await handle.exportParquet({ filename: 'data.parquet' });
+await handle.exportXLSX({ sheet: 'Q1 Report' });
+```
+
+## Import
+
+```tsx
+// Import from a File object (CSV, JSON, or Parquet)
+await handle.importFile(file);
+
+// Append to existing table instead of replacing
+await handle.importFile(file, { append: true });
+```
+
+## Progress Events
+
+Large imports and exports emit progress events so you can display a progress
+bar or status indicator.
+
+> **Tip: Parquet for Large Datasets** For tables with 100K+ rows, use Parquet export — it's significantly faster and produces smaller files than CSV or JSON. DuckDB handles the serialization natively in WebAssembly.
+
+---
+
+# Find & Replace
+
+Search across the entire table and optionally replace matches. Shows affected row count before committing.
+
+## Usage
+
+```tsx
+import { Table, findReplace, editing, keyboard, selection } from '@unify/table-react';
+
+<Table
+db={db}
+table="trades"
+plugins={[findReplace(), editing(), keyboard(), selection("range")]}
+/>
+```
+
+## Programmatic API
+
+Use the exported helper functions to search and replace from code:
+
+```tsx
+import { findInTable, replaceInTable } from '@unify/table-react';
+
+// Count matching rows (searches all text columns)
+const count = await findInTable(ctx, 'AAPL');
+
+// Search in a specific column
+const count2 = await findInTable(ctx, 'Trading', 'desk');
+
+// Replace all occurrences in a column
+const affected = await replaceInTable(ctx, 'AAPL', 'GOOG', 'ticker');
+```
+
+## Keyboard Shortcuts
+
+`Ctrl+F` opens the find bar. `Ctrl+H` opens find and replace.
+The affected count is displayed before any replacement is committed, so you can
+review the scope of the change.
+
+> **Tip: Works with Editing** Find & replace pairs naturally with the `editing` plugin — find highlights matches across the table, and replace uses the editing pipeline to commit changes with validation.
+
+---
+
+# Formulas
+
+Add computed columns that evaluate SQL expressions on each row.
+
+Two computed columns added: **PnL/Unit** (pnl divided by volume) and **Year** (extracted from trade_date). Formulas run as DuckDB expressions in the SELECT clause.</>}
+height={420}
+/>
+
+## Usage
+
+Register formula columns before mounting, then include the `formulas()` plugin.
+
+```tsx
+import { Table, formulas, addFormulaColumn, removeFormulaColumn } from '@unify/table-react';
+
+// Register computed columns
+addFormulaColumn('pnl_per_unit', 'ROUND(pnl / NULLIF(volume, 0), 4)');
+addFormulaColumn('trade_year', "DATE_PART('year', trade_date)::INTEGER");
+
+<Table db={db} table="trades" plugins={[formulas()]} />
+```
+
+## Programmatic API
+
+Add or remove formula columns dynamically. Use `formulaViewSql()` to get the underlying SQL with all computed columns included.
+
+```tsx
+import { addFormulaColumn, removeFormulaColumn, formulaViewSql } from '@unify/table-react';
+
+addFormulaColumn('margin', 'ROUND(pnl / NULLIF(notional, 0) * 100, 2)');
+
+// Get the generated view SQL
+formulaViewSql('trades');
+// → SELECT *, (ROUND(pnl / NULLIF(notional, 0) * 100, 2)) AS "margin" FROM "trades"
+
+removeFormulaColumn('margin');
+```
+
+## Expressions
+
+Any valid DuckDB SQL expression works — built-in functions, CASE statements, arithmetic,
+and type casts. Expressions are injected into the SELECT clause as computed columns.
+
+> **Tip: DuckDB Functions** You have access to the full DuckDB function library — `DATE_PART`, `ROUND`, `NULLIF`, `CASE WHEN`, string functions, and more. Check the DuckDB documentation for available functions.
+
+---
+
+# Row Grouping
+
+Group rows by one or more columns with expand/collapse and aggregation support.
+
+Row grouping lets users collapse rows into hierarchical groups by one or more columns.
+Combined with aggregations, it transforms a flat table into a pivot-like view — all powered
+by GROUP BY queries in DuckDB. This means grouping and aggregation run at database speed,
+not in JavaScript, so the experience stays snappy even on large datasets.
+
+Group by a single column to see totals per category, or nest multiple columns for a
+drilldown hierarchy (e.g. region, then product, then quarter). Each group header row
+shows the aggregated values and can be expanded to reveal the underlying rows.
+
+> **Info** See row grouping in action in the [Interactive Demo](#/demo) — the "Trades" panel groups by region with PnL aggregations.
+
+## Usage
+
+```tsx
+import { Table, rowGrouping } from '@unify/table-react';
+
+<Table db={db} table="sales" plugins={[rowGrouping()]} />
+```
+
+## Example
+
+## Aggregations
+
+Aggregations are configured when creating the plugin. Each entry specifies a column
+and an aggregation function. The aggregated values appear in the group header rows.
+
+```tsx
+import { Table, rowGrouping } from '@unify/table-react';
+
+<Table
+db={db}
+table="sales"
+plugins={[
+rowGrouping({
+aggregations: [
+{ field: 'revenue', fn: 'sum' },
+{ field: 'quantity', fn: 'avg' },
+{ field: 'orders', fn: 'count' },
+],
+defaultExpanded: false,
+}),
+]}
+initialGroupBy={['region', 'product']}
+/>
+```
+
+## Expand / Collapse
+
+Group header rows show aggregated values and can be expanded or collapsed.
+All grouping and aggregation happens in SQL via DuckDB GROUP BY, so performance
+scales to millions of rows.
+
+> **Info: Available aggregations** Built-in aggregation functions include `sum`, `avg`, `count`, 
+`min`, `max`, `count_distinct`, `median`, 
+`first`, `last`, `mode`, `stddev`, 
+`variance`, and `string_agg`. You can also register custom aggregations
+via `registerAgg()`.
+
+---
+
+# Formatting
+
+Conditional cell formatting with threshold, negative, and positive value rules.
+
+## Usage
+
+```tsx
+import { Table, formatting } from '@unify/table-react';
+
+<Table db={db} table="portfolio" plugins={[formatting()]} />
+```
+
+## Example
+
+## Formatting Rules
+
+Pass a rules map to `formatting()` at creation time. Each key is a column
+field name (or `'*'` for all columns), and the value is an array
+of `ConditionalRule` objects. Three helpers produce common rules:
+
+```tsx
+import { formatting, positive, negative, threshold } from '@unify/table-react';
+
+<Table
+db={db}
+table="portfolio"
+plugins={[
+formatting({
+pnl: [...positive('#22c55e'), ...negative('#ef4444')],
+notional: threshold([
+{ max: 100000, style: { color: '#f59e0b' } },
+{ max: 500000, style: { color: '#22c55e', fontWeight: 'bold' } },
+]),
+}),
+]}
+/>
+```
+
+## Rule Types
+
+`negative(color?)` applies when the cell value is &lt; 0. 
+`positive(color?)` applies when &gt; 0. 
+`threshold(ranges)` applies styles based on value ranges.
+For custom logic, write a rule directly with a `when` function:
+
+```tsx
+formatting({
+status: [
+{ when: (value) => value === 'Active', style: { color: '#22c55e' } },
+{ when: (value) => value === 'Inactive', style: { color: '#ef4444' } },
+],
+})
+```
+
+---
+
+# Status Bar
+
+Enriches the table footer with selection-based aggregations like sum, average, count, min, and max.
+
+## Usage
+
+```tsx
+import { Table, statusBar } from '@unify/table-react';
+
+<Table db={db} table="transactions" plugins={[statusBar()]} />
+```
+
+## Example
+
+## Behavior
+
+When cells are selected, the footer displays aggregation values computed from
+the selected range. For numeric columns this includes sum, average, min, and max.
+For all columns, the count of selected cells is shown. Aggregations update
+reactively as the selection changes.
+
+---
+
+# Presets
+
+Pre-configured plugin bundles for common use cases.
+
+The plugin pages showed how to compose features one by one. Presets bundle them for common
+use cases — instead of assembling plugins individually, pick a preset and customize from
+there. Each preset returns a standard plugin array, so you can spread it and add or override
+individual plugins as needed.
+
+> **Tip: Start with a preset, then customize** Presets are just functions that return `TablePlugin[]`. You can use the spread
+operator to extend them: `[...spreadsheet(), myCustomPlugin()]`.
+
+## Comparison
+
+Each preset targets a different use case. The table below shows which plugins are included in each.
+
+Plugin
+spreadsheet()
+dataViewer()
+readOnly()
+
+{PRESET_PLUGINS.map((row) => (
+
+{row.plugin}
+{[row.spreadsheet, row.dataViewer, row.readOnly].map((val, i) => (
+
+{val === false ? "\u2014" : val === true ? "\u2713" : typeof val === "string" ? val : "\u2713"}
+
+))}
+
+))}
+
+## spreadsheet()
+
+Full editing experience: editing, clipboard, keyboard, filters, context menu, selection (range), column resize/reorder, formatting, status bar.
+
+## dataViewer()
+
+Analytics-oriented: filters, selection (multi), column resize/reorder, row grouping, views, formatting, status bar.
+
+## readOnly()
+
+Minimal: filters, column resize, formatting. No editing, no selection.
+
+## Custom Presets
+
+```tsx
+// Create your own preset by combining plugins
+function myPreset(): TablePlugin[] {
+return [
+filters(),
+selection('multi'),
+columnResize(),
+rowGrouping(),
+statusBar(),
+];
+}
+```
+
+---
+
+# Panels
+
+Side panels provide UI for filtering, grouping, column management, and more.
+
+Panels are slide-out UI components that provide configuration interfaces — filter builder, column manager, group-by picker, and more. Click the icons in the toolbar to open each panel. Only one panel is open at a time.
+
+## Built-in Panels
+
+Six panels ship with the table, each tied to a specific plugin or feature:
+
+**Filters** — visual filter builder with per-column predicates and combinators. Requires the `filters` plugin.
+**Group By** — drag-and-drop column grouping with aggregation configuration. Requires the `rowGrouping` plugin.
+**Columns** — show, hide, reorder, and pin columns. Works with the `columnReorder` and `columnPin` plugins.
+**Export** — export table data to CSV, JSON, or Parquet. Requires the `tableIO` plugin.
+**Displays** — switch between display modes (chart, stats, pivot, etc.) and configure display options.
+**Debug** — inspect the current SQL query, state, and performance metrics during development.
+
+## Panel Configuration
+
+Panels are enabled by default. You can disable them entirely or change their position relative to the table.
+
+```tsx
+// Disable panels entirely
+<Table panels={false} />
+
+// Panel position
+<Table panelPosition="left" />  // or "right" (default)
+```
+
+## Custom Panels
+
+Register your own panels alongside the built-in ones. Each descriptor specifies a key, label, optional icon, and a render function that receives the full `TableContext`.
+
+```tsx
+interface PanelDescriptor {
+key: string;
+label: string;
+icon?: React.ComponentType<{ size?: number }>;
+render: (ctx: TableContext) => ReactNode;
+}
+```
+
+> **Tip: Panel + Plugin Pattern** Custom panels work best when paired with a custom plugin. The plugin manages state and logic, while the panel provides the UI. This keeps your panel component thin and testable.
+
+---
+
+# Displays
+
+Alternative visualizations for your table data. Switch between table view and displays.
+
+> **Info** See all display types in action in the [Interactive Demo](#/demo) — each panel showcases a different display mode.
+
+## When to Use Displays
+
+Displays transform the same underlying data into different visual formats — without leaving the table context.
+Switch from a data grid to a chart, stats summary, or pivot table with a single click. Because displays
+share the same data source, any active filters, sorts, or groupings carry over automatically.
+
+> **Tip: One data source, many views** Displays are not separate pages or routes. They are alternative renderings of the same query result.
+This means you can filter your data in table view, then flip to a chart to visualize the filtered subset.
+
+## Two-Layer Architecture
+
+Each display is split into two layers that can be used independently:
+
+- **Core `DisplayType`** (in `@unify/table-core`) — defines the SQL builder,
+default config, and validation logic. This layer has zero dependencies and can run in any JS environment.
+
+- **React `DisplayDescriptor`** (in `@unify/table-react`) — provides the
+rendering component, config UI panel, and icon. This layer depends on React and the charts package.
+
+This separation means you can use the SQL builders from core to generate display queries server-side,
+or build your own rendering layer on top of the core types.
+
+## Adding Displays
+
+Pass an array of display definitions to the `displays` prop. Each display needs a unique `id`,
+a `type` matching one of the seven built-in displays, and a `config` object specific to that type.
+
+```tsx
+<Table
+db={db}
+table="orders"
+plugins={dataViewer()}
+displays={[
+{
+id: 'my-chart',
+type: 'chart',
+label: 'Revenue Chart',
+config: { type: 'bar', x: 'category', y: { field: 'amount', agg: 'sum' } },
+},
+]}
+/>
+```
+
+## Writing a Custom Display
+
+Custom displays follow the same two-layer pattern as built-ins. Define a core `DisplayType` (SQL
+builder, config, validation), then a React `DisplayDescriptor` (rendering + config UI).
+
+### Step 1 — Core type
+
+The core type has no React dependency — it generates SQL and defines configuration. This example
+creates a "Top N" display that shows the highest values in a column as cards.
+
+```tsx
+import { DisplayType, quoteIdent } from '@unify/table-core';
+
+interface TopNConfig {
+field: string;
+labelField: string;
+agg: 'sum' | 'avg' | 'max';
+limit: number;
+}
+
+const topNDisplayType: DisplayType<TopNConfig> = {
+key: 'top-n',
+label: 'Top N',
+description: 'Show the N highest values',
+
+buildSql(viewName, config) {
+return \`SELECT \${quoteIdent(config.labelField)} AS label,
+\${config.agg.toUpperCase()}(\${quoteIdent(config.field)}) AS value
+FROM \${quoteIdent(viewName)}
+GROUP BY \${quoteIdent(config.labelField)}
+ORDER BY value DESC LIMIT \${config.limit}\`;
+},
+
+defaultConfig(columns) {
+const num = columns.find(c => c.mappedType === 'number');
+const str = columns.find(c => c.mappedType === 'string');
+return { field: num?.name ?? '', labelField: str?.name ?? '', agg: 'sum', limit: 5 };
+},
+
+validate(config) {
+if (!config.field) return ['Value field is required'];
+if (!config.labelField) return ['Label field is required'];
+return null;
+},
+};
+```
+
+### Step 2 — React descriptor
+
+The descriptor provides the render component and config panel. Use `useDisplayData(sql, engine)` to
+fetch results from the SQL the core type generated.
+
+```tsx
+import { registerDisplayType, registerDisplay, useDisplayData } from '@unify/table-react';
+import type { DisplayRenderProps, DisplayConfigProps } from '@unify/table-react';
+
+function TopNRender({ sql, engine }: DisplayRenderProps<TopNConfig>) {
+const { rows, isLoading } = useDisplayData(sql, engine);
+if (isLoading) return <div>Loading...</div>;
+return (
+<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: 12 }}>
+{rows.map((r, i) => (
+<div key={i} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #333' }}>
+<div style={{ fontSize: 18, fontWeight: 700 }}>{String(r.value)}</div>
+<div style={{ fontSize: 12, opacity: 0.6 }}>{String(r.label)}</div>
+</div>
+))}
+</div>
+);
+}
+
+function TopNConfigPanel({ config, onChange, columns }: DisplayConfigProps<TopNConfig>) {
+const numCols = columns.filter(c => c.mappedType === 'number');
+const strCols = columns.filter(c => c.mappedType === 'string');
+return (
+<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+<label>Value field:
+<select value={config.field} onChange={e => onChange({ ...config, field: e.target.value })}>
+{numCols.map(c => <option key={c.name}>{c.name}</option>)}
+</select>
+</label>
+<label>Label field:
+<select value={config.labelField} onChange={e => onChange({ ...config, labelField: e.target.value })}>
+{strCols.map(c => <option key={c.name}>{c.name}</option>)}
+</select>
+</label>
+</div>
+);
+}
+
+// Register both layers — call once at app startup
+registerDisplayType(topNDisplayType);
+registerDisplay({ type: topNDisplayType, render: TopNRender, renderConfig: TopNConfigPanel });
+```
+
+### Step 3 — Use it
+
+```tsx
+<Table
+db={db}
+table="trades"
+displays={[{
+id: 'top-tickers',
+type: 'top-n',
+label: 'Top Tickers by PnL',
+config: { field: 'pnl', labelField: 'ticker', agg: 'sum', limit: 5 },
+}]}
+/>
+```
+
+**Core layer** defines the SQL — testable without React. 
+**React layer** renders results and provides a config panel. 
+`useDisplayData(sql, engine)` handles fetching, loading state, and caching. 
+`validate()` prevents broken queries from running.
+
+## Choosing a Display
+
+Each display type is designed for a specific analytical task. Use the guide below to pick the right one.
+
+Display
+Best for
+Example
+
+{USE_CASE_GUIDE.map((row) => (
+
+{row.display}
+{row.useCase}
+{row.example}
+
+))}
+
+## Available Displays
+
+{DISPLAYS.map((d) => (
+
+{d.name}
+{d.desc}
+
+))}
+
+---
+
+# Chart Display
+
+10 chart types: bar, line, area, pie, donut, scatter, histogram, heatmap, treemap, funnel.
+
+The chart display renders your table data as interactive ECharts visualizations. It supports bar, line,
+area, pie, donut, scatter, histogram, heatmap, treemap, and funnel charts — all driven by SQL
+aggregation queries that DuckDB executes before the data reaches the browser.
+
+> **Info** See charts in action in the [Interactive Demo](#/demo) — the Volume Chart and PnL Chart panels use bar and line displays.
+
+## Chart Type Guide
+
+- **Bar** — compare discrete categories (revenue by region, counts by status)
+
+- **Line** — show trends over an ordered axis (daily sales, monthly growth)
+
+- **Area** — like line, but emphasizes volume (cumulative totals, stacked contributions)
+
+- **Pie / Donut** — show proportions of a whole (market share, category breakdown)
+
+- **Scatter** — reveal relationships between two numeric variables (price vs. quantity)
+
+- **Histogram** — visualize the distribution of a single numeric column (order amounts)
+
+- **Heatmap** — show density or intensity across two dimensions (hour vs. day activity)
+
+- **Treemap** — display hierarchical proportions (nested category breakdowns)
+
+- **Funnel** — show sequential drop-off stages (conversion pipeline, process stages)
+
+## Bar Chart
+
+## Configuration
+
+```tsx
+{
+type: 'bar',       // bar | line | area | pie | donut | scatter | histogram | heatmap | treemap | funnel
+x: 'category',    // X-axis field
+y: { field: 'amount', agg: 'sum' },  // Y-axis: field + aggregation
+series: 'region',  // Optional: group by color
+sort: 'value',     // Sort by value or name
+horizontal: false, // Horizontal bars
+stacked: false,    // Stack series
+limit: 5000,       // Max data points
+}
+```
+
+> **Info: Performance limit** Charts default to a `LIMIT 5000` on the aggregation query to keep rendering fast.
+You can increase this value in the config, but large point counts may cause browser lag with
+interactive features like tooltips and zoom.
+
+---
+
+# Stats Display
+
+Summary statistic cards with aggregations per column. Compact notation (K/M/B/T) for large numbers.
+
+The stats display renders summary cards — one per aggregation — with compact number notation (K/M/B/T).
+Ideal for dashboards where you need quick KPIs at a glance. Each card runs a single SQL aggregation
+against the current (potentially filtered) data, so the numbers always reflect what the user sees.
+
+> **Info** See stats in action in the [Interactive Demo](#/demo) — the "Stats" panel shows aggregated trade metrics.
+
+## Stats Cards
+
+## Configuration
+
+```tsx
+{
+fields: [
+{ field: 'amount', agg: 'sum', label: 'Total Revenue' },
+{ field: 'amount', agg: 'avg', label: 'Avg Order' },
+{ field: 'id', agg: 'count', label: 'Order Count' },
+{ field: 'amount', agg: 'max', label: 'Largest Order' },
+],
+layout: 'grid',  // grid | row | column
+}
+```
+
+## Supported Aggregations
+
+```tsx
+// Built-in aggregations:
+// sum, avg, count, min, max, count_distinct,
+// median, first, last, any, mode, stddev, variance, string_agg
+
+// Custom aggregations via registerAgg():
+import { registerAgg } from '@unify/table-core';
+registerAgg('p95', (field) => \`PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY \${field})\`);
+```
+
+---
+
+# Pivot Display
+
+Cross-tabulation matrix with GROUP BY and client-side pivoting. Supports row and column totals.
+
+The pivot display creates a cross-tabulation matrix from your data. Rows become one dimension,
+columns become another, and cells show aggregated values. It is the SQL `GROUP BY` equivalent
+of a spreadsheet pivot table — the grouping and aggregation happen in DuckDB, then the result is
+pivoted client-side into a matrix layout with optional row and column totals.
+
+## Pivot Table
+
+## Configuration
+
+```tsx
+{
+rowField: 'region',       // Row grouping field
+colField: 'category',     // Column grouping field
+valueField: 'amount',     // Value to aggregate
+agg: 'sum',               // Aggregation function
+showRowTotals: true,      // Show total column on the right
+showColTotals: true,      // Show total row at the bottom
+}
+```
+
+## Styling
+
+Pivot tables use `utbl-pivot-*` CSS classes for styling. Override them to customize appearance.
+
+```css
+.utbl-pivot-cell { padding: 4px 8px; text-align: right; }
+.utbl-pivot-header { font-weight: 600; }
+.utbl-pivot-total { background: var(--pivot-total-bg); }
+```
+
+---
+
+# Summary Display
+
+Auto-profile every column via DuckDB `SUMMARIZE`. Lazy-loaded histograms per card.
+
+The summary display auto-profiles every column in your table using DuckDB's `SUMMARIZE` command.
+Each column gets a card showing distribution, null rate, unique count, and a lazy-loaded histogram.
+This is the fastest way to understand a new dataset — no configuration required.
+
+## Column Profiles
+
+## How It Works
+
+The summary display runs DuckDB's built-in `SUMMARIZE` statement to compute per-column statistics including min, max, unique count, null count, and approximate quantiles. Each column card lazily loads a histogram when scrolled into view.
+
+## Configuration
+
+```tsx
+{
+// Summary display uses auto-detection, minimal config needed.
+// Identity columns (id, *_id) are excluded by default.
+excludeColumns: ['internal_notes'],  // Additional columns to exclude
+}
+```
+
+## Output Per Column
+
+```tsx
+// Each column card shows:
+// - Column name and type
+// - Min / Max values
+// - Unique count
+// - Null count and percentage
+// - Approximate quartiles (numeric columns)
+// - Histogram (lazy-loaded on scroll)
+```
+
+---
+
+# Correlation Display
+
+Pairwise Pearson correlation heatmap for numeric columns using DuckDB `CORR()`.
+
+The correlation display computes pairwise Pearson correlation coefficients between all numeric columns,
+rendered as an ECharts heatmap. Use it to quickly identify relationships between variables — for example,
+whether discount percentage correlates with order value, or if two metrics move together.
+
+## Correlation Matrix
+
+## How It Works
+
+The display automatically detects numeric columns, computes pairwise `CORR()` values via SQL, and renders an ECharts heatmap. Index-based aliases (`p_i_j`) keep the SQL compact for large column sets.
+
+## Configuration
+
+```tsx
+{
+// Correlation display auto-detects numeric columns.
+// Identity columns (id, *_id) are excluded by default.
+columns: ['price', 'quantity', 'discount', 'total'],  // Optional: explicit column list
+}
+```
+
+## Interpreting Results
+
+```tsx
+// Correlation values range from -1 to 1:
+//  1.0  = perfect positive correlation
+//  0.0  = no linear correlation
+// -1.0  = perfect negative correlation
+//
+// Color scale: red (negative) -> white (zero) -> blue (positive)
+```
+
+---
+
+# Timeline Display
+
+Time-bucketed chart using `date_trunc`. Reuses `buildBarLineOption` from the charts package.
+
+The timeline display buckets your data by time intervals (day, week, month, quarter, year) and renders
+a time-series chart. Ideal for understanding how metrics evolve over time — pick a date column,
+choose a bucket size, and the display generates a `date_trunc`-based SQL query that groups
+and aggregates your data into uniform time periods.
+
+> **Info** See the timeline in action in the [Interactive Demo](#/demo) — the "PnL Timeline" panel shows trade PnL over time.
+
+## Time Series
+
+## Configuration
+
+```tsx
+{
+dateField: 'created_at',      // Date/timestamp column
+bucket: 'month',              // year | quarter | month | week | day | hour
+valueField: 'amount',         // Value to aggregate
+agg: 'sum',                   // Aggregation function
+chartType: 'bar',             // bar | line | area
+}
+```
+
+## Date Bucketing
+
+The SQL builder uses DuckDB's `date_trunc` function to bucket timestamps into uniform intervals. This ensures consistent spacing even when data has gaps.
+
+```sql
+-- Generated SQL for monthly bucketing:
+SELECT date_trunc('month', "created_at") AS bucket,
+SUM("amount") AS value
+FROM "orders"
+GROUP BY bucket
+ORDER BY bucket
+```
+
+---
+
+# Outliers Display
+
+IQR and z-score outlier detection with inline SVG box plot and outlier data table.
+
+The outliers display detects statistical outliers using either IQR (Interquartile Range) or z-score
+methods. Results are shown as an inline SVG box plot alongside a table of outlier records. This is
+useful for data quality checks — quickly surface unusually large orders, price spikes, or any
+values that fall outside the expected range.
+
+## Outlier Detection
+
+## Configuration
+
+```tsx
+{
+field: 'amount',          // Numeric field to analyze
+method: 'iqr',            // iqr | zscore
+threshold: 1.5,           // IQR multiplier (default 1.5) or z-score cutoff (default 3)
+}
+```
+
+## IQR Method
+
+The interquartile range method flags values below `Q1 - 1.5 * IQR` or above `Q3 + 1.5 * IQR`.
+A CTE computes quartile stats, then a sentinel `UNION ALL` row (wrapped in a subquery) carries the box plot statistics.
+
+## Z-Score Method
+
+The z-score method flags values where `|value - mean| / stddev &gt; threshold`. Default threshold is 3 standard deviations.
+
+```sql
+-- Generated SQL for IQR detection:
+WITH stats AS (
+SELECT PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY "amount") AS q1,
+PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY "amount") AS q3
+FROM "orders"
+),
+bounds AS (
+SELECT q1, q3, (q3 - q1) AS iqr,
+q1 - 1.5 * (q3 - q1) AS lower,
+q3 + 1.5 * (q3 - q1) AS upper
+FROM stats
+)
+SELECT * FROM "orders"
+WHERE "amount" < (SELECT lower FROM bounds)
+OR "amount" > (SELECT upper FROM bounds)
+```
+
+---
+
+# Charts
+
+ECharts wrapper and SQL chart builders from `@unify/table-charts`.
+
+The charts package wraps Apache ECharts with SQL-driven data builders. Query the same `trades_sample` data as the table examples, then pass the results through an option builder to get a complete ECharts config.
+
+## Available Chart Types
+
+Each chart type has a dedicated option builder and, where applicable, a SQL builder that generates the aggregation query.
+
+**Bar / Line / Area** — categorical or time-series data with optional stacking. SQL builder: `barLineSql`.
+**Pie / Donut** — proportional data with optional series for nested rings. SQL builder: `pieSql`.
+**Scatter** — two numeric axes for correlation analysis. SQL builder: `scatterSql`.
+**Histogram** — distribution of a single numeric column with configurable bin count. SQL builder: `histogramSql`.
+**Heatmap** — two-dimensional density using color intensity. SQL builder: `heatmapSql`.
+**Treemap** — hierarchical proportional areas. Config-only (no dedicated SQL builder).
+**Funnel** — sequential stage drop-off. Config-only (no dedicated SQL builder).
+
+## Option Builders
+
+Option builders transform query results into ECharts option objects. Pass the data rows and a chart config, and get back a complete option ready to render.
+
+```tsx
+import { buildBarLineOption, buildPieOption, buildScatterOption,
+buildHistogramOption, buildHeatmapOption, buildTreemapOption,
+buildFunnelOption, DARK_CHART_THEME } from '@unify/table-charts';
+
+// Query data from DuckDB
+const data = await db.runAndRead(
+'SELECT ticker, SUM(pnl) AS total_pnl FROM trades GROUP BY ticker'
+);
+
+// Build the ECharts option
+const option = buildBarLineOption(data, {
+type: 'bar',
+x: 'ticker',
+y: { field: 'total_pnl', agg: 'sum' },
+theme: DARK_CHART_THEME,
+});
+```
+
+## EChartsWrapper
+
+A thin React component that manages the ECharts instance lifecycle — initialization, resizing, theme changes, and disposal. Pass any ECharts option object.
+
+```tsx
+import { EChartsWrapper } from '@unify/table-charts';
+
+<EChartsWrapper option={option} style={{ width: '100%', height: 400 }} />
+```
+
+## Sparkline
+
+A minimal inline chart for embedding in table cells, cards, or tight layouts. Renders a tiny line or bar chart with no axes, labels, or interactivity.
+
+```tsx
+import { Sparkline } from '@unify/table-charts';
+
+<Sparkline data={[10, 20, 15, 30, 25]} type="line" width={80} height={24} />
+```
+
+> **Tip: Standalone vs Display System** For quick one-off charts, use `EChartsWrapper` directly with an option builder. For charts that live alongside your table data and respond to the table's filters and grouping, use the "chart" display type — it handles SQL generation, data fetching, and a configuration UI automatically.
+
+---
+
+# SQL Builder
+
+Immutable, chainable SQL builder with four statement types.
+
+The SQL builder is the foundation of Unify Table. It's an immutable, chainable API that generates safe, properly escaped SQL from TypeScript. Every sort, filter, and group-by operation in the table ultimately becomes a SQL query built by this layer.
+
+Each method call returns a new builder instance, so you can safely branch queries without mutating shared state. This makes it easy to build base queries and extend them for different purposes.
+
+> **Info: Used internally by Table** You don't need to use the SQL builder to render a table — the `&lt;Table&gt;` component
+and its [DataSource](#/query-engine) use it internally
+to generate all queries. Reach for the builder directly when you need custom queries outside the
+table lifecycle, such as dashboards, reports, or data transformations.
+
+## Why a SQL Builder?
+
+Instead of reimplementing sort, filter, and aggregate logic in JavaScript, Unify Table delegates to DuckDB — a real analytical database. The SQL builder ensures every query is properly escaped and optimized. This means you get database-grade performance for operations like sorting millions of rows or computing aggregations, without writing raw SQL strings.
+
+The builder API is designed to compose naturally. You can start with a base query, then layer on filters, sorting, and limits as needed. Because each call returns a new instance, you can keep a reference to a partially-built query and extend it in different directions.
+
+## select()
+
+The most commonly used builder. Chain `.from()`, `.where()`, `.orderBy()`, `.limit()`, and `.offset()` to construct SELECT queries. You can also use `.groupBy()` and `.having()` for aggregations.
+
+```tsx
+import { select, gt } from '@unify/table-core';
+
+const sql = select('name', 'salary')
+.from('employees')
+.where(gt('salary', 80000))
+.orderBy('salary', 'desc')
+.limit(10)
+.sql();
+// SELECT "name", "salary" FROM "employees"
+//   WHERE "salary" > 80000 ORDER BY "salary" DESC LIMIT 10
+```
+
+Since the builder is immutable, you can create reusable base queries and extend them:
+
+```tsx
+const base = select().from('employees').where(gt('salary', 80000));
+
+// Branch into two different queries from the same base
+const topEarners = base.orderBy('salary', 'desc').limit(5).sql();
+const byName     = base.orderBy('name', 'asc').sql();
+```
+
+## update()
+
+Build UPDATE statements with `.set()` and optional `.where()` clauses.
+
+```tsx
+import { update, eq } from '@unify/table-core';
+
+const sql = update('employees')
+.set('salary', 95000)
+.where(eq('name', 'Alice'))
+.sql();
+// UPDATE "employees" SET "salary" = 95000 WHERE "name" = 'Alice'
+```
+
+## insertInto()
+
+Build INSERT statements. Pass a plain object with column-value pairs to `.values()`.
+
+```tsx
+import { insertInto } from '@unify/table-core';
+
+const sql = insertInto('employees')
+.values({ name: 'Zara', department: 'Engineering', salary: 110000 })
+.sql();
+```
+
+## deleteFrom()
+
+Build DELETE statements. Always add a `.where()` clause to avoid deleting all rows.
+
+```tsx
+import { deleteFrom, eq } from '@unify/table-core';
+
+const sql = deleteFrom('employees')
+.where(eq('department', 'Research'))
+.sql();
+```
+
+## Safety
+
+All values and identifiers are automatically escaped by the builder. You never need to worry about SQL injection when using the builder API. Under the hood, three utilities handle escaping:
+
+> **Warning: SQL Injection Protection** **quoteIdent(name)** — wraps column and table names in double quotes, escaping internal double quotes. Prevents injection through identifiers.
+**escapeString(value)** — wraps string values in single quotes, doubling internal single quotes. Handles special characters safely.
+**toSqlLiteral(value)** — routes values to the correct escaping: NULL for null/undefined, numbers and booleans as-is, strings through escapeString, dates as ISO strings.
+
+Never concatenate raw user input into SQL strings. Always use the builder API or the filter predicates, which handle escaping automatically.
+
+---
+
+# Filter System
+
+Composable SQL filter predicates with type-safe builders.
+
+The filter system provides a composable, type-safe API for building SQL WHERE clauses. Filters are plain objects that compose with `and()`, `or()`, and `not()`. Every value is automatically escaped to prevent SQL injection.
+
+> **Info: Powering the filters plugin** The [filters plugin](#/plugins/filters) uses these
+predicates internally — when a user types `&gt; 100` in a filter input, it's parsed
+into a `gt()` predicate. Use these functions directly when building custom filter UIs
+or programmatic filters via `datasource.setFilters()`.
+
+Pre-filtered to AAPL and MSFT trades with PnL above 500. Try editing the filter inputs — use syntax like `&gt; 1000`, `50..500`, or `GOOG,AMZN`.</>}
+height={420}
+/>
+
+## Filter Predicates
+
+Each predicate targets a single column and produces a SQL condition. String predicates like `contains`, `startsWith`, and `endsWith` use case-insensitive ILIKE matching with properly escaped wildcards.
+
+```tsx
+import { eq, neq, gt, gte, lt, lte, contains, startsWith,
+endsWith, oneOf, between, isNull, isNotNull } from '@unify/table-core';
+
+eq('status', 'Active')          // "status" = 'Active'
+gt('salary', 80000)             // "salary" > 80000
+contains('name', 'ali')         // "name" ILIKE '%ali%'
+oneOf('dept', ['Sales','Eng'])  // "dept" IN ('Sales','Eng')
+between('price', 10, 100)       // "price" BETWEEN 10 AND 100
+isNull('email')                 // "email" IS NULL
+```
+
+## Composition
+
+Combinators let you build arbitrarily complex filter trees. `and()` requires all conditions to match, `or()` requires at least one, and `not()` inverts a condition. They nest freely, so you can express any boolean logic.
+
+```tsx
+import { and, or, not } from '@unify/table-core';
+
+const filter = and(
+or(contains('category', 'Laptop'), contains('category', 'Monitor')),
+between('price', 200, 2000),
+not(eq('status', 'Discontinued'))
+);
+```
+
+Since filters are plain objects, you can build them dynamically based on user input:
+
+```tsx
+// Build filters conditionally
+const conditions = [];
+if (minPrice) conditions.push(gte('price', minPrice));
+if (maxPrice) conditions.push(lte('price', maxPrice));
+if (category) conditions.push(eq('category', category));
+
+const filter = conditions.length > 0 ? and(...conditions) : undefined;
+```
+
+> **Tip: Filters as Data** Because filters are plain objects (not class instances), they serialize cleanly to JSON. This makes it easy to persist filter state, share it across tabs, or include it in saved views.
+
+## Free-Form Parser
+
+The free-form parser converts human-readable expressions into filter predicates. It supports comparison operators, comma-separated lists (becomes IN), range syntax with `..` (becomes BETWEEN), and date-aware parsing.
+
+```tsx
+import { parseFilterExpr } from '@unify/table-core';
+
+parseFilterExpr('amount', '>= 100')        // "amount" >= 100
+parseFilterExpr('category', 'A,B,C')       // IN ('A','B','C')
+parseFilterExpr('price', '50..500')         // BETWEEN 50 AND 500
+parseFilterExpr('date', '2024-01', 'date')  // date range for month
+```
+
+---
+
+# Query Engine
+
+The low-level interface between your app and DuckDB.
+
+The QueryEngine is the bridge between your app and DuckDB. It wraps a TableConnection with convenience methods for common operations — querying rows, counting records, getting distinct values, and exporting data to Parquet.
+
+Most of the time, you won't use the QueryEngine directly — the `&lt;Table&gt;` component and its plugins manage queries internally. But when you need to run custom queries, build dashboards outside the table, or integrate with other parts of your app, the QueryEngine gives you direct access to the same DuckDB connection.
+
+## TableConnection
+
+The minimal interface that the QueryEngine wraps. Any object that implements these three methods can serve as a connection — this makes it easy to mock in tests or adapt to different DuckDB-WASM setups.
+
+```tsx
+interface TableConnection {
+run(query: string): Promise<void>;
+runAndRead(query: string): Promise<Record<string, unknown>[]>;
+runAndReadParquetBlob(query: string): Promise<Blob>;
+}
+```
+
+## DuckDB-WASM Setup
+
+A typical setup initializes DuckDB-WASM, loads your data, and passes the connection to the table. The connection object you pass just needs to satisfy the `TableConnection` interface above.
+
+```tsx
+import * as duckdb from '@duckdb/duckdb-wasm';
+
+// Initialize DuckDB-WASM
+const bundle = await duckdb.selectBundle(duckdb.getJsDelivrBundles());
+const worker = new Worker(bundle.mainWorker!);
+const logger = new duckdb.ConsoleLogger();
+const db = new duckdb.AsyncDuckDB(logger, worker);
+await db.instantiate(bundle.mainModule);
+
+// Create a connection that satisfies TableConnection
+const conn = await db.connect();
+
+// Load data, then pass conn to <Table db={conn} table="trades" />
+```
+
+> **Tip: When to use QueryEngine directly** Use the `&lt;Table&gt;` component for standard table UIs — it manages the QueryEngine internally. Use the QueryEngine directly when you need to run ad-hoc queries, build custom visualizations, or fetch data outside the table lifecycle.
+
+## QueryEngine
+
+The engine provides typed convenience methods so you don't need to write raw SQL for common operations. All methods return promises and use the underlying connection's `runAndRead`.
+
+```tsx
+import { createQueryEngine } from '@unify/table-core';
+
+const engine = createQueryEngine(db);
+const cols = await engine.columns('employees');
+const total = await engine.count('employees');
+const depts = await engine.distinct('employees', 'department');
+const rows = await engine.query('SELECT * FROM employees LIMIT 10');
+```
+
+## DataSource
+
+The DataSource sits on top of the QueryEngine and manages reactive state — sort order, active filters, group-by columns, and pagination. When you change any of these, the DataSource automatically rebuilds and re-executes the SQL query. Multiple changes within the same microtask are batched into a single query.
+
+```tsx
+import { createDataSource } from '@unify/table-core';
+
+const ds = createDataSource(engine, 'employees');
+ds.setFilters([gt('salary', 80000)]);
+ds.setSort([{ field: 'salary', dir: 'desc' }]);
+// Both mutations coalesce into one query via queueMicrotask
+```
+
+> **Info: Microtask Batching** Multiple state changes within the same microtask are batched into a single SQL query. This means calling `setFilters()` and `setSort()` in the same synchronous block only triggers one re-query, not two.
+
+---
+
+# Headless Mode
+
+Use `useTableContext` for full control over rendering.
+
+Everything shown in the previous pages — filters, selection, editing, grouping, displays — works
+through the `TableContext` object. The `&lt;Table&gt;` component renders
+that context with a built-in UI. The headless API gives you the same context without the UI,
+so you can render however you want.
+
+You get the same DuckDB-powered data pipeline, the same plugin system, and the same reactive
+state management — just without the built-in table markup and styling.
+
+## When to Go Headless
+
+**Custom table UI** — when you need a completely different table layout, custom row components, or design system integration that the built-in table can't accommodate.
+**Non-table visualizations** — dashboards, cards, or other views that consume the same filtered/sorted/grouped data pipeline but don't render as a table.
+**Hybrid layouts** — combine table data with other components (maps, charts, detail panels) that all react to the same filter and sort state.
+**Testing** — write unit tests against the context API without rendering the full table component.
+
+## useTableContext
+
+Call the hook with the same options you'd pass to `&lt;Table&gt;` — a database connection, table name, column definitions, and plugins. It returns a `TableContext` object with all data and mutation methods.
+
+```tsx
+import { useTableContext } from '@unify/table-react';
+
+function CustomTable() {
+const ctx = useTableContext({ db, table: 'employees', plugins: [filters()] });
+
+return (
+<div>
+<p>Total: {ctx.totalCount} rows</p>
+<p>Sort: {JSON.stringify(ctx.sort)}</p>
+<table>
+<thead>
+<tr>
+{ctx.columns.map(col => <th key={col.field}>{col.label}</th>)}
+</tr>
+</thead>
+<tbody>
+{ctx.rows.map((row, i) => (
+<tr key={i}>
+{ctx.columns.map(col => <td key={col.field}>{String(row[col.field])}</td>)}
+</tr>
+))}
+</tbody>
+</table>
+</div>
+);
+}
+```
+
+## Context API
+
+The `TableContext` object exposes both read-only state and mutation methods. State properties are reactive — they update automatically when the underlying data or configuration changes.
+
+**State:** `columns`, `rows`, `sort`, `filters`, `groupBy`, `totalCount`, `isLoading`, `selection`.
+
+**Mutations:** `setSort()`, `setFilters()`, `startEditing()`, `commitEdit()`, and more — depending on which plugins you've enabled.
+
+> **Info: Plugins Still Work** All plugins (selection, editing, keyboard, clipboard, etc.) work in headless mode. They extend the context with additional state and methods. The only difference is that you're responsible for rendering the UI that uses them.
+
+---

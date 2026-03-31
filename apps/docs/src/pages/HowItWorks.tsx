@@ -57,7 +57,7 @@ function ArchitectureDiagram() {
         <div style={labelStyle}>@unify/table-react</div>
         <div style={titleStyle}>React Layer</div>
         <div style={descStyle}>
-          Table component, 15 plugins, panels, displays, themes. Virtualizes rows via TanStack Virtual. Only renders the visible viewport.
+          Table component, 16 plugins, panels, displays, themes. Virtualizes rows via TanStack Virtual. Only renders the visible viewport.
         </div>
         <div
           style={{
@@ -234,56 +234,22 @@ export default function HowItWorks() {
       </p>
 
       {/* Plugin Composition */}
-      <Heading level={2} id="plugin-composition">Plugin Composition, Not Prop Explosion</Heading>
+      <Heading level={2} id="plugin-composition">Plugin Composition</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)", lineHeight: 1.7 }}>
-        Traditional table libraries give you a mega-component with hundreds of props. Want sorting?
-        Add <code>sortable=&#123;true&#125;</code>. Want filtering? Add <code>filterable=&#123;true&#125;</code> plus
-        a <code>filterModel</code> plus an <code>onFilterChange</code> callback. The props accumulate until
-        the component signature is unreadable and every feature interacts with every other feature in
-        unpredictable ways.
-      </p>
-      <p className="text-[13px] mb-4" style={{ color: "var(--doc-text-secondary)", lineHeight: 1.7 }}>
-        Unify Table uses a plugin architecture instead. Each feature is an independent module:
+        Features are independent plugins, not props on a mega-component. Each plugin — filtering,
+        selection, editing, clipboard — is its own module with its own state, lifecycle, and bundle weight.
+        You compose them as an array, paying only for what you use:
       </p>
 
-      <CodeBlock code={`// Traditional approach: prop explosion
-<DataGrid
-  sortable={true}
-  filterable={true}
-  editable={true}
-  selectionMode="multi"
-  onSelectionChange={handleSelection}
-  filterModel={filters}
-  onFilterChange={setFilters}
-  resizable={true}
-  groupBy={groupCols}
-  onGroupChange={setGroupCols}
-  // ... 50 more props
-/>`} language="tsx" filename="Before" />
-
-      <CodeBlock code={`// Unify Table: composable plugins
-<Table
+      <CodeBlock code={`<Table
   db={db}
   table="trades"
-  plugins={[
-    filters(),
-    selection('multi'),
-    editing(),
-    keyboard(),
-    columnResize(),
-    contextMenu(),
-  ]}
-/>`} language="tsx" filename="After" />
+  plugins={[filters(), selection('multi'), editing(), keyboard()]}
+/>`} language="tsx" />
 
-      <p className="text-[13px] mb-2 mt-4" style={{ color: "var(--doc-text-secondary)", lineHeight: 1.7 }}>
-        This matters for several reasons:
+      <p className="text-[13px] mb-6" style={{ color: "var(--doc-text-secondary)", lineHeight: 1.7 }}>
+        See the <a href="#/plugins">Plugins</a> page for the full architecture, lifecycle, and list of all 16 built-in plugins.
       </p>
-      <ul className="text-[13px] mb-6 space-y-2 pl-5" style={{ color: "var(--doc-text-secondary)", lineHeight: 1.7, listStyleType: "disc" }}>
-        <li><strong style={{ color: "var(--doc-text)" }}>Bundle size</strong> — Only include what you use. A read-only table doesn't ship editing code.</li>
-        <li><strong style={{ color: "var(--doc-text)" }}>No conflicts</strong> — Plugins declare their dependencies explicitly. If <code>clipboard()</code> needs <code>selection()</code>, it says so.</li>
-        <li><strong style={{ color: "var(--doc-text)" }}>Custom plugins</strong> — You build plugins with the same API the built-in ones use. No second-class citizens.</li>
-        <li><strong style={{ color: "var(--doc-text)" }}>Predictable lifecycle</strong> — Every plugin follows the same path: init, transform, render, cleanup. No surprises.</li>
-      </ul>
 
       {/* The SQL Pipeline */}
       <Heading level={2} id="sql-pipeline">The SQL Pipeline</Heading>

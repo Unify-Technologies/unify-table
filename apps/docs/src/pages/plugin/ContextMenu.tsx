@@ -32,6 +32,11 @@ export default function ContextMenuPlugin() {
 <Table db={db} table="orders" plugins={[contextMenu()]} />`} language="tsx" />
 
       <Heading level={2} id="example">Example</Heading>
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        This example combines <code>contextMenu()</code> with <code>clipboard()</code>,
+        <code>selection()</code>, <code>editing()</code>, and <code>keyboard()</code> —
+        notice how the menu items change based on which plugins are active.
+      </p>
       <Example id="with-context-menu" description="Right-click on a cell, a column header, or a multi-selection to see contextual actions." height={350} />
 
       <Heading level={2} id="custom-items">Custom Menu Items</Heading>

@@ -30,6 +30,10 @@ export default function EditingPlugin() {
 <Table db={db} table="employees" plugins={[editing()]} />`} language="tsx" />
 
       <Heading level={2} id="example">Example</Heading>
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        The same trade data, now with <code>editing()</code>, <code>keyboard()</code>, and <code>selection('range')</code>.
+        Column definitions specify the editor type and validation rules for each field.
+      </p>
       <Example id="with-editing" description="Double-click any cell to edit. Ticker and Desk use select dropdowns. PnL validates numeric input. Tab moves between cells." height={350} />
 
       <Heading level={2} id="validation">Validation</Heading>

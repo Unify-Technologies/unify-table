@@ -8,7 +8,7 @@ import { Database, Puzzle, BarChart3, Code2, ArrowRight, Zap, Layers, Table2 } f
 
 const FEATURES = [
   { icon: Database, title: "DuckDB-Powered", desc: "Sort, filter, group, aggregate — all in SQL. Handles millions of rows natively in the browser.", color: "#3b82f6" },
-  { icon: Puzzle, title: "Plugin Composition", desc: "15 plugins, mix and match. Not a mega-component with 200 props. Start minimal, add what you need.", color: "#8b5cf6" },
+  { icon: Puzzle, title: "Plugin Composition", desc: "16 plugins, mix and match. Not a mega-component with 200 props. Start minimal, add what you need.", color: "#8b5cf6" },
   { icon: BarChart3, title: "7 Display Types", desc: "Charts, stats, pivot, summary, correlation, timeline, and outlier detection. All driven by SQL.", color: "#10b981" },
   { icon: Code2, title: "Type-Safe SQL", desc: "Immutable, chainable query builder with composable filter predicates. No raw string concatenation.", color: "#f59e0b" },
 ];
@@ -25,7 +25,7 @@ import '@unify/table-react/themes';
 />`;
 
 const STATS = [
-  { label: "Plugins", value: "15", icon: Puzzle },
+  { label: "Plugins", value: "16", icon: Puzzle },
   { label: "Display Types", value: "7", icon: Layers },
   { label: "Chart Types", value: "10", icon: BarChart3 },
   { label: "Max Rows", value: "1M+", icon: Zap },
@@ -64,7 +64,7 @@ export default function Home() {
         </p>
         <p className="text-sm max-w-xl mx-auto mb-8" style={{ color: textMuted }}>
           Sort, filter, group, and aggregate millions of rows — all in DuckDB-WASM.<br className="hidden sm:inline" />
-          15 composable plugins. 7 display types. Zero-config to fully headless.
+          16 composable plugins. 7 display types. Zero-config to fully headless.
         </p>
         <div className="flex items-center justify-center gap-3">
           <Link

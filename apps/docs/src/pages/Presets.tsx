@@ -35,9 +35,10 @@ export default function Presets() {
       </p>
 
       <p className="text-[13px] mb-3" style={{ color: textSec }}>
-        Presets are curated plugin bundles for common use cases. Instead of assembling plugins
-        individually, pick a preset and customize from there. Each preset returns a standard
-        plugin array, so you can spread it and add or override individual plugins as needed.
+        The plugin pages showed how to compose features one by one. Presets bundle them for common
+        use cases — instead of assembling plugins individually, pick a preset and customize from
+        there. Each preset returns a standard plugin array, so you can spread it and add or override
+        individual plugins as needed.
       </p>
       <Callout type="tip" title="Start with a preset, then customize">
         Presets are just functions that return <code>TablePlugin[]</code>. You can use the spread

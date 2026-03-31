@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generate-llms.mjs && vite build",
+    "generate:llms": "node scripts/generate-llms.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -28,6 +28,10 @@ export default function FiltersPlugin() {
 <Table db={db} table="products" plugins={[filters()]} />`} language="tsx" />
 
       <Heading level={2} id="example">Example</Heading>
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Same <code>trades_sample</code> table as the <a href="#/table-basics" style={{color: "var(--doc-accent)"}}>basic example</a>,
+        now with <code>filters()</code> added. Notice the filter row below the headers.
+      </p>
       <Example id="with-filters" description="Pre-filtered to profitable AAPL trades. Try typing GOOG,META in the ticker filter, or > 500 in notional." height={350} />
 
       <Heading level={2} id="filter-syntax">Filter Syntax</Heading>
@@ -73,20 +77,26 @@ not(isNull('email'))`} language="tsx" />
 
       <Heading level={2} id="programmatic">Programmatic Filtering</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        You can set filters from code by accessing the DataSource through the table context.
-        This is useful for building custom filter UIs or applying filters based on external events.
+        Set filters from code via the DataSource's <code>setFilters()</code> method, which
+        accepts an array of filter predicates. This is useful for building custom filter UIs
+        or applying filters based on external events.
       </p>
-      <CodeBlock code={`// Set a filter on a specific column
-ctx.dataSource.setFilter('price', gt('price', 100));
+      <CodeBlock code={`import { gt, between, eq, and } from '@unify/table-core';
 
-// Set multiple filters at once
-ctx.dataSource.setFilters({
-  price: between('price', 50, 500),
-  status: eq('status', 'active'),
-});
+// Set filters as an array of predicates
+ctx.datasource.setFilters([
+  gt('price', 100),
+  eq('status', 'active'),
+]);
 
-// Clear all filters
-ctx.dataSource.clearFilters();`} language="tsx" />
+// Combine multiple conditions on the same column
+ctx.datasource.setFilters([
+  between('price', 50, 500),
+  eq('status', 'active'),
+]);
+
+// Clear all filters by passing an empty array
+ctx.datasource.setFilters([]);`} language="tsx" />
       <Callout type="tip" title="Debounced by default">
         Filter inputs in the UI are debounced to avoid firing a query on every keystroke.
         Programmatic filters applied via <code>setFilter()</code> take effect on the next

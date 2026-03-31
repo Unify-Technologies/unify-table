@@ -18,17 +18,22 @@ export default function ViewsPlugin() {
 <Table db={db} table="sales" plugins={[views()]} />`} language="tsx" />
 
       <Heading level={2} id="api">API</Heading>
-      <CodeBlock code={`// Save current view state
-ctx.views.save('Q1 Summary');
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Views are managed through standalone functions that operate on the table context:
+      </p>
+      <CodeBlock code={`import { views, saveView, applyView, listViews, serializeViews } from '@unify/table-react';
 
-// List saved views
-const list = ctx.views.list();
+// Save current state as a named view
+saveView('Q1 Summary', ctx);
 
-// Apply a saved view
-ctx.views.apply('Q1 Summary');
+// List saved view names
+const names = listViews(); // ['Q1 Summary', ...]
 
-// Delete a saved view
-ctx.views.remove('Q1 Summary');`} language="tsx" />
+// Restore a saved view
+applyView('Q1 Summary', ctx);
+
+// Serialize all views to JSON (for persistence)
+const json = serializeViews();`} language="tsx" />
 
       <Heading level={2} id="what-is-saved">What Gets Saved</Heading>
       <div className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>

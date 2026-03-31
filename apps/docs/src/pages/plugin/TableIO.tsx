@@ -34,20 +34,27 @@ export default function TableIOPlugin() {
 
       <Heading level={2} id="export">Export</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Export the full table or a filtered subset. Three formats are supported — CSV and JSON are generated client-side, while Parquet uses DuckDB's native writer for maximum performance.
+        Export the full table or just the selection. CSV, JSON, Parquet, and XLSX formats are
+        supported. Parquet uses DuckDB's native writer for maximum performance on large datasets.
       </p>
-      <CodeBlock code={`// Export as CSV
-await ctx.tableIO.export('csv');
+      <CodeBlock code={`import { tableIO } from '@unify/table-react';
 
-// Export as Parquet blob
-const blob = await ctx.tableIO.export('parquet');
+const io = tableIO();
+// After mounting, get the handle from the plugin:
+const handle = io.getHandle(ctx);
 
-// Export as JSON
-await ctx.tableIO.export('json');`} language="tsx" />
+await handle.exportCSV();                          // full table
+await handle.exportCSV({ selection: true });       // selected cells only
+await handle.exportJSON({ pretty: true });
+await handle.exportParquet({ filename: 'data.parquet' });
+await handle.exportXLSX({ sheet: 'Q1 Report' });`} language="tsx" />
 
       <Heading level={2} id="import">Import</Heading>
-      <CodeBlock code={`// Import from a File object
-await ctx.tableIO.import(file);`} language="tsx" />
+      <CodeBlock code={`// Import from a File object (CSV, JSON, or Parquet)
+await handle.importFile(file);
+
+// Append to existing table instead of replacing
+await handle.importFile(file, { append: true });`} language="tsx" />
 
       <Heading level={2} id="progress">Progress Events</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>

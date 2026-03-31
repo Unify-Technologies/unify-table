@@ -16,24 +16,26 @@ packages/
     src/
       sql/          — SQL builders (select, filters, agg, chart, utils)
       displays/     — display type definitions (chart, stats, pivot, etc.)
-  react/      @unify/table-react    — React table + 15 plugins + UI panels
+  react/      @unify/table-react    — React table + 16 plugins + UI panels
     src/
-      components/   — Table, TableRow, HeaderRow, ColumnResizeOverlay
+      components/   — Table, TableRow, HeaderRow, ColumnResizeOverlay, Tooltip
       hooks/        — useTableContext
-      plugins/      — 15 feature plugins
-      panels/       — side panel components (filter, groupBy, columns, etc.)
+      plugins/      — 16 feature plugins
+      panels/       — side panel components (filter, groupBy, columns, display, export, debug, etc.)
       displays/     — display renderers + config UI
       styles/       — themes.css
   charts/     @unify/table-charts   — ECharts wrapper + SQL chart builders
 apps/
-  demo/       Vite + React + Tailwind + DuckDB-WASM demo + Playwright E2E
+  docs/       Vite + React + Tailwind + DuckDB-WASM docs site + interactive examples + Playwright E2E
     src/
-      components/   — DockLayout, DockTab, GroupActions, TablePanel
-      hooks/        — useDuckDB
-      config/       — column definitions
-      context/      — DemoContext
-      data/         — sample seed data
-      styles/       — global CSS + dockview themes
+      components/   — Callout, CodeBlock, Example, ExampleRunner, Heading, PageNav, PageTitle, PropTable, SearchDialog
+      pages/        — documentation pages (top-level + plugin/ + display/ + demo/)
+      examples/     — 34 interactive example files
+      layout/       — Shell, Sidebar, TopNav, TableOfContents, MobileDrawer, nav
+      providers/    — DuckDBProvider, ThemeProvider, useDuckDB, useExampleData
+      data/         — sample datasets (employees, orders, products, tasks, trades)
+      search/       — search index
+      styles/       — global CSS
 ```
 
 ## Tech Stack
@@ -42,7 +44,7 @@ apps/
 |------|---------|---------|
 | pnpm | 10.x | Package manager + workspaces |
 | tsgo | @typescript/native-preview | TypeScript compilation |
-| vite | 8.x | Demo app dev/build |
+| vite | 8.x | Docs app dev/build |
 | oxlint | 1.x | Linting |
 | oxfmt | 0.x | Formatting |
 | vitest | 4.x | Unit + integration tests |
@@ -52,6 +54,9 @@ apps/
 | Tailwind CSS | 4.x | Styling |
 | lucide-react | 1.x | Icons |
 | React | 19.x | UI framework |
+| @base-ui/react | 1.x | Headless UI components |
+| highlight.js | 11.x | Code syntax highlighting |
+| dockview | 1.x | Tab/docking system for demo workspace |
 
 Node >= 21.0.0 required.
 
@@ -89,7 +94,7 @@ interface TableConnection {
 
 **SQL Builder** — immutable, chainable. Four builders: `select()`, `update()`, `insertInto()`, `deleteFrom()`. Each returns new instance on mutation.
 
-**Filters** — composable SQL predicates: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `startsWith`, `endsWith`, `oneOf`, `between`, `isNull`, `isNotNull`. Combinators: `and()`, `or()`, `not()`. Escape hatch: `raw()`.
+**Filters** — composable SQL predicates: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `startsWith`, `endsWith`, `oneOf`, `between`, `isNull`, `isNotNull`. Combinators: `and()`, `or()`. Escape hatch: `raw()`.
 
 **Aggregations** — built-in: sum, avg, count, min, max, count_distinct, median, first, last, any, mode, stddev, variance, string_agg. Extensible via `registerAgg()`.
 
@@ -99,7 +104,7 @@ interface TableConnection {
 
 **useTableContext** — headless hook. Returns full `TableContext` for custom rendering.
 
-**Plugins** (15 total):
+**Plugins** (16 total):
 - `filters` — filter state management
 - `selection` — single/multi/range cell selection
 - `editing` — inline cell editing with validation
@@ -115,10 +120,21 @@ interface TableConnection {
 - `formulas` — formula columns with expression evaluation
 - `rowGrouping` — group by columns, expand/collapse, aggregations
 - `formatting` — conditional cell formatting (threshold, negative, positive rules)
+- `statusBar` — aggregation status bar for selected cells (sum, avg, min, max)
+
+**Panels:**
+- `FilterPanel` — filter configuration UI
+- `GroupByPanel` — group-by column selection
+- `ColumnsPanel` — column visibility/ordering
+- `DisplayPanel` — display type switcher + config
+- `ExportPanel` — export options
+- `DebugPanel` — troubleshooting/inspection
+- `PanelShell` — shared panel container + layout
+- `DragList` — reorderable list component used by panels
 
 **Presets:**
-- `spreadsheet()` — full editing experience
-- `dataViewer()` — analytics-oriented read view
+- `spreadsheet()` — full editing experience (includes statusBar)
+- `dataViewer()` — analytics-oriented read view (includes statusBar)
 - `readOnly()` — minimal: filters + columnResize + formatting
 
 **Themes:** Built-in dark/light themes (`darkTheme`, `lightTheme`). Each `Theme` provides `styles` (TableStyles class names), `panelVars` (CSS variable overrides for panels), and `containerClass`. Pure CSS — no Tailwind dependency. Import CSS via sub-paths:
@@ -176,7 +192,7 @@ All display `defaultConfig()` functions exclude identity columns (`id`, `*_id`) 
 Every change validated at two levels:
 
 1. **Unit tests (vitest)** — add or update tests for changed logic. Tests co-located in `tests/` dir per package. Run `pnpm test`.
-2. **Playwright E2E** — validate in demo app. E2E tests in `apps/demo/e2e/`. Confirm feature works in real browser.
+2. **Playwright E2E** — validate in docs app. E2E tests in `apps/docs/e2e/`. Confirm feature works in real browser.
 
 Test patterns:
 - Mock `TableConnection` for engine/datasource tests — no real DuckDB needed

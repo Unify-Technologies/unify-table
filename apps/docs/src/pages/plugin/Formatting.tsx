@@ -21,20 +21,40 @@ export default function FormattingPlugin() {
       <Example id="with-formatting" description="Green PnL = profit, red = loss. Amber notional = mid-range. Bold purple volume = high-volume trades. Three formatting techniques combined." height={350} />
 
       <Heading level={2} id="rules">Formatting Rules</Heading>
-      <CodeBlock code={`// Apply formatting rules to columns
-ctx.formatting.setRules('pnl', [
-  { type: 'negative', style: { color: '#ef4444' } },
-  { type: 'positive', style: { color: '#22c55e' } },
-  { type: 'threshold', value: 1000000, style: { fontWeight: 'bold' } },
-]);`} language="tsx" />
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Pass a rules map to <code>formatting()</code> at creation time. Each key is a column
+        field name (or <code>'*'</code> for all columns), and the value is an array
+        of <code>ConditionalRule</code> objects. Three helpers produce common rules:
+      </p>
+      <CodeBlock code={`import { formatting, positive, negative, threshold } from '@unify/table-react';
+
+<Table
+  db={db}
+  table="portfolio"
+  plugins={[
+    formatting({
+      pnl: [...positive('#22c55e'), ...negative('#ef4444')],
+      notional: threshold([
+        { max: 100000, style: { color: '#f59e0b' } },
+        { max: 500000, style: { color: '#22c55e', fontWeight: 'bold' } },
+      ]),
+    }),
+  ]}
+/>`} language="tsx" />
 
       <Heading level={2} id="rule-types">Rule Types</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        <code>negative</code> applies when the cell value is less than zero.
-        <code>positive</code> applies when the value is greater than zero.
-        <code>threshold</code> applies when the value exceeds the specified threshold.
-        Multiple rules can be combined on a single column.
+        <code>negative(color?)</code> applies when the cell value is &lt; 0.{" "}
+        <code>positive(color?)</code> applies when &gt; 0.{" "}
+        <code>threshold(ranges)</code> applies styles based on value ranges.
+        For custom logic, write a rule directly with a <code>when</code> function:
       </p>
+      <CodeBlock code={`formatting({
+  status: [
+    { when: (value) => value === 'Active', style: { color: '#22c55e' } },
+    { when: (value) => value === 'Inactive', style: { color: '#ef4444' } },
+  ],
+})`} language="tsx" />
       <PageNav />
     </div>
   );

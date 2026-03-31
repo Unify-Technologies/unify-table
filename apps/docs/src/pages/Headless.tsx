@@ -12,10 +12,14 @@ export default function Headless() {
         Use <code>useTableContext</code> for full control over rendering.
       </p>
       <p className="text-[13px] mb-4" style={{ color: "var(--doc-text-secondary)" }}>
-        The headless API gives you full control over the table engine without the built-in UI. Use <code>useTableContext()</code> to access all the data, state, and methods — then render however you want.
+        Everything shown in the previous pages — filters, selection, editing, grouping, displays — works
+        through the <code>TableContext</code> object. The <code>&lt;Table&gt;</code> component renders
+        that context with a built-in UI. The headless API gives you the same context without the UI,
+        so you can render however you want.
       </p>
       <p className="text-[13px] mb-8" style={{ color: "var(--doc-text-secondary)" }}>
-        This is useful when the default <code>&lt;Table&gt;</code> component doesn't fit your design. You get the same DuckDB-powered data pipeline, the same plugin system, and the same reactive state management — just without the built-in table markup and styling.
+        You get the same DuckDB-powered data pipeline, the same plugin system, and the same reactive
+        state management — just without the built-in table markup and styling.
       </p>
 
       <Heading level={2} id="when">When to Go Headless</Heading>

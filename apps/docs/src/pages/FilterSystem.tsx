@@ -12,9 +12,15 @@ export default function FilterSystem() {
       <p className="text-[15px] mb-4" style={{ color: "var(--doc-text-secondary)" }}>
         Composable SQL filter predicates with type-safe builders.
       </p>
-      <p className="text-[13px] mb-8" style={{ color: "var(--doc-text-secondary)" }}>
+      <p className="text-[13px] mb-4" style={{ color: "var(--doc-text-secondary)" }}>
         The filter system provides a composable, type-safe API for building SQL WHERE clauses. Filters are plain objects that compose with <code>and()</code>, <code>or()</code>, and <code>not()</code>. Every value is automatically escaped to prevent SQL injection.
       </p>
+      <Callout type="info" title="Powering the filters plugin">
+        The <a href="#/plugins/filters" style={{color: "var(--doc-accent)"}}>filters plugin</a> uses these
+        predicates internally — when a user types <code>&gt; 100</code> in a filter input, it's parsed
+        into a <code>gt()</code> predicate. Use these functions directly when building custom filter UIs
+        or programmatic filters via <code>datasource.setFilters()</code>.
+      </Callout>
 
       <Example
         id="filter-system"

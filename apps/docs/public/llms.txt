@@ -1,0 +1,66 @@
+# Unify Table
+
+> DuckDB-native data table & charts library for React. SQL does the work — sort, filter, group, aggregate all happen in DuckDB-WASM. 16 composable plugins, 7 display types, zero-config to fully headless.
+
+Unify Table replaces AG Grid / AG Charts with a composable, plugin-based API backed by DuckDB-WASM. The core layer has zero dependencies — pure TypeScript SQL builders and a reactive data source. The React layer provides virtualized table rendering, 16 feature plugins, side panels, and 7 display types (charts, stats, pivot, summary, correlation, timeline, outliers). Charts are powered by ECharts with SQL-driven data builders.
+
+## Overview
+
+- [Getting Started](https://unify.sh/unify-table/#/getting-started): Installation, CSS imports, and your first table in under 5 minutes
+- [How It Works](https://unify.sh/unify-table/#/how-it-works): Three-layer architecture — core SQL engine, React rendering, ECharts visualization
+
+## Core Concepts
+
+- [Table Basics](https://unify.sh/unify-table/#/table-basics): Zero-config rendering, column auto-detection, row virtualization, sorting
+- [Column Definitions](https://unify.sh/unify-table/#/column-definitions): Explicit column schemas with labels, widths, formatting, and sort behavior
+- [Themes](https://unify.sh/unify-table/#/themes): Built-in dark/light themes, CSS variable customization, pure CSS with no Tailwind dependency
+- [Density & Layout](https://unify.sh/unify-table/#/density-layout): Row height presets (compact/default/comfortable), table height and overflow control
+
+## Plugins
+
+- [Plugin Overview](https://unify.sh/unify-table/#/plugins): How plugins work — composition model, configuration, and the full plugin list
+- [Filters](https://unify.sh/unify-table/#/plugins/filters): Column-level filter inputs with composable SQL predicates — scales to millions of rows
+- [Selection](https://unify.sh/unify-table/#/plugins/selection): Single, multi, and range cell selection with keyboard and mouse support
+- [Editing](https://unify.sh/unify-table/#/plugins/editing): Inline cell editing with validation, commit/cancel, and DuckDB write-back
+- [Keyboard](https://unify.sh/unify-table/#/plugins/keyboard): Arrow keys, Tab, Enter, Escape, Delete, and Ctrl shortcuts for table navigation
+- [Clipboard](https://unify.sh/unify-table/#/plugins/clipboard): Copy/paste in TSV format, paste-as-append for adding rows from spreadsheets
+- [Column Resize](https://unify.sh/unify-table/#/plugins/column-resize): Drag handle for column width adjustment with min/max constraints
+- [Column Pin](https://unify.sh/unify-table/#/plugins/column-pin): Pin columns to left or right edge — pinned columns stay visible during horizontal scroll
+- [Column Reorder](https://unify.sh/unify-table/#/plugins/column-reorder): HTML5 drag-and-drop column reordering
+- [Context Menu](https://unify.sh/unify-table/#/plugins/context-menu): Right-click menus with nested submenus, plugin-contributed items, and separators
+- [Views](https://unify.sh/unify-table/#/plugins/views): Save, load, and apply view presets capturing filters, sort, groupBy, and column state
+- [Table I/O](https://unify.sh/unify-table/#/plugins/table-io): Import/export CSV, JSON, and Parquet files with progress events
+- [Find & Replace](https://unify.sh/unify-table/#/plugins/find-replace): Search across the table with find, replace, and affected row count
+- [Formulas](https://unify.sh/unify-table/#/plugins/formulas): Formula columns with expression evaluation
+- [Row Grouping](https://unify.sh/unify-table/#/plugins/row-grouping): Group by columns with expand/collapse, nested aggregations, and subtotals
+- [Formatting](https://unify.sh/unify-table/#/plugins/formatting): Conditional cell formatting — threshold, negative, positive rules with custom styles
+- [Status Bar](https://unify.sh/unify-table/#/plugins/status-bar): Aggregation status bar showing sum, avg, min, max for selected cells
+
+## Presets & Panels
+
+- [Presets](https://unify.sh/unify-table/#/presets): Pre-built plugin bundles — spreadsheet(), dataViewer(), readOnly()
+- [Panels](https://unify.sh/unify-table/#/panels): Side panel system for filters, groupBy, columns, display, export, and debug
+
+## Displays & Charts
+
+- [Display Overview](https://unify.sh/unify-table/#/displays): 7 display types that transform table data into charts, stats, pivots, and more
+- [Chart Display](https://unify.sh/unify-table/#/displays/chart): Bar, line, area, pie, donut, scatter, histogram, heatmap, treemap, funnel charts
+- [Stats Display](https://unify.sh/unify-table/#/displays/stats): Summary cards with aggregations per column — compact K/M/B/T notation
+- [Pivot Display](https://unify.sh/unify-table/#/displays/pivot): Cross-tabulation matrix with row/column totals via GROUP BY + client-side pivot
+- [Summary Display](https://unify.sh/unify-table/#/displays/summary): Auto-profile every column via DuckDB SUMMARIZE with lazy histograms
+- [Correlation Display](https://unify.sh/unify-table/#/displays/correlation): Pairwise Pearson correlation heatmap for numeric columns
+- [Timeline Display](https://unify.sh/unify-table/#/displays/timeline): Date-bucketed time series chart using date_trunc aggregation
+- [Outliers Display](https://unify.sh/unify-table/#/displays/outliers): IQR/z-score outlier detection with inline box plots and outlier table
+- [Charts](https://unify.sh/unify-table/#/charts): ECharts integration — SQL chart builders, sparklines, and option builder functions
+
+## Data Layer
+
+- [SQL Builder](https://unify.sh/unify-table/#/sql-builder): Immutable, chainable SQL builder — select, update, insertInto, deleteFrom
+- [Filter System](https://unify.sh/unify-table/#/filter-system): Composable filter predicates — eq, gt, contains, oneOf, between, and/or combinators
+- [Query Engine](https://unify.sh/unify-table/#/query-engine): TableConnection interface, QueryEngine wrapper, and DuckDB-WASM setup
+- [Headless](https://unify.sh/unify-table/#/headless): useTableContext hook for fully custom rendering with full TableContext access
+
+## Optional
+
+- [Interactive Demo](https://unify.sh/unify-table/#/demo): Live multi-tab workspace with DuckDB-powered tables
+- [Full documentation](https://unify.sh/unify-table/llms-full.txt): Complete documentation in a single markdown file

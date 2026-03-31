@@ -13,11 +13,17 @@ export default function SqlBuilder() {
         Immutable, chainable SQL builder with four statement types.
       </p>
       <p className="text-[13px] mb-4" style={{ color: "var(--doc-text-secondary)" }}>
-        The SQL builder is the foundation of Unify Table. It's an immutable, chainable API that generates safe, parameterized SQL from TypeScript. Every sort, filter, and group-by operation in the table ultimately becomes a SQL query built by this layer.
+        The SQL builder is the foundation of Unify Table. It's an immutable, chainable API that generates safe, properly escaped SQL from TypeScript. Every sort, filter, and group-by operation in the table ultimately becomes a SQL query built by this layer.
       </p>
-      <p className="text-[13px] mb-8" style={{ color: "var(--doc-text-secondary)" }}>
+      <p className="text-[13px] mb-4" style={{ color: "var(--doc-text-secondary)" }}>
         Each method call returns a new builder instance, so you can safely branch queries without mutating shared state. This makes it easy to build base queries and extend them for different purposes.
       </p>
+      <Callout type="info" title="Used internally by Table">
+        You don't need to use the SQL builder to render a table — the <code>&lt;Table&gt;</code> component
+        and its <a href="#/query-engine" style={{color: "var(--doc-accent)"}}>DataSource</a> use it internally
+        to generate all queries. Reach for the builder directly when you need custom queries outside the
+        table lifecycle, such as dashboards, reports, or data transformations.
+      </Callout>
 
       <Heading level={2} id="why">Why a SQL Builder?</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>

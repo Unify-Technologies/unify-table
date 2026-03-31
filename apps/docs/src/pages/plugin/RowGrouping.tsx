@@ -36,15 +36,27 @@ export default function RowGroupingPlugin() {
       <Example id="with-grouping" description="Grouped by Desk then Ticker. Click expand arrows to drill into groups. Try adding a filter on Region while grouped." height={350} />
 
       <Heading level={2} id="aggregations">Aggregations</Heading>
-      <CodeBlock code={`// Grouping is driven by DataSource state
-ctx.dataSource.setGroupBy(['region', 'product']);
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Aggregations are configured when creating the plugin. Each entry specifies a column
+        and an aggregation function. The aggregated values appear in the group header rows.
+      </p>
+      <CodeBlock code={`import { Table, rowGrouping } from '@unify/table-react';
 
-// Aggregations are configured per column
-ctx.dataSource.setAggregations({
-  revenue: 'sum',
-  quantity: 'avg',
-  orders: 'count',
-});`} language="tsx" />
+<Table
+  db={db}
+  table="sales"
+  plugins={[
+    rowGrouping({
+      aggregations: [
+        { field: 'revenue', fn: 'sum' },
+        { field: 'quantity', fn: 'avg' },
+        { field: 'orders', fn: 'count' },
+      ],
+      defaultExpanded: false,
+    }),
+  ]}
+  initialGroupBy={['region', 'product']}
+/>`} language="tsx" />
 
       <Heading level={2} id="expand-collapse">Expand / Collapse</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>

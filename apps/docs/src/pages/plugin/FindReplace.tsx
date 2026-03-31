@@ -31,16 +31,18 @@ export default function FindReplacePlugin() {
 
       <Heading level={2} id="api">Programmatic API</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Open the find bar, execute searches, or replace matches from code via the table context.
+        Use the exported helper functions to search and replace from code:
       </p>
-      <CodeBlock code={`// Open find bar programmatically
-ctx.findReplace.open();
+      <CodeBlock code={`import { findInTable, replaceInTable } from '@unify/table-react';
 
-// Find with options
-ctx.findReplace.find('error', { caseSensitive: true });
+// Count matching rows (searches all text columns)
+const count = await findInTable(ctx, 'AAPL');
 
-// Replace all matches
-ctx.findReplace.replaceAll('error', 'warning');`} language="tsx" />
+// Search in a specific column
+const count2 = await findInTable(ctx, 'Trading', 'desk');
+
+// Replace all occurrences in a column
+const affected = await replaceInTable(ctx, 'AAPL', 'GOOG', 'ticker');`} language="tsx" />
 
       <Heading level={2} id="shortcuts">Keyboard Shortcuts</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>

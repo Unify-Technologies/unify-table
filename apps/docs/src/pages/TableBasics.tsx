@@ -30,11 +30,10 @@ export default function TableBasics() {
 
       <Heading level={2} id="with-plugins">Adding Plugins</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Compose features by passing an array of plugin functions. Each plugin is a standalone module
-        that adds a specific capability — filters, selection, editing, keyboard shortcuts, and more.
-        Plugins are independent and can be combined freely:
+        The minimal table above is static. Add the <code>filters()</code> plugin to let users narrow
+        down the data — notice the filter row that appears below the headers:
       </p>
-      <Example id="with-filters" title="With Filters" description="Pre-filtered to profitable AAPL trades. Try changing the filter values." height={350} />
+      <Example id="with-filters" title="With Filters" description="Same trades data, now filterable. Pre-filtered to profitable AAPL trades. Try changing the filter values." height={350} />
 
       <Heading level={2} id="props">Table Props</Heading>
       <PropTable
@@ -48,9 +47,17 @@ export default function TableBasics() {
           { name: "density", type: "'compact' | 'comfortable' | 'spacious'", default: "'comfortable'", description: "Row height: 28px / 36px / 48px" },
           { name: "height", type: "number | string", description: "Table container height (px or CSS string)" },
           { name: "displays", type: "DisplayConfig[]", description: "Display configurations (charts, stats, etc.)" },
+          { name: "panels", type: "false | PanelConfig[]", description: "Panel configurations, or false to disable panels entirely" },
+          { name: "panelPosition", type: "'left' | 'right'", default: "'right'", description: "Which side panels open on" },
           { name: "initialSort", type: "SortField[]", description: "Initial sort state" },
           { name: "initialGroupBy", type: "string[]", description: "Initial grouping columns" },
           { name: "initialFilterValues", type: "Record<string, string>", description: "Initial filter input values" },
+          { name: "initialHiddenCols", type: "string[]", description: "Columns to hide on first render" },
+          { name: "initialColumnOrder", type: "string[]", description: "Initial column display order" },
+          { name: "initialColumnWidths", type: "Record<string, number>", description: "Initial column widths in pixels" },
+          { name: "onSortChange", type: "(sort: SortField[]) => void", description: "Callback when sort state changes" },
+          { name: "onFilterValuesChange", type: "(values: Record<string, string>) => void", description: "Callback when filter values change" },
+          { name: "onGroupByChange", type: "(cols: string[]) => void", description: "Callback when group-by columns change" },
         ]}
       />
 

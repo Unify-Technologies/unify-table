@@ -31,17 +31,22 @@ export default function SelectionPlugin() {
       <Heading level={2} id="usage">Usage</Heading>
       <CodeBlock code={`import { Table, selection } from '@unify/table-react';
 
-// Single cell selection (default)
+// Multi-select with Ctrl/Cmd click (default)
 <Table db={db} table="orders" plugins={[selection()]} />
 
-// Multi-select with Ctrl/Cmd click
-<Table db={db} table="orders" plugins={[selection('multi')]} />
+// Single cell — one cell at a time
+<Table db={db} table="orders" plugins={[selection('single')]} />
 
 // Range selection with Shift+click
 <Table db={db} table="orders" plugins={[selection('range')]} />`} language="tsx" />
 
       <Heading level={2} id="example">Example</Heading>
-      <Example id="with-selection" description="Click and drag across the PnL column. The status bar shows sum, average, and count of your selection." height={350} />
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Building on the same <code>trades_sample</code> data — this time with <code>selection('range')</code>,
+        <code>keyboard()</code> for arrow-key navigation, and <code>statusBar()</code> to show aggregations
+        of the selected cells.
+      </p>
+      <Example id="with-selection" description="Click and drag across the PnL column. Hold Shift and press arrow keys to extend the selection. The status bar shows sum, average, and count." height={350} />
 
       <Heading level={2} id="modes">Selection Modes</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>

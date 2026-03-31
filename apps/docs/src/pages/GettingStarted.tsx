@@ -35,12 +35,11 @@ export default function GettingStarted() {
       {/* ── Installation ── */}
       <Heading level={2} id="installation">Installation</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        The library is split into three packages: <strong style={{ color: "var(--doc-text)" }}>core</strong> (SQL
-        engine and data source), <strong style={{ color: "var(--doc-text)" }}>react</strong> (components and
-        plugins), and <strong style={{ color: "var(--doc-text)" }}>charts</strong> (ECharts-based
-        visualizations). Install all three:
+        The library is split into two packages you install directly: <strong style={{ color: "var(--doc-text)" }}>core</strong> (SQL
+        engine and data source) and <strong style={{ color: "var(--doc-text)" }}>react</strong> (components,
+        plugins, and charts). The charts package is included as a dependency of react — no separate install needed.
       </p>
-      <CodeBlock code={`pnpm add @unify/table-core @unify/table-react @unify/table-charts`} language="bash" filename="Terminal" />
+      <CodeBlock code={`pnpm add @unify/table-core @unify/table-react`} language="bash" filename="Terminal" />
 
       {/* ── CSS Imports ── */}
       <Heading level={2} id="css-imports">CSS Imports</Heading>
@@ -75,8 +74,8 @@ import '@unify/table-react/displays';  // Display renderer CSS (charts, stats, p
       {/* ── Adding Interactivity ── */}
       <Heading level={2} id="adding-plugins">Adding Interactivity</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Features are plugins, not props. This keeps the API composable and the bundle lean — you only
-        pay for what you use. Pass an array of plugin functions to the <code>plugins</code> prop:
+        The basic table above is read-only. To add features, compose plugins — each one is an
+        independent module. Start with the table you just built and layer on capabilities:
       </p>
       <CodeBlock code={`import { Table, filters, selection, columnResize, darkTheme } from '@unify/table-react';
 
@@ -105,7 +104,7 @@ import '@unify/table-react/displays';  // Display renderer CSS (charts, stats, p
         </li>
       </ul>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        There are 15 plugins in total, covering everything from inline editing and clipboard support
+        There are 16 plugins in total, covering everything from inline editing and clipboard support
         to row grouping and context menus. See
         the <Link to="/plugins" style={{ color: "var(--doc-accent)" }}>Plugins</Link> page for the
         full list.
@@ -114,8 +113,8 @@ import '@unify/table-react/displays';  // Display renderer CSS (charts, stats, p
       {/* ── Using Presets ── */}
       <Heading level={2} id="presets">Using Presets</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Presets are curated plugin bundles for common use cases. Use them as starting points, or
-        spread them and override individual plugins.
+        Assembling plugins one by one gives you full control, but for common setups there are
+        presets — curated bundles you can use as-is or spread and customize:
       </p>
       <CodeBlock code={`import { spreadsheet, dataViewer, readOnly } from '@unify/table-react';
 
@@ -180,7 +179,7 @@ const theme = darkTheme; // or lightTheme
           </li>
           <li>
             <Link to="/plugins" style={{ color: "var(--doc-accent)", fontWeight: 500 }}>Plugins</Link>
-            {" "} — explore all 15 plugins with live examples and API reference
+            {" "} — explore all 16 plugins with live examples and API reference
           </li>
           <li>
             <Link to="/demo" style={{ color: "var(--doc-accent)", fontWeight: 500 }}>Demo</Link>

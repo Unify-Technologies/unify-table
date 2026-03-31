@@ -6,7 +6,7 @@
  * llms.txt  — curated index with links to each section (per llmstxt.org spec)
  * llms-full.txt — full documentation content in a single markdown file
  *
- * Run:  node apps/docs/scripts/generate-llms.mjs
+ * Run:  node docs/scripts/generate-llms.mjs
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

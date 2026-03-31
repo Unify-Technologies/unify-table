@@ -31,13 +31,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm --filter @unify/docs build
+      - run: pnpm --filter docs build
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/docs/dist
+          path: docs/dist
 
   deploy:
     needs: build

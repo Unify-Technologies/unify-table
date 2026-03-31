@@ -25,17 +25,16 @@ packages/
       displays/     — display renderers + config UI
       styles/       — themes.css
   charts/     @unify/table-charts   — ECharts wrapper + SQL chart builders
-apps/
-  docs/       Vite + React + Tailwind + DuckDB-WASM docs site + interactive examples + Playwright E2E
-    src/
-      components/   — Callout, CodeBlock, Example, ExampleRunner, Heading, PageNav, PageTitle, PropTable, SearchDialog
-      pages/        — documentation pages (top-level + plugin/ + display/ + demo/)
-      examples/     — 34 interactive example files
-      layout/       — Shell, Sidebar, TopNav, TableOfContents, MobileDrawer, nav
-      providers/    — DuckDBProvider, ThemeProvider, useDuckDB, useExampleData
-      data/         — sample datasets (employees, orders, products, tasks, trades)
-      search/       — search index
-      styles/       — global CSS
+docs/             Vite + React + Tailwind + DuckDB-WASM docs site + interactive examples + Playwright E2E
+  src/
+    components/   — Callout, CodeBlock, Example, ExampleRunner, Heading, PageNav, PageTitle, PropTable, SearchDialog
+    pages/        — documentation pages (top-level + plugin/ + display/ + demo/)
+    examples/     — 34 interactive example files
+    layout/       — Shell, Sidebar, TopNav, TableOfContents, MobileDrawer, nav
+    providers/    — DuckDBProvider, ThemeProvider, useDuckDB, useExampleData
+    data/         — sample datasets (employees, orders, products, tasks, trades)
+    search/       — search index
+    styles/       — global CSS
 ```
 
 ## Tech Stack
@@ -192,7 +191,7 @@ All display `defaultConfig()` functions exclude identity columns (`id`, `*_id`) 
 Every change validated at two levels:
 
 1. **Unit tests (vitest)** — add or update tests for changed logic. Tests co-located in `tests/` dir per package. Run `pnpm test`.
-2. **Playwright E2E** — validate in docs app. E2E tests in `apps/docs/e2e/`. Confirm feature works in real browser.
+2. **Playwright E2E** — validate in docs app. E2E tests in `docs/e2e/`. Confirm feature works in real browser.
 
 Test patterns:
 - Mock `TableConnection` for engine/datasource tests — no real DuckDB needed

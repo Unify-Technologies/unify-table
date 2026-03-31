@@ -69,7 +69,23 @@ export function Table(props: TableProps) {
   } = props;
 
   const showPanels = panelsProp !== false;
-  const panelConfigs = showPanels ? (Array.isArray(panelsProp) ? panelsProp : DEFAULT_PANELS) : [];
+  const panelConfigs = useMemo(() => {
+    if (!showPanels) return [];
+    if (Array.isArray(panelsProp)) return panelsProp;
+
+    const pluginNames = new Set(plugins?.map((p) => p.name) ?? []);
+    const PLUGIN_PANEL_MAP: Record<string, string[]> = {
+      columns: ['columnReorder', 'columnResize', 'columnPin'],
+      filters: ['filters'],
+      groupBy: ['rowGrouping'],
+    };
+
+    return DEFAULT_PANELS.filter((p) => {
+      const key = typeof p === 'string' ? p : p.key;
+      const requiredPlugins = PLUGIN_PANEL_MAP[key];
+      return !requiredPlugins || requiredPlugins.some((p) => pluginNames.has(p));
+    });
+  }, [showPanels, panelsProp, plugins]);
 
   // Panel state — lives here so useTableContext receives the filtered columns
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(() => new Set(initialHiddenCols ?? []));

@@ -44,12 +44,6 @@ importers:
       '@unify/table-react':
         specifier: workspace:*
         version: link:../../packages/react
-      '@unify/unify-duckdb-common':
-        specifier: ^1.4.0
-        version: 1.4.0
-      '@unify/unify-duckdb-frontend':
-        specifier: ^1.4.0
-        version: 1.4.0(@duckdb/duckdb-wasm@1.32.0)
       dockview:
         specifier: ^1.15.2
         version: 1.17.2
@@ -755,14 +749,6 @@ packages:
     resolution: {integrity: sha512-42I1oVqz2EOkE1vCrzazV3r+zVREq+le4m7Vr4OEz9taH2rhR02yxq+tNygKV3IOUOPLOXkX/soKcgrF3drDHA==}
     hasBin: true
 
-  '@unify/unify-duckdb-common@1.4.0':
-    resolution: {integrity: sha512-XQKRo3Aazjg3gfmY4SlGIWs9BHErrpB/f8ZWqGLAUkxGZ7l4UXORIfqpwk7GO0s/MTnaxUxD4Dv6URGMPwkiSg==}
-
-  '@unify/unify-duckdb-frontend@1.4.0':
-    resolution: {integrity: sha512-TaNm8X0EWrIcN5HrQdwc1iJD0fA71EIQtMdBzKNBavi2yWvsSMIQQ/VUvWfwqFxs9YtxXBdSHu0wNmAUqaRqfg==}
-    peerDependencies:
-      '@duckdb/duckdb-wasm': 1.29.1-dev167.0
-
   '@vitejs/plugin-react@4.7.0':
     resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -822,9 +808,6 @@ packages:
   ansi-styles@5.2.0:
     resolution: {integrity: sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==}
     engines: {node: '>=10'}
-
-  any-base@1.1.0:
-    resolution: {integrity: sha512-uMgjozySS8adZZYePpaWs8cxB9/kdzmpX6SgJZ+wbz1K5eYk5QMYDVJaZKhxyIHUdnnJkfR7SVgStgH7LkGUyg==}
 
   apache-arrow@17.0.0:
     resolution: {integrity: sha512-X0p7auzdnGuhYMVKYINdQssS4EcKec9TCXyez/qtJt32DrIMGbzqiaMiQ0X6fQlQpw8Fl0Qygcv4dfRAr5Gu9Q==}
@@ -1383,10 +1366,6 @@ packages:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
-    hasBin: true
 
   vite@8.0.2:
     resolution: {integrity: sha512-1gFhNi+bHhRE/qKZOJXACm6tX4bA3Isy9KuKF15AgSRuRazNBOJfdDemPBU16/mpMxApDPrWvZ08DcLPEoRnuA==}
@@ -2126,17 +2105,6 @@ snapshots:
       '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260325.1
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20260325.1
 
-  '@unify/unify-duckdb-common@1.4.0':
-    dependencies:
-      any-base: 1.1.0
-      uuid: 13.0.0
-
-  '@unify/unify-duckdb-frontend@1.4.0(@duckdb/duckdb-wasm@1.32.0)':
-    dependencies:
-      '@duckdb/duckdb-wasm': 1.32.0
-      '@unify/unify-duckdb-common': 1.4.0
-      apache-arrow: 17.0.0
-
   '@vitejs/plugin-react@4.7.0(vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1))':
     dependencies:
       '@babel/core': 7.29.0
@@ -2213,8 +2181,6 @@ snapshots:
       color-convert: 2.0.1
 
   ansi-styles@5.2.0: {}
-
-  any-base@1.1.0: {}
 
   apache-arrow@17.0.0:
     dependencies:
@@ -2752,8 +2718,6 @@ snapshots:
   use-sync-external-store@1.6.0(react@19.2.4):
     dependencies:
       react: 19.2.4
-
-  uuid@13.0.0: {}
 
   vite@8.0.2(@types/node@25.5.0)(jiti@2.6.1):
     dependencies:

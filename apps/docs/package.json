@@ -14,8 +14,6 @@
     "@unify/table-charts": "workspace:*",
     "@unify/table-core": "workspace:*",
     "@unify/table-react": "workspace:*",
-    "@unify/unify-duckdb-common": "^1.4.0",
-    "@unify/unify-duckdb-frontend": "^1.4.0",
     "dockview": "^1.15.2",
     "highlight.js": "^11.11.1",
     "lucide-react": "^1.7.0",

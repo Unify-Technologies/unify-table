@@ -7,20 +7,25 @@ interface RouteContext {
 
 const RouterCtx = createContext<RouteContext>({ path: "/", navigate: () => {} });
 
-function getHashPath() {
-  const hash = window.location.hash.slice(1);
-  return hash || "/";
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, ""); // e.g. "/unify-table"
+
+function getPath() {
+  const full = window.location.pathname;
+  const stripped = full.startsWith(BASE) ? full.slice(BASE.length) : full;
+  return stripped || "/";
 }
 
 function subscribe(cb: () => void) {
-  window.addEventListener("hashchange", cb);
-  return () => window.removeEventListener("hashchange", cb);
+  window.addEventListener("popstate", cb);
+  return () => window.removeEventListener("popstate", cb);
 }
 
 export function Router({ children }: { children: ReactNode }) {
-  const path = useSyncExternalStore(subscribe, getHashPath, () => "/");
+  const path = useSyncExternalStore(subscribe, getPath, () => "/");
   const navigate = useCallback((to: string) => {
-    window.location.hash = to;
+    window.history.pushState(null, "", BASE + to);
+    // Dispatch popstate so useSyncExternalStore picks up the change
+    window.dispatchEvent(new PopStateEvent("popstate"));
   }, []);
   return <RouterCtx.Provider value={{ path, navigate }}>{children}</RouterCtx.Provider>;
 }
@@ -45,7 +50,7 @@ export function Link({
   const { navigate } = useRoute();
   return (
     <a
-      href={`#${to}`}
+      href={`${BASE}${to}`}
       className={className}
       style={style}
       onClick={(e) => {

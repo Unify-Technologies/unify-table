@@ -270,6 +270,14 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     emit('column:reorder', order);
   }, [emit]);
 
+  // ── Column pin ─────────────────────────────────────────────
+  const setColumnPin = useCallback((field: string, pin: 'left' | 'right' | null) => {
+    setResolvedColumns((prev) =>
+      prev.map((col) => col.field === field ? { ...col, pin: pin ?? undefined } : col)
+    );
+    emit('column:pin', { field, pin });
+  }, [emit]);
+
   // ── Row ID detection ──────────────────────────────────────
   const rowIdField = useMemo(() => {
     if (rowId) return Array.isArray(rowId) ? rowId[0] : rowId;
@@ -420,13 +428,14 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       requestRange,
       setColumnWidth,
       setColumnOrder,
+      setColumnPin,
     }),
     [
       datasource, engine, table, viewManager, transformedColumns, transformedRows, sort, filters, groupBy,
       totalCount, isLoading, selection, activeCell, editingCell,
       handleSetSort, handleSetFilters, handleSetGroupBy,
       startEditing, commitEdit, cancelEdit, addRow, deleteRows,
-      undo, redo, on, emit, fetchData, requestRange, setColumnWidth, setColumnOrder,
+      undo, redo, on, emit, fetchData, requestRange, setColumnWidth, setColumnOrder, setColumnPin,
     ]
   );
 

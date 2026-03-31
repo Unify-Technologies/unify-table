@@ -190,6 +190,9 @@ export interface TableContext {
 
   // Column reorder
   setColumnOrder(order: string[]): void;
+
+  // Column pin
+  setColumnPin(field: string, pin: 'left' | 'right' | null): void;
 }
 
 export type TableEvent =
@@ -234,6 +237,10 @@ export interface ResolvedColumn extends ColumnDef {
   currentWidth: number;
   /** Column info from DuckDB schema */
   columnInfo?: ColumnInfo;
+  /** Sticky left/right offset in px (set by columnPin plugin) */
+  _pinOffset?: number;
+  /** True on last-left-pinned or first-right-pinned column (for edge shadow) */
+  _pinEdge?: boolean;
 }
 
 // --- Table Props ---

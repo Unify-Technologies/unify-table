@@ -16,6 +16,8 @@ import WithColumnResize from "./with_column_resize";
 import withColumnResizeCode from "./with_column_resize.tsx?raw";
 import WithColumnPin from "./with_column_pin";
 import withColumnPinCode from "./with_column_pin.tsx?raw";
+import PinContextMenu from "./pin_context_menu";
+import pinContextMenuCode from "./pin_context_menu.tsx?raw";
 import WithColumnReorder from "./with_column_reorder";
 import withColumnReorderCode from "./with_column_reorder.tsx?raw";
 import WithContextMenu from "./with_context_menu";
@@ -79,6 +81,7 @@ export const EXAMPLES: Record<string, ExampleDef> = {
   "with-clipboard": { component: WithClipboard, code: withClipboardCode },
   "with-column-resize": { component: WithColumnResize, code: withColumnResizeCode },
   "with-column-pin": { component: WithColumnPin, code: withColumnPinCode },
+  "pin-context-menu": { component: PinContextMenu, code: pinContextMenuCode },
   "with-column-reorder": { component: WithColumnReorder, code: withColumnReorderCode },
   "with-context-menu": { component: WithContextMenu, code: withContextMenuCode },
   "with-status-bar": { component: WithStatusBar, code: withStatusBarCode },

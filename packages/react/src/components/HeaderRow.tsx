@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { Pin } from 'lucide-react';
 import type { ResolvedColumn, TableStyles } from '../types.js';
 import type { SortField } from '@unify/table-core';
 
@@ -95,17 +96,23 @@ export function HeaderRow({ column, sort, onSort, onResize, styles, px, py }: He
         overflow: 'hidden',
         boxSizing: 'border-box',
         padding: `${py}px ${px}px`,
-        position: 'relative',
+        position: column.pin ? 'sticky' : 'relative',
         backgroundColor: 'inherit',
+        ...(column.pin === 'left' ? { left: column._pinOffset ?? 0, zIndex: 2 } : {}),
+        ...(column.pin === 'right' ? { right: column._pinOffset ?? 0, zIndex: 2 } : {}),
+        ...(column._pinEdge ? { boxShadow: column.pin === 'left' ? '4px 0 8px -4px rgba(0,0,0,0.15)' : '-4px 0 8px -4px rgba(0,0,0,0.15)' } : {}),
       }}
       onClick={handleClick}
       role="columnheader"
       data-field={column.field}
       tabIndex={0}
     >
-      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', paddingRight: resizable ? 8 : 0 }}>
-        {column.label ?? column.field}
-        {sortIndicator}
+      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 4, paddingRight: resizable ? 8 : 0 }}>
+        {column.pin && <Pin size={10} style={{ opacity: 0.4, flexShrink: 0 }} />}
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {column.label ?? column.field}
+          {sortIndicator}
+        </span>
       </span>
 
       {/* Resize handle */}

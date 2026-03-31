@@ -25,14 +25,17 @@
 .utbl-dark-row {
   border-bottom: 1px solid #1a1e2b;
   transition: background 0.15s;
+  --utbl-row-bg: #12151e;
 }
 
 .utbl-dark-row:hover {
   background: rgba(26, 30, 43, 0.6);
+  --utbl-row-bg: #1a1e2b;
 }
 
 .utbl-dark-row-even {
   background: #0f1219;
+  --utbl-row-bg: #0f1219;
 }
 
 .utbl-dark-row-selected {
@@ -112,14 +115,17 @@
 .utbl-light-row {
   border-bottom: 1px solid #e6dfcb;
   transition: background 0.15s;
+  --utbl-row-bg: #fdf6e3;
 }
 
 .utbl-light-row:hover {
   background: #eee8d5;
+  --utbl-row-bg: #eee8d5;
 }
 
 .utbl-light-row-even {
   background: #f5eed8;
+  --utbl-row-bg: #f5eed8;
 }
 
 .utbl-light-row-selected {

@@ -23,23 +23,29 @@ export default function ColumnPinPlugin() {
 
       <Heading level={2} id="pinning">Pinning Columns</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Right-click a column header and select "Pin Left" or "Pin Right" from the context
-        menu. Pinned columns stay fixed at the edge while the rest of the table scrolls.
-        Select "Unpin" to restore normal scrolling behavior.
+        Set <code>pin: 'left'</code> or <code>pin: 'right'</code> on a column definition to pin it.
+        Pinned columns stay fixed at the edge while the rest of the table scrolls horizontally,
+        with a subtle shadow to indicate the boundary.
       </p>
 
-      <Callout type="tip" title="When to pin">
-        Pin identifier columns (name, ticker, ID) so users always see which row they're looking at while scrolling through many columns. Combine with{" "}
-        <a href="#/plugins/column-resize" style={{color: "var(--doc-accent)"}}>columnResize()</a> and{" "}
-        <a href="#/plugins/column-reorder" style={{color: "var(--doc-accent)"}}>columnReorder()</a> for full column management.
-      </Callout>
-
-      <Heading level={2} id="programmatic">Programmatic Pinning</Heading>
-      <CodeBlock code={`// Pin columns via column definitions
-const columns = [
+      <CodeBlock code={`const columns = [
   { field: 'ticker', pin: 'left' },
   { field: 'total', pin: 'right' },
 ];`} language="tsx" />
+
+      <Heading level={2} id="context-menu">Context Menu Pinning</Heading>
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Right-click any column header to pin or unpin it at runtime.
+        Requires both <code>columnPin()</code> and{" "}
+        <code>contextMenu()</code> plugins.
+      </p>
+      <Example id="pin-context-menu" description="Right-click a column header to pin it left or right." height={350} />
+
+      <Callout type="tip" title="When to pin">
+        Pin identifier columns (name, ticker, ID) so users always see which row they're looking at while scrolling through many columns. Combine with{" "}
+        <a href="/plugins/column-resize" style={{color: "var(--doc-accent)"}}>columnResize()</a> and{" "}
+        <a href="/plugins/column-reorder" style={{color: "var(--doc-accent)"}}>columnReorder()</a> for full column management.
+      </Callout>
       <PageNav />
     </div>
   );

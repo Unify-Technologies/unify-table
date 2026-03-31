@@ -123,10 +123,20 @@ export function TableRow({ column, row, styles, px, py, isCellSelected, isActive
   const { className: dynamicClass, inlineStyle } = parseCellStyle(rawStyle);
 
   const selectionStyle: React.CSSProperties = isActiveCell
-    ? { outline: '2px solid #3b82f6', outlineOffset: -2, zIndex: 1, position: 'relative' }
+    ? { outline: '2px solid #3b82f6', outlineOffset: -2, zIndex: column.pin ? 3 : 1, ...(column.pin ? {} : { position: 'relative' }) }
     : isCellSelected
       ? { backgroundColor: 'var(--row-selected-bg, #1e3a5f)' }
       : {};
+
+  const pinStyle: React.CSSProperties = column.pin
+    ? {
+        position: 'sticky',
+        zIndex: 1,
+        backgroundColor: 'var(--utbl-row-bg, inherit)',
+        ...(column.pin === 'left' ? { left: column._pinOffset ?? 0 } : { right: column._pinOffset ?? 0 }),
+        ...(column._pinEdge ? { boxShadow: column.pin === 'left' ? '4px 0 8px -4px rgba(0,0,0,0.15)' : '-4px 0 8px -4px rgba(0,0,0,0.15)' } : {}),
+      }
+    : {};
 
   const cellCss: React.CSSProperties = {
     width: column.currentWidth,
@@ -140,6 +150,7 @@ export function TableRow({ column, row, styles, px, py, isCellSelected, isActive
     whiteSpace: 'nowrap',
     boxSizing: 'border-box',
     padding: `${py}px ${px}px`,
+    ...pinStyle,
     ...inlineStyle,
     ...selectionStyle,
   };

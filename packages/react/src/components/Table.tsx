@@ -595,10 +595,20 @@ export function TableView({
                       const isCellInGroupSel = isGroupSelected && !isActiveCellHere;
 
                       const activeCellStyle: React.CSSProperties = isActiveCellHere
-                        ? { outline: '2px solid #3b82f6', outlineOffset: -2, zIndex: 1, position: 'relative' }
+                        ? { outline: '2px solid #3b82f6', outlineOffset: -2, zIndex: col.pin ? 3 : 1, ...(col.pin ? {} : { position: 'relative' }) }
                         : isCellInGroupSel
                           ? { backgroundColor: 'var(--row-selected-bg, #1e3a5f)' }
                           : {};
+
+                      const groupPinStyle: React.CSSProperties = col.pin
+                        ? {
+                            position: 'sticky',
+                            zIndex: 1,
+                            backgroundColor: 'var(--utbl-row-bg, inherit)',
+                            ...(col.pin === 'left' ? { left: col._pinOffset ?? 0 } : { right: col._pinOffset ?? 0 }),
+                            ...(col._pinEdge ? { boxShadow: col.pin === 'left' ? '4px 0 8px -4px rgba(0,0,0,0.15)' : '-4px 0 8px -4px rgba(0,0,0,0.15)' } : {}),
+                          }
+                        : {};
 
                       const cellStyle: React.CSSProperties = {
                         width: col.currentWidth,
@@ -613,6 +623,7 @@ export function TableView({
                         padding: `${density.py}px ${density.px}px`,
                         fontWeight: 600,
                         textAlign: col.align ?? 'left',
+                        ...groupPinStyle,
                         ...activeCellStyle,
                       };
 

@@ -24,6 +24,7 @@ import FilterSystem from "./pages/FilterSystem";
 import QueryEngine from "./pages/QueryEngine";
 import Charts from "./pages/Charts";
 import Headless from "./pages/Headless";
+import LlmDocs from "./pages/LlmDocs";
 import Demo from "./pages/Demo";
 
 // Plugin pages
@@ -134,6 +135,7 @@ function AppContent() {
       <Route path="/query-engine" component={QueryEngine} />
       <Route path="/charts" component={Charts} />
       <Route path="/headless" component={Headless} />
+      <Route path="/llm-docs" component={LlmDocs} />
       <Route path="/demo" component={Demo} />
     </Shell>
   );

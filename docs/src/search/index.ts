@@ -47,6 +47,7 @@ export const SEARCH_INDEX: SearchItem[] = [
   { title: "Charts", path: "/charts", keywords: ["echarts", "sparkline", "chart", "option", "builder", "EChartsWrapper", "barLineSql", "pieSql", "scatterSql"], description: "ECharts wrapper and SQL chart builders", section: "Displays & Charts" },
   { title: "Headless", path: "/headless", keywords: ["headless", "useTableContext", "hook", "custom", "render", "api", "programmatic"], description: "useTableContext hook for custom rendering", section: "Data Layer" },
   { title: "Demo", path: "/demo", keywords: ["demo", "playground", "full", "dockview", "interactive", "1M", "million", "rows", "trades"], description: "Full interactive demo with 1M rows", section: "Overview" },
+  { title: "For LLMs", path: "/llm-docs", keywords: ["llm", "ai", "machine", "readable", "llms.txt", "markdown", "context", "claude", "copilot", "cursor", "agent"], description: "Machine-readable docs for AI assistants", section: "Integrations" },
 ];
 
 export function fuzzyMatch(query: string, item: SearchItem): boolean {

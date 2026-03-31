@@ -17,6 +17,7 @@ import {
   Filter,
   Database,
   Terminal,
+  BotMessageSquare,
 } from "lucide-react";
 
 export interface NavItem {
@@ -109,6 +110,12 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Filter System", path: "/filter-system", icon: Filter },
       { label: "Query Engine", path: "/query-engine", icon: Database },
       { label: "Headless", path: "/headless", icon: Terminal },
+    ],
+  },
+  {
+    title: "Integrations",
+    items: [
+      { label: "For LLMs", path: "/llm-docs", icon: BotMessageSquare },
     ],
   },
 ];

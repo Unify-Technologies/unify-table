@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, createElement } from 'react';
+import { createPortal } from 'react-dom';
 import type { TablePlugin, TableContext, MenuItem, ResolvedColumn } from '../types.js';
 import { quoteIdent } from '@unify/table-core';
 import { detectIdColumn, downloadBlob } from '../utils.js';
@@ -222,24 +223,35 @@ function defaultHeaderItems(ctx: TableContext, column: ResolvedColumn): MenuItem
 
 /* ═══════════════════════════════════════════════════════════ */
 
-const menuStyle: React.CSSProperties = {
-  position: 'absolute', minWidth: 220,
-  backgroundColor: 'var(--utbl-surface)', border: '1px solid var(--utbl-border)',
-  borderRadius: 8, padding: '4px 0', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-  fontFamily: 'system-ui, sans-serif', fontSize: '0.8rem',
-};
+interface MenuColors {
+  surface: string;
+  surfaceAlt: string;
+  border: string;
+  text: string;
+  textMuted: string;
+}
 
-function MenuPanel({ items, x, y, onClose }: { items: MenuItem[]; x: number | string; y: number | string; onClose: () => void }): React.ReactElement {
+const DARK_COLORS: MenuColors = { surface: '#0c0e14', surfaceAlt: '#12151e', border: '#252a38', text: '#e8eaef', textMuted: '#5c6478' };
+const LIGHT_COLORS: MenuColors = { surface: '#fdf6e3', surfaceAlt: '#eee8d5', border: '#d3cbb7', text: '#073642', textMuted: '#93a1a1' };
+
+function MenuPanel({ items, x, y, onClose, colors }: { items: MenuItem[]; x: number | string; y: number | string; onClose: () => void; colors: MenuColors }): React.ReactElement {
   const [hovered, setHovered] = useState(-1);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
 
+  const menuStyle: React.CSSProperties = {
+    position: 'absolute', minWidth: 220, left: x, top: y,
+    backgroundColor: colors.surface, border: `1px solid ${colors.border}`,
+    borderRadius: 8, padding: '4px 0', boxShadow: '0 8px 32px rgba(0,0,0,0.24)',
+    fontFamily: 'system-ui, sans-serif', fontSize: '0.8rem',
+  };
+
   return createElement('div', {
-    style: { ...menuStyle, left: x, top: y },
+    style: menuStyle,
     onClick: (e: React.MouseEvent) => e.stopPropagation(),
   },
     items.map((item, i) => {
       if (item.type === 'separator') {
-        return createElement('div', { key: `sep-${i}`, style: { height: 1, backgroundColor: 'var(--utbl-border)', margin: '4px 8px' } });
+        return createElement('div', { key: `sep-${i}`, style: { height: 1, backgroundColor: colors.border, margin: '4px 8px' } });
       }
       const hasChildren = item.children && item.children.length > 0;
       return createElement('div', {
@@ -255,8 +267,8 @@ function MenuPanel({ items, x, y, onClose }: { items: MenuItem[]; x: number | st
           style: {
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
             padding: '6px 12px', border: 'none',
-            background: hovered === i ? 'var(--utbl-surface-alt)' : 'none',
-            color: item.disabled ? 'var(--utbl-text-muted)' : item.danger ? '#ef4444' : 'var(--utbl-text)',
+            background: hovered === i ? colors.surfaceAlt : 'none',
+            color: item.disabled ? colors.textMuted : item.danger ? '#ef4444' : colors.text,
             cursor: item.disabled ? 'default' : 'pointer', textAlign: 'left',
             fontSize: 'inherit', fontFamily: 'inherit', opacity: item.disabled ? 0.5 : 1,
           },
@@ -274,19 +286,28 @@ function MenuPanel({ items, x, y, onClose }: { items: MenuItem[]; x: number | st
           x: '100%',
           y: 0,
           onClose,
+          colors,
         }) : null,
       ]);
     }),
   );
 }
 
+function detectColors(): MenuColors {
+  // Check if any dark table container exists in the DOM
+  return document.querySelector('.utbl-dark-container') ? DARK_COLORS : LIGHT_COLORS;
+}
+
 function ContextMenuOverlay({ ctx }: { ctx: TableContext }) {
   const [menu, setMenu] = useState<MenuState>({ open: false, x: 0, y: 0, items: [] });
+  const [colors, setColors] = useState<MenuColors>(DARK_COLORS);
 
   useEffect(() => {
     const unsub = ctx.on('contextmenu', (payload: unknown) => {
       const { x, y, items } = payload as { x: number; y: number; items: MenuItem[] };
-      if (items.length > 0) setMenu({ open: true, x, y, items });
+      if (items.length === 0) return;
+      setColors(detectColors());
+      setMenu({ open: true, x, y, items });
     });
     return unsub;
   }, [ctx]);
@@ -307,9 +328,12 @@ function ContextMenuOverlay({ ctx }: { ctx: TableContext }) {
 
   if (!menu.open) return null;
 
-  // Wrapper with relative positioning for submenus
-  return createElement('div', { style: { position: 'fixed', left: menu.x, top: menu.y, zIndex: 9999 } },
-    createElement(MenuPanel, { items: menu.items, x: 0, y: 0, onClose: () => setMenu((m) => ({ ...m, open: false })) }),
+  // Portal to document.body so the menu is never clipped by ancestor overflow:hidden.
+  return createPortal(
+    createElement('div', { style: { position: 'fixed', left: menu.x, top: menu.y, zIndex: 9999 } },
+      createElement(MenuPanel, { items: menu.items, x: 0, y: 0, onClose: () => setMenu((m) => ({ ...m, open: false })), colors }),
+    ),
+    document.body,
   );
 }
 

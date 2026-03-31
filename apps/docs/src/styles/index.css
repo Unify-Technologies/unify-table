@@ -1,0 +1,544 @@
+@import "tailwindcss";
+
+/* Scan workspace packages for Tailwind classes */
+@source "../../../packages/react/src";
+@source "../../../packages/charts/src";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+
+  --color-surface: #fdf6e3;
+  --color-surface-alt: #eee8d5;
+  --color-surface-hover: #e6dfcb;
+  --color-border: #d3cbb7;
+  --color-text: #073642;
+  --color-text-secondary: #586e75;
+  --color-text-muted: #93a1a1;
+  --color-accent: #268bd2;
+  --color-accent-hover: #1e7ab8;
+  --color-positive: #859900;
+  --color-negative: #dc322f;
+  --color-warning: #b58900;
+
+  --color-dark-surface: #0c0e14;
+  --color-dark-surface-alt: #12151e;
+  --color-dark-surface-hover: #1a1e2b;
+  --color-dark-border: #252a38;
+  --color-dark-text: #e8eaef;
+  --color-dark-text-secondary: #8b92a5;
+  --color-dark-text-muted: #5c6478;
+  --color-dark-accent: #3b82f6;
+  --color-dark-positive: #34d399;
+  --color-dark-negative: #f87171;
+}
+
+/* ── Dockview custom themes (for Demo page) ─────────────── */
+
+.dockview-theme-unify-dark {
+  --dv-background-color: var(--color-dark-surface);
+  --dv-group-view-background-color: var(--color-dark-surface);
+  --dv-tabs-and-actions-container-background-color: var(--color-dark-surface-alt);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-dark-surface);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-dark-surface-alt);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-dark-surface);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-dark-surface-alt);
+  --dv-tab-divider-color: var(--color-dark-border);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-dark-text);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-dark-text-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-dark-text-secondary);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-dark-text-muted);
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: var(--color-dark-border);
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-container-scrollbar-color: var(--color-dark-text-muted);
+  --dv-icon-hover-background-color: var(--color-dark-surface-hover);
+  --dv-drag-over-background-color: rgba(59, 130, 246, 0.12);
+  --dv-drag-over-border-color: var(--color-dark-accent);
+  --dv-floating-box-shadow: 8px 8px 16px 0px rgba(0, 0, 0, 0.4);
+  --dv-separator-handle-background-color: var(--color-dark-border);
+  --dv-separator-handle-hover-background-color: var(--color-dark-accent);
+}
+
+.dockview-theme-unify-light {
+  --dv-background-color: var(--color-surface);
+  --dv-group-view-background-color: var(--color-surface);
+  --dv-tabs-and-actions-container-background-color: var(--color-surface-alt);
+  --dv-activegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--color-surface-alt);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--color-surface);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--color-surface-alt);
+  --dv-tab-divider-color: var(--color-border);
+  --dv-activegroup-visiblepanel-tab-color: var(--color-text);
+  --dv-activegroup-hiddenpanel-tab-color: var(--color-text-muted);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--color-text-secondary);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--color-text-muted);
+  --dv-separator-border: transparent;
+  --dv-paneview-header-border-color: var(--color-border);
+  --dv-tabs-and-actions-container-font-size: 12px;
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-container-scrollbar-color: var(--color-text-muted);
+  --dv-icon-hover-background-color: var(--color-surface-hover);
+  --dv-drag-over-background-color: rgba(37, 99, 235, 0.1);
+  --dv-drag-over-border-color: var(--color-accent);
+  --dv-floating-box-shadow: 8px 8px 16px 0px rgba(0, 0, 0, 0.1);
+  --dv-separator-handle-background-color: var(--color-border);
+  --dv-separator-handle-hover-background-color: var(--color-accent);
+}
+
+/* ── Dockview layout: rounded groups + spacing ──────────── */
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light):not(
+  :is(.dockview-theme-unify-dark, .dockview-theme-unify-light) *
+) {
+  padding: 6px;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .split-view-container > .view-container > .view {
+  overflow: visible !important;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--dv-tab-divider-color);
+  position: absolute !important;
+  inset: 4px;
+  width: auto !important;
+  height: auto !important;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light).dv-maximized .groupview {
+  border-radius: 0;
+  border: none;
+  inset: 0;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light).dv-maximized .groupview > .content-container {
+  border-radius: 0;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview > .content-container {
+  border-radius: 0 0 7px 7px;
+  overflow: hidden;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container {
+  border-bottom: 1px solid var(--dv-tab-divider-color);
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container .tab {
+  border-radius: 0;
+  margin: 0;
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container .tab.active-tab {
+  position: relative;
+}
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) .groupview .tabs-and-actions-container .tab.active-tab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--dv-group-view-background-color);
+}
+
+:is(.dockview-theme-unify-dark, .dockview-theme-unify-light) :is(.utbl-dark-container, .utbl-light-container) {
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+[role="separator"]:hover .resize-indicator,
+[role="separator"]:active .resize-indicator {
+  opacity: 0.4 !important;
+  width: 2px !important;
+}
+
+/* ── Doc-specific styles ────────────────────────────────── */
+
+/* Smooth scroll for anchor links */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+/* ── Scrollbar improvements ────────────────────────────── */
+
+/* Dark mode scrollbar - blend with theme */
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border);
+}
+
+/* ── Hero section ──────────────────────────────────────── */
+
+.doc-hero-gradient {
+  background:
+    radial-gradient(ellipse 100% 70% at 50% -30%, rgba(59, 130, 246, 0.20), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 70% 0%, rgba(139, 92, 246, 0.08), transparent 60%);
+}
+
+html:not(.dark) .doc-hero-gradient {
+  background:
+    radial-gradient(ellipse 100% 70% at 50% -30%, rgba(38, 139, 210, 0.14), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 70% 0%, rgba(108, 71, 177, 0.06), transparent 60%);
+}
+
+/* Animated glow for hero badge */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(59, 130, 246, 0.2), 0 0 48px rgba(59, 130, 246, 0.08); }
+  50% { box-shadow: 0 0 32px rgba(59, 130, 246, 0.35), 0 0 64px rgba(59, 130, 246, 0.12); }
+}
+
+html:not(.dark) .doc-hero-badge {
+  animation: none;
+  box-shadow: 0 1px 4px rgba(38, 139, 210, 0.12);
+}
+
+.doc-hero-badge {
+  animation: glow-pulse 4s ease-in-out infinite;
+}
+
+/* ── Feature cards ─────────────────────────────────────── */
+
+.doc-feature-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.doc-feature-card:hover {
+  transform: translateY(-2px);
+}
+
+html.dark .doc-feature-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  border-color: var(--color-dark-accent);
+}
+
+html:not(.dark) .doc-feature-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  border-color: var(--color-accent);
+}
+
+/* ── Example cards ─────────────────────────────────────── */
+
+.doc-example-card {
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+html.dark .doc-example-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+html:not(.dark) .doc-example-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Code blocks ───────────────────────────────────────── */
+
+.doc-code-block {
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.6;
+  transition: box-shadow 0.2s ease;
+}
+
+html.dark .doc-code-block {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+html:not(.dark) .doc-code-block {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ── Highlight.js dark-mode integration ──────────────── */
+/* Override github-dark-dimmed background to match our doc dark surface. */
+html.dark .hljs {
+  background: transparent;
+}
+
+/* ── Highlight.js light-mode overrides ────────────────── */
+/* Warm palette tuned to complement the solarized-light doc surface.
+   Uses deeper, more saturated colors than stock solarized for legibility. */
+html:not(.dark) .hljs {
+  color: #3b4252;
+  background: transparent;
+}
+html:not(.dark) .hljs-keyword,
+html:not(.dark) .hljs-selector-tag { color: #8839ef; }
+html:not(.dark) .hljs-tag { color: #d20f39; }
+html:not(.dark) .hljs-name { color: #d20f39; }
+html:not(.dark) .hljs-string,
+html:not(.dark) .hljs-template-tag,
+html:not(.dark) .hljs-template-variable { color: #40a02b; }
+html:not(.dark) .hljs-comment,
+html:not(.dark) .hljs-quote { color: #9ca0b0; font-style: italic; }
+html:not(.dark) .hljs-number,
+html:not(.dark) .hljs-literal { color: #fe640b; }
+html:not(.dark) .hljs-type,
+html:not(.dark) .hljs-built_in,
+html:not(.dark) .hljs-class .hljs-title { color: #df8e1d; }
+html:not(.dark) .hljs-attr,
+html:not(.dark) .hljs-attribute { color: #1e66f5; }
+html:not(.dark) .hljs-function,
+html:not(.dark) .hljs-title { color: #1e66f5; }
+html:not(.dark) .hljs-params { color: #4c4f69; }
+html:not(.dark) .hljs-variable { color: #e64553; }
+html:not(.dark) .hljs-selector-class,
+html:not(.dark) .hljs-selector-id { color: #1e66f5; }
+html:not(.dark) .hljs-meta { color: #fe640b; }
+html:not(.dark) .hljs-symbol { color: #ea76cb; }
+
+/* Code blocks with a filename header get extra emphasis */
+.doc-code-block:has(.doc-code-header) {
+  border-radius: 12px;
+}
+
+.doc-code-block pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.doc-code-block code {
+  font-family: var(--font-mono);
+}
+
+/* ── Section separators ───────────────────────────────── */
+
+#doc-content h2 {
+  padding-top: 24px;
+  margin-top: 8px;
+}
+
+#doc-content h2:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+}
+
+/* ── Sidebar nav ───────────────────────────────────────── */
+
+.doc-nav-item {
+  transition: background-color 0.15s, color 0.15s;
+}
+
+html.dark .doc-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+html:not(.dark) .doc-nav-item:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+.doc-nav-item:hover .lucide {
+  opacity: 1 !important;
+}
+
+/* ── TOC nav ─────────────────────────────────────────── */
+
+.doc-toc-item {
+  transition: background-color 0.15s, color 0.15s;
+}
+
+html.dark .doc-toc-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+html:not(.dark) .doc-toc-item:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Page transitions ──────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#doc-content > div > div {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ── Inline code ───────────────────────────────────────── */
+
+code:not(pre code) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+html.dark code:not(pre code) {
+  background: rgba(255, 255, 255, 0.06);
+  color: #93c5fd;
+}
+
+html:not(.dark) code:not(pre code) {
+  background: rgba(0, 0, 0, 0.04);
+  color: #2563eb;
+}
+
+/* ── Links ─────────────────────────────────────────────── */
+
+#doc-content a:not(.no-underline):not([class*="rounded"]) {
+  text-decoration: none;
+}
+
+html.dark #doc-content a:not(.no-underline):not([class*="rounded"]) {
+  color: #60a5fa;
+}
+
+html:not(.dark) #doc-content a:not(.no-underline):not([class*="rounded"]) {
+  color: #268bd2;
+}
+
+#doc-content a:not(.no-underline):not([class*="rounded"]):hover {
+  text-decoration: underline;
+}
+
+/* ── Theme-adaptive doc tokens ────────────────────────── */
+/* Pages use these instead of hardcoded dark/light vars    */
+
+:root {
+  --doc-surface: var(--color-surface);
+  --doc-surface-alt: var(--color-surface-alt);
+  --doc-border: var(--color-border);
+  --doc-text: var(--color-text);
+  --doc-text-secondary: var(--color-text-secondary);
+  --doc-text-muted: var(--color-text-muted);
+  --doc-accent: var(--color-accent);
+}
+
+html.dark {
+  --doc-surface: var(--color-dark-surface);
+  --doc-surface-alt: var(--color-dark-surface-alt);
+  --doc-border: var(--color-dark-border);
+  --doc-text: var(--color-dark-text);
+  --doc-text-secondary: var(--color-dark-text-secondary);
+  --doc-text-muted: var(--color-dark-text-muted);
+  --doc-accent: var(--color-dark-accent);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  html.dark body {
+    background-color: var(--color-dark-surface);
+    color: var(--color-dark-text);
+  }
+}
+
+/* ── Light theme refinements ──────────────────────────── */
+
+/* Light mode sidebar gets a subtle background tint */
+html:not(.dark) nav[class*="flex flex-col"] {
+  background-color: rgba(238, 232, 213, 0.4);
+}
+
+/* Light mode callouts */
+html:not(.dark) .doc-callout-info {
+  border-color: rgba(38, 139, 210, 0.3);
+  background-color: rgba(38, 139, 210, 0.04);
+}
+
+html:not(.dark) .doc-callout-tip {
+  border-color: rgba(133, 153, 0, 0.3);
+  background-color: rgba(133, 153, 0, 0.04);
+}
+
+html:not(.dark) .doc-callout-warning {
+  border-color: rgba(181, 137, 0, 0.3);
+  background-color: rgba(181, 137, 0, 0.04);
+}
+
+/* Light mode TOC active state */
+html:not(.dark) .doc-toc-active {
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+/* ── Viewport-centered content ────────────────────────── */
+
+/* On lg+ screens, shift content toward viewport center instead of main-area center.
+   Falls back to margin-left:0 (left-aligned in main) when main is too narrow,
+   which is still closer to viewport center than mx-auto would be. */
+@media (min-width: 1024px) {
+  #doc-content > .doc-content-inner {
+    margin-left: max(0px, calc(50vw - var(--sidebar-offset, 0px) - 450px));
+    margin-right: auto;
+    transition: margin-left 0.2s ease;
+  }
+}
+
+/* ── Content spacing ──────────────────────────────────── */
+
+/* Consistent vertical rhythm for doc pages */
+#doc-content p + p {
+  margin-top: 0.75rem;
+}
+
+#doc-content ul, #doc-content ol {
+  line-height: 1.7;
+}
+
+/* Code blocks: consistent spacing above and below */
+#doc-content .doc-code-block {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Example cards */
+#doc-content .doc-example-card {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Space after a code block before a paragraph */
+#doc-content .doc-code-block + p,
+#doc-content .doc-example-card + p {
+  margin-top: 1rem;
+}
+
+/* Space between a heading and a code block directly after it */
+#doc-content h2 + .doc-code-block,
+#doc-content h3 + .doc-code-block {
+  margin-top: 0.5rem;
+}

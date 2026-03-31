@@ -1,0 +1,34 @@
+{
+  "name": "@unify/docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.1-dev167.0",
+    "@unify/table-charts": "workspace:*",
+    "@unify/table-core": "workspace:*",
+    "@unify/table-react": "workspace:*",
+    "@unify/unify-duckdb-common": "^1.4.0",
+    "@unify/unify-duckdb-frontend": "^1.4.0",
+    "dockview": "^1.15.2",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^1.7.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.8.0",
+    "vite": "^8.0.2"
+  }
+}

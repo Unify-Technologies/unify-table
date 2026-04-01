@@ -23,6 +23,8 @@ export function findReplace(): TablePlugin {
       if (!el) return;
 
       const handler = (e: KeyboardEvent) => {
+        if (ctx.getLatest().editingCell) return;
+
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
           e.preventDefault();
           ctx.emit('findReplace:open');
@@ -75,12 +77,15 @@ export async function findInTable(
   return Number(rows[0]?.cnt ?? 0);
 }
 
-/** Helper to replace via SQL */
+/** Helper to replace via SQL.
+ * Routes through ctx.commitEdit so edits go through the overlay when the editing plugin is active.
+ */
 export async function replaceInTable(
   ctx: TableContext,
   query: string,
   replacement: string,
   column: string,
+  rowIdField?: string,
 ): Promise<number> {
   const { engine, table } = ctx;
   const qt = quoteIdent(table);
@@ -88,6 +93,36 @@ export async function replaceInTable(
   const escapedQuery = query.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
   const whereClause = `${qc} ILIKE '%${escapedQuery}%' ESCAPE '\\'`;
 
+  // Detect rowIdField if not provided
+  let idField = rowIdField;
+  if (!idField) {
+    const cols = await engine.columns(table);
+    const candidates = ['id', 'ID', '_id', 'rowid', '__table_rid'];
+    for (const c of candidates) {
+      if (cols.some((col) => col.name === c)) {
+        idField = c;
+        break;
+      }
+    }
+  }
+
+  // If we have a rowIdField, route through commitEdit for non-destructive editing
+  if (idField) {
+    const affectedRows = await engine.query<Record<string, unknown>>(
+      `SELECT ${quoteIdent(idField)}, ${qc} FROM ${qt} WHERE ${whereClause}`,
+    );
+    for (const row of affectedRows) {
+      const oldValue = String(row[column] ?? '');
+      const newValue = oldValue.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
+      await ctx.commitEdit(
+        { rowIndex: 0, colIndex: 0, rowId: String(row[idField]), field: column, value: oldValue },
+        newValue,
+      );
+    }
+    return affectedRows.length;
+  }
+
+  // Fallback: direct UPDATE (no rowIdField available)
   const countSql = `SELECT COUNT(*) AS cnt FROM ${qt} WHERE ${whereClause}`;
   const countRows = await engine.query<{ cnt: number }>(countSql);
   const affected = Number(countRows[0]?.cnt ?? 0);

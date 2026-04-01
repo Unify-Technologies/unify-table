@@ -175,6 +175,9 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
         const live = ctx.getLatest();
         const active = live.activeCell;
 
+        // When a cell is being edited, let the editor handle all keys
+        if (live.editingCell) return;
+
         // Ctrl+A: select all
         if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
           e.preventDefault();

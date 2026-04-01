@@ -12,6 +12,8 @@ export interface ViewManager {
   readonly viewName: string;
   /** The full CREATE OR REPLACE VIEW SQL last executed */
   readonly viewSql: string;
+  /** Change the base table used in view creation (e.g. to an edit overlay view). */
+  setBaseTable(table: string): void;
   /** Recreate the VIEW from the given filters and sort. */
   sync(filters: SqlFragment[], sort: SortSpec[]): Promise<void>;
   /** Drop the VIEW (cleanup). */
@@ -55,6 +57,7 @@ export function createViewManager(
 ): ViewManager {
   const viewName = `__utbl_v_${id}`;
   let _viewSql = '';
+  let _baseTable = table;
 
   return {
     get viewName() {
@@ -64,8 +67,12 @@ export function createViewManager(
       return _viewSql;
     },
 
+    setBaseTable(t: string) {
+      _baseTable = t;
+    },
+
     async sync(filters, sort) {
-      const body = buildViewSelect(table, filters, sort);
+      const body = buildViewSelect(_baseTable, filters, sort);
       _viewSql = `CREATE OR REPLACE VIEW ${quoteIdent(viewName)} AS ${body}`;
       await engine.execute(_viewSql);
     },

@@ -38,6 +38,10 @@ export type { DataSource, DataSourceOptions, DataPage, GetRowsParams, SortField,
 export { createViewManager, buildViewSelect } from './view.js';
 export type { ViewManager } from './view.js';
 
+// Edit overlay
+export { createEditOverlay } from './edit_overlay.js';
+export type { EditOverlay, DirtyRow } from './edit_overlay.js';
+
 // Display
 export { registerDisplayType, getDisplayType, listDisplayTypes, clearDisplayTypes } from './display.js';
 export type { DisplayConfig, DisplayType, CardSize } from './display.js';

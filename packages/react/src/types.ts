@@ -7,6 +7,7 @@ import type {
   TableConnection,
   ColumnInfo,
   Row,
+  ViewManager,
 } from '@unify/table-core';
 
 // --- Column definitions ---
@@ -126,6 +127,16 @@ export function isFullRowSpan(span: SelectionSpan, colCount: number): boolean {
   return c0 === 0 && c1 >= colCount - 1;
 }
 
+export interface EditBackend {
+  commitEdit(cell: CellRef, value: unknown): Promise<void>;
+  addRow(data: Row): Promise<void>;
+  deleteRows(ids: string[]): Promise<void>;
+  undo(): Promise<void>;
+  redo(): Promise<void>;
+  canUndo(): boolean;
+  canRedo(): boolean;
+}
+
 export interface TableContext {
   // Data
   datasource: DataSource;
@@ -133,6 +144,8 @@ export interface TableContext {
   table: string;
   /** The DuckDB VIEW name reflecting current filters + sort. */
   viewName: string;
+  /** The ViewManager instance (for plugins that need to adjust the view chain). */
+  viewManager: ViewManager;
 
   // State
   columns: ResolvedColumn[];
@@ -165,6 +178,9 @@ export interface TableContext {
   redo(): Promise<void>;
   canUndo: boolean;
   canRedo: boolean;
+
+  // Edit backend (set by editing plugin)
+  setEditBackend(backend: EditBackend | null): void;
 
   // Events
   on(event: TableEvent, handler: TableEventHandler): () => void;

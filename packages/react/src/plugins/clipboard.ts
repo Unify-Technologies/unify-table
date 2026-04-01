@@ -14,6 +14,9 @@ export function clipboard(): TablePlugin {
       if (!el) return;
 
       const handler = (e: KeyboardEvent) => {
+        // When a cell is being edited, let the editor handle Ctrl+C/V natively
+        if (ctx.getLatest().editingCell) return;
+
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
           e.preventDefault();
           copySelection(ctx);

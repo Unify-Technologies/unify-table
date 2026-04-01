@@ -103,4 +103,34 @@ describe('ViewManager', () => {
     expect(engine.execute).toHaveBeenCalledTimes(2);
     expect(vm.viewSql).toContain(`"region" = 'US'`);
   });
+
+  it('setBaseTable changes the table used in subsequent sync calls', async () => {
+    const engine = mockEngine();
+    const vm = createViewManager(engine, 'trades', '0');
+
+    // Initial sync uses 'trades'
+    await vm.sync([], []);
+    expect(engine.execute).toHaveBeenCalledWith(
+      'CREATE OR REPLACE VIEW "__utbl_v_0" AS SELECT * FROM "trades"',
+    );
+
+    // Change base table to an edit overlay view
+    vm.setBaseTable('__utbl_ev_0');
+    await vm.sync([], []);
+    expect(engine.execute).toHaveBeenCalledWith(
+      'CREATE OR REPLACE VIEW "__utbl_v_0" AS SELECT * FROM "__utbl_ev_0"',
+    );
+  });
+
+  it('setBaseTable applies to sync with filters and sort', async () => {
+    const engine = mockEngine();
+    const vm = createViewManager(engine, 'trades', '1');
+
+    vm.setBaseTable('__utbl_ev_1');
+    await vm.sync([eq('region', 'US')], [{ field: 'pnl', dir: 'desc' }]);
+
+    expect(engine.execute).toHaveBeenCalledWith(
+      `CREATE OR REPLACE VIEW "__utbl_v_1" AS SELECT * FROM "__utbl_ev_1" WHERE "region" = 'US' ORDER BY "pnl" DESC`,
+    );
+  });
 });

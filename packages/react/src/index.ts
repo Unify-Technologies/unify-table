@@ -91,7 +91,9 @@ export type {
   MenuItem,
   SelectionState,
   SelectionSpan,
+  EditBackend,
 } from './types.js';
+export type { EditingOptions } from './plugins/editing.js';
 
 // Utility functions
 export { isInSpan, isInAnySpan, isFullRowSpan } from './types.js';

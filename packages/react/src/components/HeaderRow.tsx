@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { Pin } from 'lucide-react';
+import { Pin, PencilLine } from 'lucide-react';
 import type { ResolvedColumn, TableStyles } from '../types.js';
 import type { SortField } from '@unify/table-core';
 
@@ -109,6 +109,7 @@ export function HeaderRow({ column, sort, onSort, onResize, styles, px, py }: He
     >
       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 4, paddingRight: resizable ? 8 : 0 }}>
         {column.pin && <Pin size={10} style={{ opacity: 0.4, flexShrink: 0 }} />}
+        {column.editable !== false && column.editor && <PencilLine size={10} style={{ opacity: 0.35, flexShrink: 0 }} />}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {column.label ?? column.field}
           {sortIndicator}

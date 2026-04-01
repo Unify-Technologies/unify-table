@@ -36,11 +36,31 @@ export function keyboard(): TablePlugin {
       if (!el) return;
 
       const shortcuts = plugin.shortcuts!;
+      const hasSelectionPlugin = !!ctx.getLatest().getPlugin('selection');
+
       const handler = (e: KeyboardEvent) => {
+        const latest = ctx.getLatest();
+
+        // When a cell is being edited, let the editor handle all keys
+        // except Escape (cancel) and Enter (commit, handled by editor's onKeyDown)
+        if (latest.editingCell) {
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            latest.cancelEdit();
+          }
+          // All other keys pass through to the inline editor
+          return;
+        }
+
+        // Arrow keys are handled by the selection plugin when present
+        // to avoid double-movement
+        const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+        if (isArrow && hasSelectionPlugin) return;
+
         const shortcut = shortcuts[e.key];
         if (shortcut) {
           e.preventDefault();
-          shortcut(ctx.getLatest());
+          shortcut(latest);
         }
       };
 

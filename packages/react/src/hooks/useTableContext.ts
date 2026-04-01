@@ -22,6 +22,7 @@ import type {
   SelectionState,
   ResolvedColumn,
   ColumnDef,
+  EditBackend,
 } from '../types.js';
 import { createPageCache } from '../page_cache.js';
 import { emptySelection } from '../utils.js';
@@ -93,6 +94,9 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   interface EditAction { type: 'update' | 'insert' | 'delete'; sql: string; undoSql: string; }
   const undoStack = useRef<EditAction[]>([]);
   const redoStack = useRef<EditAction[]>([]);
+
+  // Edit backend — set by the editing plugin to intercept edit operations
+  const editBackendRef = useRef<EditBackend | null>(null);
 
   // Events
   const listenersRef = useRef(new Map<TableEvent, Set<TableEventHandler>>());
@@ -302,7 +306,17 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     setRows(cacheRef.current.flatten(page.total, pageSize));
   }, [datasource, pageSize]);
 
+  const refocusContainer = useCallback(() => {
+    containerRef.current?.focus();
+  }, []);
+
   const commitEdit = useCallback(async (cell: CellRef, value: unknown) => {
+    if (editBackendRef.current) {
+      await editBackendRef.current.commitEdit(cell, value);
+      setEditingCell(null);
+      refocusContainer();
+      return;
+    }
     if (!rowIdField) return;
     const oldValue = cell.value;
     const qt = quoteIdent(table);
@@ -314,13 +328,18 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     undoStack.current.push({ type: 'update', sql: updateSql, undoSql: undoSqlStr });
     redoStack.current = [];
     setEditingCell(null);
+    refocusContainer();
     emit('edit:commit', { cell, value });
     await fetchData();
-  }, [engine, table, rowIdField, emit, fetchData]);
+  }, [engine, table, rowIdField, emit, fetchData, refocusContainer]);
 
-  const cancelEdit = useCallback(() => { setEditingCell(null); emit('edit:cancel'); }, [emit]);
+  const cancelEdit = useCallback(() => { setEditingCell(null); refocusContainer(); emit('edit:cancel'); }, [emit, refocusContainer]);
 
   const addRow = useCallback(async (data: Row) => {
+    if (editBackendRef.current) {
+      await editBackendRef.current.addRow(data);
+      return;
+    }
     const cols = Object.keys(data);
     const vals = cols.map((c) => toSqlLiteral(data[c]));
     const sql = `INSERT INTO ${quoteIdent(table)} (${cols.map(quoteIdent).join(', ')}) VALUES (${vals.join(', ')})`;
@@ -332,6 +351,10 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   }, [engine, table, emit, fetchData]);
 
   const deleteRows = useCallback(async (ids: string[]) => {
+    if (editBackendRef.current) {
+      await editBackendRef.current.deleteRows(ids);
+      return;
+    }
     if (!rowIdField || ids.length === 0) return;
     const idList = ids.map(toSqlLiteral).join(', ');
     const sql = `DELETE FROM ${quoteIdent(table)} WHERE ${quoteIdent(rowIdField)} IN (${idList})`;
@@ -343,6 +366,10 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   }, [engine, table, rowIdField, emit, fetchData]);
 
   const undo = useCallback(async () => {
+    if (editBackendRef.current) {
+      await editBackendRef.current.undo();
+      return;
+    }
     const action = undoStack.current.pop();
     if (!action) return;
     await engine.execute(action.undoSql);
@@ -351,6 +378,10 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   }, [engine, fetchData]);
 
   const redo = useCallback(async () => {
+    if (editBackendRef.current) {
+      await editBackendRef.current.redo();
+      return;
+    }
     const action = redoStack.current.pop();
     if (!action) return;
     await engine.execute(action.sql);
@@ -412,14 +443,15 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
 
   const ctx: TableContext = useMemo(
     () => ({
-      datasource, engine, table, viewName: viewManager.viewName,
+      datasource, engine, table, viewName: viewManager.viewName, viewManager,
       columns: transformedColumns, rows: transformedRows, sort, filters, groupBy,
       totalCount, isLoading, selection, activeCell, editingCell,
       setSort: handleSetSort, setFilters: handleSetFilters, setGroupBy: handleSetGroupBy,
       setSelection, setActiveCell, startEditing, commitEdit, cancelEdit,
       addRow, deleteRows, undo, redo,
-      canUndo: undoStack.current.length > 0,
-      canRedo: redoStack.current.length > 0,
+      canUndo: editBackendRef.current ? editBackendRef.current.canUndo() : undoStack.current.length > 0,
+      canRedo: editBackendRef.current ? editBackendRef.current.canRedo() : redoStack.current.length > 0,
+      setEditBackend: (backend: EditBackend | null) => { editBackendRef.current = backend; },
       on, emit,
       getPlugin: <T extends TablePlugin>(name: string) => pluginMap.current.get(name) as T | undefined,
       getLatest: () => ctxRef.current!,

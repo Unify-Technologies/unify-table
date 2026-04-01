@@ -11,7 +11,7 @@ import { registerDefaultDisplays } from '../displays/defaults.js';
 import { getDisplay } from '../displays/registry.js';
 import type { PanelConfig } from '../panels/types.js';
 import type { AggFn } from '../panels/types.js';
-import type { TableProps, TableContext, TablePlugin, TableStyles, MenuItem, ColumnDef } from '../types.js';
+import type { TableProps, TableContext, TablePlugin, TableStyles, MenuItem, ColumnDef, CellRef, ResolvedColumn } from '../types.js';
 import { isInAnySpan, isFullRowSpan } from '../types.js';
 import { getRowId } from '../utils.js';
 
@@ -38,6 +38,152 @@ function mergeStyles(base: TableStyles, override?: TableStyles): TableStyles {
 }
 
 const DEFAULT_PANELS: PanelConfig[] = ['columns', 'filters', 'groupBy', 'displays', 'export', 'debug'];
+
+// ── Inline cell editor ──────────────────────────────────────
+
+interface InlineEditorProps {
+  column: ResolvedColumn;
+  cell: CellRef;
+  styles: TableStyles;
+  px: number;
+  py: number;
+  onCommit: (value: unknown) => void;
+  onCancel: () => void;
+}
+
+function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: InlineEditorProps) {
+  const [draft, setDraft] = useState(cell.value != null ? String(cell.value) : '');
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    // Place caret at end so the user can continue editing
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    }
+  }, []);
+
+  const commit = () => {
+    const editor = column.editor ?? 'text';
+    let value: unknown = draft;
+    if (editor === 'number') {
+      const n = Number(draft);
+      value = Number.isNaN(n) ? draft : n;
+    } else if (editor === 'checkbox') {
+      value = draft === 'true';
+    }
+    onCommit(value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Stop propagation so the keyboard plugin (on the container) doesn't interfere
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+    else if (e.key === 'Tab') { e.preventDefault(); commit(); }
+  };
+
+  // Prevent clicks inside the editor from bubbling to the row/container
+  // (which would steal focus and trigger cell:click selection events)
+  const stopClick = (e: React.MouseEvent) => e.stopPropagation();
+  const stopMouseDown = (e: React.MouseEvent) => e.stopPropagation();
+
+  const pinStyle: React.CSSProperties = column.pin
+    ? {
+        position: 'sticky',
+        zIndex: 2,
+        backgroundColor: 'var(--utbl-row-bg, inherit)',
+        ...(column.pin === 'left' ? { left: column._pinOffset ?? 0 } : { right: column._pinOffset ?? 0 }),
+      }
+    : {};
+
+  const cellCss: React.CSSProperties = {
+    width: column.currentWidth,
+    minWidth: column.minWidth ?? 50,
+    maxWidth: column.maxWidth,
+    flexShrink: 0,
+    flexGrow: 0,
+    boxSizing: 'border-box',
+    padding: 0,
+    outline: '2px solid #3b82f6',
+    outlineOffset: -2,
+    position: 'relative' as const,
+    zIndex: 1,
+    ...pinStyle,
+  };
+
+  const inputCss: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    border: 'none',
+    outline: 'none',
+    background: 'var(--utbl-cell-edit-bg, var(--utbl-row-bg, #1a1a2e))',
+    color: 'inherit',
+    font: 'inherit',
+    padding: `${py}px ${px}px`,
+    boxSizing: 'border-box',
+    textAlign: column.align ?? 'left',
+    userSelect: 'text',
+    WebkitUserSelect: 'text',
+    cursor: 'text',
+  };
+
+  const editor = column.editor ?? 'text';
+
+  if (editor === 'select' && column.editorOptions) {
+    return (
+      <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+        <select
+          ref={inputRef as React.RefObject<HTMLSelectElement>}
+          value={draft}
+          onChange={(e) => { setDraft(e.target.value); }}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          style={inputCss}
+        >
+          {column.editorOptions.map((opt) => (
+            <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
+  if (editor === 'textarea') {
+    return (
+      <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+        <textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          style={{ ...inputCss, resize: 'none' }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+      <input
+        ref={inputRef as React.RefObject<HTMLInputElement>}
+        type={editor === 'date' ? 'date' : 'text'}
+        inputMode={editor === 'number' ? 'decimal' : undefined}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={handleKeyDown}
+        style={inputCss}
+      />
+    </div>
+  );
+}
+
+// ── Table component ─────────────────────────────────────────
 
 export function Table(props: TableProps) {
   const {
@@ -530,6 +676,16 @@ export function TableView({
     onRowClick?.(row);
   }, [ctx, onRowClick, findColIndex, columns]);
 
+  // Handle row double-click — start editing the cell
+  const handleRowDoubleClick = useCallback((row: Record<string, unknown>, index: number, e: React.MouseEvent) => {
+    if (isGroupRow(row)) return;
+    const colIndex = findColIndex(e.clientX);
+    const col = columns[colIndex];
+    if (!col || col.editable === false) return;
+    const rowId = getRowId(row, index);
+    ctx.startEditing({ rowIndex: index, colIndex, rowId, field: col.field, value: row[col.field] });
+  }, [ctx, findColIndex, columns]);
+
   return (
     <div className={`${styles.root ?? ''} ${className ?? ''}`} style={{ fontSize: density.fontSize, position: 'relative', display: 'flex', flexDirection: 'column', height: height === '100%' ? '100%' : undefined }}>
       {/* Plugin renderAbove */}
@@ -589,6 +745,7 @@ export function TableView({
                 }}
                 className={rowClass}
                 onClick={!isPlaceholder ? (e) => handleRowClick(row, virtualRow.index, e) : undefined}
+                onDoubleClick={!isPlaceholder && !isGroupRow(row) ? (e) => handleRowDoubleClick(row, virtualRow.index, e) : undefined}
               >
                 {isPlaceholder ? (
                   <div style={{ padding: `${density.py}px ${density.px}px`, color: '#666', fontSize: '0.75rem' }}>
@@ -694,6 +851,23 @@ export function TableView({
                   columns.map((col, colIdx) => {
                     const inSpan = isInAnySpan(virtualRow.index, colIdx, selection);
                     const isActive = ctx.activeCell?.rowIndex === virtualRow.index && ctx.activeCell?.colIndex === colIdx;
+                    const isEditingThis = ctx.editingCell?.rowIndex === virtualRow.index && ctx.editingCell?.colIndex === colIdx;
+
+                    if (isEditingThis) {
+                      return (
+                        <InlineEditor
+                          key={col.field}
+                          column={col}
+                          cell={ctx.editingCell!}
+                          styles={styles}
+                          px={density.px}
+                          py={density.py}
+                          onCommit={(value) => ctx.commitEdit(ctx.editingCell!, value)}
+                          onCancel={() => ctx.cancelEdit()}
+                        />
+                      );
+                    }
+
                     return (
                       <TableRow key={col.field} column={col} row={row}
                         styles={styles} px={density.px} py={density.py}

@@ -1,29 +1,38 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronDown } from 'lucide-react';
-import type { DisplayConfig, ColumnInfo } from '@unify/table-core';
-import { useTableContext } from '../hooks/useTableContext.js';
-import { HeaderRow } from './HeaderRow.js';
-import { TableRow } from './TableRow.js';
-import { GroupRow } from './GroupRow.js';
-import { isGroupRow, serializeGroupKey } from '../plugins/row_grouping.js';
-import { PanelShell } from '../panels/PanelShell.js';
-import { DisplayRenderer } from '../displays/DisplayRenderer.js';
-import { registerDefaultDisplays } from '../displays/defaults.js';
-import { getDisplay } from '../displays/registry.js';
-import type { PanelConfig } from '../panels/types.js';
-import type { AggFn } from '../panels/types.js';
-import type { TableProps, TableContext, TablePlugin, TableStyles, MenuItem, ColumnDef, CellRef, ResolvedColumn } from '../types.js';
-import { isInAnySpan, isFullRowSpan } from '../types.js';
-import { getRowId, buildPinStyle } from '../utils.js';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { ChevronDown } from "lucide-react";
+import type { DisplayConfig, ColumnInfo } from "@unify/table-core";
+import { useTableContext } from "../hooks/useTableContext.js";
+import { HeaderRow } from "./HeaderRow.js";
+import { TableRow } from "./TableRow.js";
+import { GroupRow } from "./GroupRow.js";
+import { isGroupRow, serializeGroupKey } from "../plugins/row_grouping.js";
+import { PanelShell } from "../panels/PanelShell.js";
+import { DisplayRenderer } from "../displays/DisplayRenderer.js";
+import { registerDefaultDisplays } from "../displays/defaults.js";
+import { getDisplay } from "../displays/registry.js";
+import type { PanelConfig } from "../panels/types.js";
+import type { AggFn } from "../panels/types.js";
+import type {
+  TableProps,
+  TableContext,
+  TablePlugin,
+  TableStyles,
+  MenuItem,
+  ColumnDef,
+  CellRef,
+  ResolvedColumn,
+} from "../types.js";
+import { isInAnySpan, isFullRowSpan } from "../types.js";
+import { getRowId, buildPinStyle } from "../utils.js";
 
 // Register built-in display types on first import
 registerDefaultDisplays();
 
 const DENSITY = {
-  compact: { rowHeight: 28, fontSize: '0.75rem', px: 8, py: 2 },
-  comfortable: { rowHeight: 36, fontSize: '0.875rem', px: 12, py: 6 },
-  spacious: { rowHeight: 48, fontSize: '1rem', px: 16, py: 12 },
+  compact: { rowHeight: 28, fontSize: "0.75rem", px: 8, py: 2 },
+  comfortable: { rowHeight: 36, fontSize: "0.875rem", px: 12, py: 6 },
+  spacious: { rowHeight: 48, fontSize: "1rem", px: 16, py: 12 },
 } as const;
 
 export type DensityValues = (typeof DENSITY)[keyof typeof DENSITY];
@@ -32,14 +41,21 @@ function mergeStyles(base: TableStyles, override?: TableStyles): TableStyles {
   if (!override) return base;
   const result: TableStyles = { ...base };
   for (const key of Object.keys(override) as (keyof TableStyles)[]) {
-    const b = base[key] ?? '';
+    const b = base[key] ?? "";
     const o = override[key];
     result[key] = o ? (b ? `${b} ${o}` : o) : b;
   }
   return result;
 }
 
-const DEFAULT_PANELS: PanelConfig[] = ['columns', 'filters', 'groupBy', 'displays', 'export', 'debug'];
+const DEFAULT_PANELS: PanelConfig[] = [
+  "columns",
+  "filters",
+  "groupBy",
+  "displays",
+  "export",
+  "debug",
+];
 
 // ── Inline cell editor ──────────────────────────────────────
 
@@ -54,7 +70,7 @@ interface InlineEditorProps {
 }
 
 function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: InlineEditorProps) {
-  const [draft, setDraft] = useState(cell.value != null ? String(cell.value) : '');
+  const [draft, setDraft] = useState(cell.value != null ? String(cell.value) : "");
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -69,13 +85,13 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
   }, []);
 
   const commit = () => {
-    const editor = column.editor ?? 'text';
+    const editor = column.editor ?? "text";
     let value: unknown = draft;
-    if (editor === 'number') {
+    if (editor === "number") {
       const n = Number(draft);
       value = Number.isNaN(n) ? draft : n;
-    } else if (editor === 'checkbox') {
-      value = draft === 'true';
+    } else if (editor === "checkbox") {
+      value = draft === "true";
     }
     onCommit(value);
   };
@@ -83,9 +99,16 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Stop propagation so the keyboard plugin (on the container) doesn't interfere
     e.stopPropagation();
-    if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    else if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
-    else if (e.key === 'Tab') { e.preventDefault(); commit(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      commit();
+    }
   };
 
   // Prevent clicks inside the editor from bubbling to the row/container
@@ -101,38 +124,38 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
     maxWidth: column.maxWidth,
     flexShrink: 0,
     flexGrow: 0,
-    boxSizing: 'border-box',
+    boxSizing: "border-box",
     padding: 0,
-    outline: '2px solid #3b82f6',
+    outline: "2px solid #3b82f6",
     outlineOffset: -2,
-    position: 'relative' as const,
+    position: "relative" as const,
     zIndex: 1,
     ...pinStyle,
   };
 
   const inputCss: React.CSSProperties = {
-    width: '100%',
-    height: '100%',
-    border: 'none',
-    outline: 'none',
-    background: 'var(--utbl-cell-edit-bg, var(--utbl-row-bg, #1a1a2e))',
-    color: 'inherit',
-    font: 'inherit',
+    width: "100%",
+    height: "100%",
+    border: "none",
+    outline: "none",
+    background: "var(--utbl-cell-edit-bg, var(--utbl-row-bg, #1a1a2e))",
+    color: "inherit",
+    font: "inherit",
     padding: `${py}px ${px}px`,
-    boxSizing: 'border-box',
-    textAlign: column.align ?? 'left',
-    userSelect: 'text',
-    WebkitUserSelect: 'text',
-    cursor: 'text',
+    boxSizing: "border-box",
+    textAlign: column.align ?? "left",
+    userSelect: "text",
+    WebkitUserSelect: "text",
+    cursor: "text",
   };
 
-  const editor = column.editor ?? 'text';
+  const editor = column.editor ?? "text";
 
-  if (editor === 'select' && column.editorOptions) {
+  if (editor === "select" && column.editorOptions) {
     const selectCss: React.CSSProperties = {
       ...inputCss,
-      appearance: 'none',
-      WebkitAppearance: 'none',
+      appearance: "none",
+      WebkitAppearance: "none",
       paddingRight: 24,
     };
 
@@ -141,12 +164,19 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
       const allOptions = column.editorOptions.map(String);
       if (draft && !allOptions.includes(draft)) allOptions.push(draft);
       return (
-        <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+        <div
+          className={`${styles.cell ?? ""} ${styles.cellEditing ?? ""}`}
+          style={cellCss}
+          onClick={stopClick}
+          onMouseDown={stopMouseDown}
+        >
           <input
             ref={inputRef as React.RefObject<HTMLInputElement>}
             list={listId}
             value={draft}
-            onChange={(e) => { setDraft(e.target.value); }}
+            onChange={(e) => {
+              setDraft(e.target.value);
+            }}
             onBlur={commit}
             onKeyDown={handleKeyDown}
             style={selectCss}
@@ -156,51 +186,90 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
               <option key={opt} value={opt} />
             ))}
           </datalist>
-          <ChevronDown size={14} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
+          <ChevronDown
+            size={14}
+            style={{
+              position: "absolute",
+              right: 8,
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+              opacity: 0.5,
+            }}
+          />
         </div>
       );
     }
 
     return (
-      <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+      <div
+        className={`${styles.cell ?? ""} ${styles.cellEditing ?? ""}`}
+        style={cellCss}
+        onClick={stopClick}
+        onMouseDown={stopMouseDown}
+      >
         <select
           ref={inputRef as React.RefObject<HTMLSelectElement>}
           value={draft}
-          onChange={(e) => { setDraft(e.target.value); }}
+          onChange={(e) => {
+            setDraft(e.target.value);
+          }}
           onBlur={commit}
           onKeyDown={handleKeyDown}
           style={selectCss}
         >
           {column.editorOptions.map((opt) => (
-            <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
+            <option key={String(opt)} value={String(opt)}>
+              {String(opt)}
+            </option>
           ))}
         </select>
-        <ChevronDown size={14} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
+        <ChevronDown
+          size={14}
+          style={{
+            position: "absolute",
+            right: 8,
+            top: "50%",
+            transform: "translateY(-50%)",
+            pointerEvents: "none",
+            opacity: 0.5,
+          }}
+        />
       </div>
     );
   }
 
-  if (editor === 'textarea') {
+  if (editor === "textarea") {
     return (
-      <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+      <div
+        className={`${styles.cell ?? ""} ${styles.cellEditing ?? ""}`}
+        style={cellCss}
+        onClick={stopClick}
+        onMouseDown={stopMouseDown}
+      >
         <textarea
           ref={inputRef as React.RefObject<HTMLTextAreaElement>}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={handleKeyDown}
-          style={{ ...inputCss, resize: 'none' }}
+          style={{ ...inputCss, resize: "none" }}
         />
       </div>
     );
   }
 
   return (
-    <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+    <div
+      className={`${styles.cell ?? ""} ${styles.cellEditing ?? ""}`}
+      style={cellCss}
+      onClick={stopClick}
+      onMouseDown={stopMouseDown}
+    >
       <input
         ref={inputRef as React.RefObject<HTMLInputElement>}
-        type={editor === 'date' ? 'date' : 'text'}
-        inputMode={editor === 'number' ? 'decimal' : undefined}
+        type={editor === "date" ? "date" : "text"}
+        inputMode={editor === "number" ? "decimal" : undefined}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
@@ -215,13 +284,22 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
 
 export function Table(props: TableProps) {
   const {
-    db, table, columns: columnsProp, plugins,
-    styles: stylesProp, className,
-    density = 'comfortable',
-    rowStyle, onRowClick, height = 600, pageSize, rowId,
-    renderFooter, onTotalCount,
+    db,
+    table,
+    columns: columnsProp,
+    plugins,
+    styles: stylesProp,
+    className,
+    density = "comfortable",
+    rowStyle,
+    onRowClick,
+    height = 600,
+    pageSize,
+    rowId,
+    renderFooter,
+    onTotalCount,
     panels: panelsProp,
-    panelPosition = 'right',
+    panelPosition = "right",
     displays: displaysProp,
     onDisplaysChange,
     onActiveDisplayChange,
@@ -249,13 +327,13 @@ export function Table(props: TableProps) {
 
     const pluginNames = new Set(plugins?.map((p) => p.name) ?? []);
     const PLUGIN_PANEL_MAP: Record<string, string[]> = {
-      columns: ['columnReorder', 'columnResize', 'columnPin'],
-      filters: ['filters'],
-      groupBy: ['rowGrouping'],
+      columns: ["columnReorder", "columnResize", "columnPin"],
+      filters: ["filters"],
+      groupBy: ["rowGrouping"],
     };
 
     return DEFAULT_PANELS.filter((p) => {
-      const key = typeof p === 'string' ? p : p.key;
+      const key = typeof p === "string" ? p : p.key;
       const requiredPlugins = PLUGIN_PANEL_MAP[key];
       return !requiredPlugins || requiredPlugins.some((p) => pluginNames.has(p));
     });
@@ -264,7 +342,9 @@ export function Table(props: TableProps) {
   // Panel state — lives here so useTableContext receives the filtered columns
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(() => new Set(initialHiddenCols ?? []));
   const [groupByCols, setGroupByCols] = useState<string[]>(initialGroupBy ?? []);
-  const [aggFns, setAggFns] = useState<Record<string, AggFn>>((initialAggFns ?? {}) as Record<string, AggFn>);
+  const [aggFns, setAggFns] = useState<Record<string, AggFn>>(
+    (initialAggFns ?? {}) as Record<string, AggFn>,
+  );
 
   // ── Display state ─────────────────────────────────────────
   const [displays, setDisplays] = useState<DisplayConfig[]>(displaysProp ?? []);
@@ -273,7 +353,7 @@ export function Table(props: TableProps) {
     displaysProp?.reduce((max, d) => {
       const m = d.id.match(/^d_(\d+)$/);
       return m ? Math.max(max, Number(m[1])) : max;
-    }, 0) ?? 0
+    }, 0) ?? 0,
   );
   const schemaColumnsRef = useRef<ColumnInfo[]>([]);
 
@@ -284,43 +364,57 @@ export function Table(props: TableProps) {
 
   // Notify parent when active display changes
   useEffect(() => {
-    const displayType = activeDisplay ? displays.find((d) => d.id === activeDisplay)?.type ?? null : null;
+    const displayType = activeDisplay
+      ? (displays.find((d) => d.id === activeDisplay)?.type ?? null)
+      : null;
     onActiveDisplayChange?.(displayType);
   }, [activeDisplay, displays, onActiveDisplayChange]);
 
-  const updateDisplays = useCallback((next: DisplayConfig[]) => {
-    setDisplays(next);
-    onDisplaysChange?.(next);
-  }, [onDisplaysChange]);
+  const updateDisplays = useCallback(
+    (next: DisplayConfig[]) => {
+      setDisplays(next);
+      onDisplaysChange?.(next);
+    },
+    [onDisplaysChange],
+  );
 
-  const handleAddDisplay = useCallback((typeKey: string) => {
-    const descriptor = getDisplay(typeKey);
-    if (!descriptor) return;
-    const id = `d_${++displayIdCounter.current}`;
-    const newDisplay: DisplayConfig = {
-      id,
-      type: typeKey,
-      label: descriptor.type.label,
-      config: descriptor.type.defaultConfig(schemaColumnsRef.current) as Record<string, unknown>,
-    };
-    // Replace any existing display — only one allowed at a time
-    updateDisplays([newDisplay]);
-    setActiveDisplay(id);
-  }, [updateDisplays]);
+  const handleAddDisplay = useCallback(
+    (typeKey: string) => {
+      const descriptor = getDisplay(typeKey);
+      if (!descriptor) return;
+      const id = `d_${++displayIdCounter.current}`;
+      const newDisplay: DisplayConfig = {
+        id,
+        type: typeKey,
+        label: descriptor.type.label,
+        config: descriptor.type.defaultConfig(schemaColumnsRef.current) as Record<string, unknown>,
+      };
+      // Replace any existing display — only one allowed at a time
+      updateDisplays([newDisplay]);
+      setActiveDisplay(id);
+    },
+    [updateDisplays],
+  );
 
-  const handleRemoveDisplay = useCallback((id: string) => {
-    updateDisplays(displays.filter((d) => d.id !== id));
-    if (activeDisplay === id) setActiveDisplay(null);
-  }, [displays, activeDisplay, updateDisplays]);
+  const handleRemoveDisplay = useCallback(
+    (id: string) => {
+      updateDisplays(displays.filter((d) => d.id !== id));
+      if (activeDisplay === id) setActiveDisplay(null);
+    },
+    [displays, activeDisplay, updateDisplays],
+  );
 
-  const handleDisplayConfigChange = useCallback((id: string, config: Record<string, unknown>) => {
-    updateDisplays(displays.map((d) => d.id === id ? { ...d, config } : d));
-  }, [displays, updateDisplays]);
+  const handleDisplayConfigChange = useCallback(
+    (id: string, config: Record<string, unknown>) => {
+      updateDisplays(displays.map((d) => (d.id === id ? { ...d, config } : d)));
+    },
+    [displays, updateDisplays],
+  );
 
   // Resolve original columns for the panel (before hiding)
   const originalColumns = useMemo<ColumnDef[]>(() => {
     if (!columnsProp) return [];
-    return columnsProp.map((c) => typeof c === 'string' ? { field: c } : c);
+    return columnsProp.map((c) => (typeof c === "string" ? { field: c } : c));
   }, [columnsProp]);
 
   // Capture initial column order/widths in refs so they're only used on mount
@@ -359,7 +453,14 @@ export function Table(props: TableProps) {
     return cols;
   }, [originalColumns, hiddenCols, groupByCols]);
 
-  const ctx = useTableContext({ db, table, columns: visibleColumns.length > 0 ? visibleColumns : columnsProp, plugins, pageSize, rowId });
+  const ctx = useTableContext({
+    db,
+    table,
+    columns: visibleColumns.length > 0 ? visibleColumns : columnsProp,
+    plugins,
+    pageSize,
+    rowId,
+  });
   const styles = useMemo(() => mergeStyles({}, stylesProp), [stylesProp]);
   const d = DENSITY[density];
 
@@ -383,8 +484,8 @@ export function Table(props: TableProps) {
   // Notify parent of sort changes
   useEffect(() => {
     if (!onSortChange) return;
-    return ctx.on('sort', (payload) => {
-      onSortChange(payload as import('@unify/table-core').SortField[]);
+    return ctx.on("sort", (payload) => {
+      onSortChange(payload as import("@unify/table-core").SortField[]);
     });
   }, [ctx, onSortChange]);
 
@@ -408,23 +509,23 @@ export function Table(props: TableProps) {
   useEffect(() => {
     if (appliedInitialGroupWidth.current) return;
     const widths = initialColumnWidthsRef.current;
-    if (!widths || widths['__group__'] == null) return;
+    if (!widths || widths["__group__"] == null) return;
     if (ctx.columns.length === 0) return;
-    if (!ctx.columns.some((c) => c.field === '__group__')) return;
+    if (!ctx.columns.some((c) => c.field === "__group__")) return;
     appliedInitialGroupWidth.current = true;
-    ctx.setColumnWidth('__group__', widths['__group__']);
+    ctx.setColumnWidth("__group__", widths["__group__"]);
   }, [ctx]);
 
   // Notify parent of column order changes
   useEffect(() => {
     if (!onColumnOrderChange) return;
-    return ctx.on('column:reorder', (payload) => {
+    return ctx.on("column:reorder", (payload) => {
       onColumnOrderChange(payload as string[]);
     });
   }, [ctx, onColumnOrderChange]);
 
   // Notify parent of column width changes — derive from resolved columns
-  const prevWidthsRef = useRef<string>('');
+  const prevWidthsRef = useRef<string>("");
   useEffect(() => {
     if (!onColumnWidthsChange) return;
     if (ctx.columns.length === 0) return;
@@ -441,14 +542,15 @@ export function Table(props: TableProps) {
 
   // Sync aggregations to rowGrouping plugin
   const aggregations = useMemo(
-    () => Object.entries(aggFns)
-      .filter(([, fn]) => fn !== '')
-      .map(([field, fn]) => ({ field, fn: fn as Exclude<AggFn, ''> })),
+    () =>
+      Object.entries(aggFns)
+        .filter(([, fn]) => fn !== "")
+        .map(([field, fn]) => ({ field, fn: fn as Exclude<AggFn, ""> })),
     [aggFns],
   );
 
   useEffect(() => {
-    ctxRef.current.emit('group:aggregations', aggregations);
+    ctxRef.current.emit("group:aggregations", aggregations);
   }, [aggregations]);
 
   // Notify parent of totalCount changes
@@ -459,10 +561,13 @@ export function Table(props: TableProps) {
   // ── Schema columns for display config panels ──────────
   const [schemaColumns, setSchemaColumns] = useState<ColumnInfo[]>([]);
   useEffect(() => {
-    ctx.engine.columns(table).then((cols) => {
-      setSchemaColumns(cols);
-      schemaColumnsRef.current = cols;
-    }).catch(() => {});
+    ctx.engine
+      .columns(table)
+      .then((cols) => {
+        setSchemaColumns(cols);
+        schemaColumnsRef.current = cols;
+      })
+      .catch(() => {});
   }, [ctx.engine, table]);
 
   const activeDisplayConfig = activeDisplay ? displays.find((d) => d.id === activeDisplay) : null;
@@ -480,15 +585,29 @@ export function Table(props: TableProps) {
       showSql={false}
     />
   ) : (
-    <TableView ctx={ctx} styles={styles} density={d} plugins={plugins}
-      height={height} rowStyle={rowStyle} onRowClick={onRowClick}
+    <TableView
+      ctx={ctx}
+      styles={styles}
+      density={d}
+      plugins={plugins}
+      height={height}
+      rowStyle={rowStyle}
+      onRowClick={onRowClick}
       renderFooter={renderFooter}
     />
   );
 
   if (!showPanels) {
     return (
-      <div className={className ?? ''} style={{ display: 'flex', flexDirection: 'column', height: height === '100%' ? '100%' : undefined, minHeight: 0 }}>
+      <div
+        className={className ?? ""}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          height: height === "100%" ? "100%" : undefined,
+          minHeight: 0,
+        }}
+      >
         {contentArea}
       </div>
     );
@@ -517,15 +636,19 @@ export function Table(props: TableProps) {
     />
   );
 
-  const resolvedHeight = height === '100%' ? '100%' : (typeof height === 'number' ? `${height}px` : height);
+  const resolvedHeight =
+    height === "100%" ? "100%" : typeof height === "number" ? `${height}px` : height;
 
   return (
-    <div className={className ?? ''} style={{ display: 'flex', height: resolvedHeight, minHeight: 0 }}>
-      {panelPosition === 'left' && panel}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+    <div
+      className={className ?? ""}
+      style={{ display: "flex", height: resolvedHeight, minHeight: 0 }}
+    >
+      {panelPosition === "left" && panel}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         {contentArea}
       </div>
-      {panelPosition === 'right' && panel}
+      {panelPosition === "right" && panel}
     </div>
   );
 }
@@ -534,7 +657,15 @@ export function Table(props: TableProps) {
 const PLACEHOLDER_ROW = { __placeholder: true } as Record<string, unknown>;
 
 export function TableView({
-  ctx, styles, density, className, height, rowStyle, onRowClick, renderFooter, plugins,
+  ctx,
+  styles,
+  density,
+  className,
+  height,
+  rowStyle,
+  onRowClick,
+  renderFooter,
+  plugins,
 }: {
   ctx: TableContext;
   styles: TableStyles;
@@ -543,17 +674,32 @@ export function TableView({
   height: number | string;
   rowStyle?: (row: Record<string, unknown>, index: number) => string;
   onRowClick?: (row: Record<string, unknown>) => void;
-  renderFooter?: (info: { totalCount: number; isLoading: boolean; selection: import('../types.js').SelectionState }) => React.ReactNode;
+  renderFooter?: (info: {
+    totalCount: number;
+    isLoading: boolean;
+    selection: import("../types.js").SelectionState;
+  }) => React.ReactNode;
   plugins?: TablePlugin[];
 }) {
-  const { rows, columns, isLoading, totalCount, sort, containerRef, requestRange, selection, setColumnWidth, groupBy } = ctx;
+  const {
+    rows,
+    columns,
+    isLoading,
+    totalCount,
+    sort,
+    containerRef,
+    requestRange,
+    selection,
+    setColumnWidth,
+    groupBy,
+  } = ctx;
 
   // Map sort state so the __group__ header shows the correct indicator.
   // All groupBy fields collapse into a single __group__ entry (use first match's direction).
   const headerSort = useMemo(() => {
     if (groupBy.length === 0) return sort;
     const groupSet = new Set(groupBy);
-    let groupDir: 'asc' | 'desc' | null = null;
+    let groupDir: "asc" | "desc" | null = null;
     const filtered: typeof sort = [];
     for (const s of sort) {
       if (groupSet.has(s.field)) {
@@ -562,13 +708,14 @@ export function TableView({
         filtered.push(s);
       }
     }
-    if (groupDir !== null) filtered.unshift({ field: '__group__', dir: groupDir });
+    if (groupDir !== null) filtered.unshift({ field: "__group__", dir: groupDir });
     return filtered;
   }, [sort, groupBy]);
 
   // When plugins transform rows (e.g. grouping), use the transformed array length.
   // Otherwise use totalCount for virtual scrolling over the full dataset.
-  const displayCount = groupBy.length > 0 && rows.length > 0 && rows.length < totalCount ? rows.length : totalCount;
+  const displayCount =
+    groupBy.length > 0 && rows.length > 0 && rows.length < totalCount ? rows.length : totalCount;
 
   const virtualizer = useVirtualizer({
     count: displayCount,
@@ -588,171 +735,267 @@ export function TableView({
     requestRange(startRow, endRow);
   }, [virtualRows, requestRange]);
 
-  const collectPluginItems = useCallback(<T,>(method: 'contextMenuItems' | 'headerContextMenuItems', arg: T): MenuItem[] => {
-    if (!plugins) return [];
-    const items: MenuItem[] = [];
-    for (const plugin of plugins) {
-      const fn = plugin[method] as ((ctx: TableContext, arg: T) => MenuItem[]) | undefined;
-      if (fn) items.push(...fn(ctx, arg));
-    }
-    return items;
-  }, [plugins, ctx]);
+  const collectPluginItems = useCallback(
+    <T,>(method: "contextMenuItems" | "headerContextMenuItems", arg: T): MenuItem[] => {
+      if (!plugins) return [];
+      const items: MenuItem[] = [];
+      for (const plugin of plugins) {
+        const fn = plugin[method] as ((ctx: TableContext, arg: T) => MenuItem[]) | undefined;
+        if (fn) items.push(...fn(ctx, arg));
+      }
+      return items;
+    },
+    [plugins, ctx],
+  );
 
-  const collectMenuItems = useCallback((cell: import('../types.js').CellRef | null): MenuItem[] =>
-    collectPluginItems('contextMenuItems', cell!), [collectPluginItems]);
+  const collectMenuItems = useCallback(
+    (cell: import("../types.js").CellRef | null): MenuItem[] =>
+      collectPluginItems("contextMenuItems", cell!),
+    [collectPluginItems],
+  );
 
-  const collectHeaderMenuItems = useCallback((column: import('../types.js').ResolvedColumn): MenuItem[] =>
-    collectPluginItems('headerContextMenuItems', column), [collectPluginItems]);
+  const collectHeaderMenuItems = useCallback(
+    (column: import("../types.js").ResolvedColumn): MenuItem[] =>
+      collectPluginItems("headerContextMenuItems", column),
+    [collectPluginItems],
+  );
 
   // Find which column index a clientX falls in
-  const findColIndex = useCallback((clientX: number): number => {
-    const el = containerRef.current;
-    if (!el) return 0;
-    const rect = el.getBoundingClientRect();
-    let x = rect.left - el.scrollLeft;
-    for (let i = 0; i < columns.length; i++) {
-      x += columns[i].currentWidth;
-      if (clientX < x) return i;
-    }
-    return columns.length - 1;
-  }, [columns, containerRef]);
+  const findColIndex = useCallback(
+    (clientX: number): number => {
+      const el = containerRef.current;
+      if (!el) return 0;
+      const rect = el.getBoundingClientRect();
+      let x = rect.left - el.scrollLeft;
+      for (let i = 0; i < columns.length; i++) {
+        x += columns[i].currentWidth;
+        if (clientX < x) return i;
+      }
+      return columns.length - 1;
+    },
+    [columns, containerRef],
+  );
 
   // Handle right-click — detect actual cell
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    const target = e.target as HTMLElement;
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const target = e.target as HTMLElement;
 
-    // Header right-click — detect via role="columnheader"
-    const headerEl = target.closest('[role="columnheader"]');
-    if (headerEl) {
-      const field = headerEl.getAttribute('data-field');
-      const column = field ? columns.find((c) => c.field === field) : null;
-      if (column) {
-        const items = collectHeaderMenuItems(column);
-        ctx.emit('contextmenu', { x: e.clientX, y: e.clientY, column, items });
-        return;
+      // Header right-click — detect via role="columnheader"
+      const headerEl = target.closest('[role="columnheader"]');
+      if (headerEl) {
+        const field = headerEl.getAttribute("data-field");
+        const column = field ? columns.find((c) => c.field === field) : null;
+        if (column) {
+          const items = collectHeaderMenuItems(column);
+          ctx.emit("contextmenu", { x: e.clientX, y: e.clientY, column, items });
+          return;
+        }
       }
-    }
 
-    const rowEl = target.closest('[data-index]');
-    const rowIndex = rowEl ? Number(rowEl.getAttribute('data-index')) : -1;
-    const row = rowIndex >= 0 ? (rows[rowIndex] ?? null) : null;
+      const rowEl = target.closest("[data-index]");
+      const rowIndex = rowEl ? Number(rowEl.getAttribute("data-index")) : -1;
+      const row = rowIndex >= 0 ? (rows[rowIndex] ?? null) : null;
 
-    const colIndex = findColIndex(e.clientX);
-    const col = columns[colIndex];
-    const cell = row && col ? {
-      rowIndex,
-      colIndex,
-      rowId: getRowId(row, rowIndex),
-      field: col.field,
-      value: row[col.field] ?? null,
-    } : null;
+      const colIndex = findColIndex(e.clientX);
+      const col = columns[colIndex];
+      const cell =
+        row && col
+          ? {
+              rowIndex,
+              colIndex,
+              rowId: getRowId(row, rowIndex),
+              field: col.field,
+              value: row[col.field] ?? null,
+            }
+          : null;
 
-    // Auto-select right-clicked group row if not already in group selection
-    if (cell && row && isGroupRow(row)) {
-      const serialized = serializeGroupKey(row.__groupKey);
-      if (!ctx.getLatest().selection.selectedGroups.has(serialized)) {
-        ctx.setSelection({
-          span: null, additionalSpans: [],
-          selectedIds: new Set(), selectedCells: [], count: 0,
-          asFilter: () => null,
-          selectedGroups: new Set([serialized]), groupCount: 1,
-        });
+      // Auto-select right-clicked group row if not already in group selection
+      if (cell && row && isGroupRow(row)) {
+        const serialized = serializeGroupKey(row.__groupKey);
+        if (!ctx.getLatest().selection.selectedGroups.has(serialized)) {
+          ctx.setSelection({
+            span: null,
+            additionalSpans: [],
+            selectedIds: new Set(),
+            selectedCells: [],
+            count: 0,
+            asFilter: () => null,
+            selectedGroups: new Set([serialized]),
+            groupCount: 1,
+          });
+        }
       }
-    }
 
-    // Set active cell for plugins that read ctx.activeCell
-    if (cell) ctx.setActiveCell(cell);
+      // Set active cell for plugins that read ctx.activeCell
+      if (cell) ctx.setActiveCell(cell);
 
-    const items = collectMenuItems(cell);
-    ctx.emit('contextmenu', { x: e.clientX, y: e.clientY, cell, items });
-  }, [rows, columns, findColIndex, collectMenuItems, collectHeaderMenuItems, ctx]);
+      const items = collectMenuItems(cell);
+      ctx.emit("contextmenu", { x: e.clientX, y: e.clientY, cell, items });
+    },
+    [rows, columns, findColIndex, collectMenuItems, collectHeaderMenuItems, ctx],
+  );
 
   // Handle row click — emit cell:click for selection, group:click for groups
-  const handleRowClick = useCallback((row: Record<string, unknown>, index: number, e: React.MouseEvent) => {
-    if (isGroupRow(row)) {
-      // All group row clicks → selection (expand/collapse handled by chevron icon)
+  const handleRowClick = useCallback(
+    (row: Record<string, unknown>, index: number, e: React.MouseEvent) => {
+      if (isGroupRow(row)) {
+        // All group row clicks → selection (expand/collapse handled by chevron icon)
+        const colIndex = findColIndex(e.clientX);
+        ctx.emit("group:click", {
+          rowIndex: index,
+          colIndex,
+          groupKey: row.__groupKey,
+          ctrlKey: e.ctrlKey || e.metaKey,
+          shiftKey: e.shiftKey,
+        });
+        return;
+      }
+
       const colIndex = findColIndex(e.clientX);
-      ctx.emit('group:click', { rowIndex: index, colIndex, groupKey: row.__groupKey, ctrlKey: e.ctrlKey || e.metaKey, shiftKey: e.shiftKey });
-      return;
-    }
+      const col = columns[colIndex];
 
-    const colIndex = findColIndex(e.clientX);
-    const col = columns[colIndex];
+      // Emit cell:click for cell-level selection
+      if (col) {
+        ctx.emit("cell:click", {
+          rowIndex: index,
+          colIndex,
+          field: col.field,
+          value: row[col.field],
+          row,
+          ctrlKey: e.ctrlKey || e.metaKey,
+          shiftKey: e.shiftKey,
+        });
+      }
 
-    // Emit cell:click for cell-level selection
-    if (col) {
-      ctx.emit('cell:click', {
-        rowIndex: index,
-        colIndex,
-        field: col.field,
-        value: row[col.field],
-        row,
-        ctrlKey: e.ctrlKey || e.metaKey,
-        shiftKey: e.shiftKey,
-      });
-    }
-
-    onRowClick?.(row);
-  }, [ctx, onRowClick, findColIndex, columns]);
+      onRowClick?.(row);
+    },
+    [ctx, onRowClick, findColIndex, columns],
+  );
 
   // Handle row double-click — start editing the cell
-  const handleRowDoubleClick = useCallback((row: Record<string, unknown>, index: number, e: React.MouseEvent) => {
-    if (!ctx.editing) return;
-    if (isGroupRow(row)) return;
-    const colIndex = findColIndex(e.clientX);
-    const col = columns[colIndex];
-    if (!col || col.editable === false) return;
-    const rowId = getRowId(row, index);
-    ctx.editing.startEditing({ rowIndex: index, colIndex, rowId, field: col.field, value: row[col.field] });
-  }, [ctx, findColIndex, columns]);
+  const handleRowDoubleClick = useCallback(
+    (row: Record<string, unknown>, index: number, e: React.MouseEvent) => {
+      if (!ctx.editing) return;
+      if (isGroupRow(row)) return;
+      const colIndex = findColIndex(e.clientX);
+      const col = columns[colIndex];
+      if (!col || col.editable === false) return;
+      const rowId = getRowId(row, index);
+      ctx.editing.startEditing({
+        rowIndex: index,
+        colIndex,
+        rowId,
+        field: col.field,
+        value: row[col.field],
+      });
+    },
+    [ctx, findColIndex, columns],
+  );
 
   return (
-    <div role="grid" aria-rowcount={totalCount + 1} aria-colcount={columns.length} className={`${styles.root ?? ''} ${className ?? ''}`} style={{ fontSize: density.fontSize, position: 'relative', display: 'flex', flexDirection: 'column', height: height === '100%' ? '100%' : undefined }}>
+    <div
+      role="grid"
+      aria-rowcount={totalCount + 1}
+      aria-colcount={columns.length}
+      className={`${styles.root ?? ""} ${className ?? ""}`}
+      style={{
+        fontSize: density.fontSize,
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        height: height === "100%" ? "100%" : undefined,
+      }}
+    >
       {/* Plugin renderAbove */}
-      {plugins?.map((p, i) => p.renderAbove ? <div key={`above-${p.name}-${i}`}>{p.renderAbove(ctx)}</div> : null)}
+      {plugins?.map((p, i) =>
+        p.renderAbove ? <div key={`above-${p.name}-${i}`}>{p.renderAbove(ctx)}</div> : null,
+      )}
 
       {/* Scroll container */}
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
         tabIndex={0}
-        aria-busy={isLoading} aria-live="polite"
-        style={{ height: height === '100%' ? undefined : (typeof height === 'number' ? `${height}px` : height), flex: height === '100%' ? 1 : undefined, overflow: 'auto', position: 'relative', userSelect: 'none', WebkitUserSelect: 'none', outline: 'none' }}
-        className={`utbl-scroll ${isLoading ? (styles.loading ?? '') : ''}`}
+        aria-busy={isLoading}
+        aria-live="polite"
+        style={{
+          height:
+            height === "100%" ? undefined : typeof height === "number" ? `${height}px` : height,
+          flex: height === "100%" ? 1 : undefined,
+          overflow: "auto",
+          position: "relative",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          outline: "none",
+        }}
+        className={`utbl-scroll ${isLoading ? (styles.loading ?? "") : ""}`}
         onContextMenu={handleContextMenu}
         onClick={() => containerRef.current?.focus()}
       >
         {/* Header */}
-        <div role="rowgroup" className={`utbl-header-row ${styles.header ?? ''}`} style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 10, minWidth: 'fit-content' }}>
-          <div role="row" style={{ display: 'contents' }}>
+        <div
+          role="rowgroup"
+          className={`utbl-header-row ${styles.header ?? ""}`}
+          style={{
+            display: "flex",
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+            minWidth: "fit-content",
+          }}
+        >
+          <div role="row" style={{ display: "contents" }}>
             {columns.map((col) => (
-              <HeaderRow key={col.field} column={col} sort={headerSort} onSort={ctx.setSort}
-                onResize={setColumnWidth} styles={styles} px={density.px} py={density.py}
+              <HeaderRow
+                key={col.field}
+                column={col}
+                sort={headerSort}
+                onSort={ctx.setSort}
+                onResize={setColumnWidth}
+                styles={styles}
+                px={density.px}
+                py={density.py}
               />
             ))}
           </div>
         </div>
 
         {/* Virtual rows */}
-        <div role="rowgroup" className="utbl-vlist" style={{ height: `${totalHeight}px`, position: 'relative', minWidth: 'fit-content' }}>
+        <div
+          role="rowgroup"
+          className="utbl-vlist"
+          style={{ height: `${totalHeight}px`, position: "relative", minWidth: "fit-content" }}
+        >
           {virtualRows.map((virtualRow) => {
             const row = rows[virtualRow.index] ?? PLACEHOLDER_ROW;
             const isPlaceholder = row.__placeholder === true;
             const isEven = virtualRow.index % 2 === 0;
             // Check if entire row is selected (full-row span)
-            const allSpans = selection.span ? [selection.span, ...selection.additionalSpans] : selection.additionalSpans;
-            const isFullRowSelected = !isPlaceholder && allSpans.some(
-              (s) => isFullRowSpan(s, columns.length) && isInAnySpan(virtualRow.index, 0, selection),
-            );
+            const allSpans = selection.span
+              ? [selection.span, ...selection.additionalSpans]
+              : selection.additionalSpans;
+            const isFullRowSelected =
+              !isPlaceholder &&
+              allSpans.some(
+                (s) =>
+                  isFullRowSpan(s, columns.length) && isInAnySpan(virtualRow.index, 0, selection),
+              );
             const isGroup = !isPlaceholder && isGroupRow(row);
-            const isGroupSelected = isGroup && selection.selectedGroups.has(serializeGroupKey(row.__groupKey as Record<string, unknown>));
+            const isGroupSelected =
+              isGroup &&
+              selection.selectedGroups.has(
+                serializeGroupKey(row.__groupKey as Record<string, unknown>),
+              );
             const isSelected = isFullRowSelected;
             const rowClass = [
               styles.row,
-              isGroup ? '' : (isEven ? styles.rowEven : ''),
-              isSelected ? styles.rowSelected : '',
-              !isPlaceholder ? (rowStyle?.(row, virtualRow.index) ?? '') : '',
-            ].filter(Boolean).join(' ');
+              isGroup ? "" : isEven ? styles.rowEven : "",
+              isSelected ? styles.rowSelected : "",
+              !isPlaceholder ? (rowStyle?.(row, virtualRow.index) ?? "") : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
 
             return (
               <div
@@ -763,19 +1006,38 @@ export function TableView({
                 aria-rowindex={virtualRow.index + 2}
                 aria-selected={isSelected || isGroupSelected || undefined}
                 style={{
-                  position: 'absolute', top: 0, left: 0, width: '100%', minWidth: 'fit-content',
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  minWidth: "fit-content",
                   transform: `translateY(${virtualRow.start}px)`,
-                  display: 'flex', height: `${density.rowHeight}px`, alignItems: 'center',
+                  display: "flex",
+                  height: `${density.rowHeight}px`,
+                  alignItems: "center",
                   opacity: isPlaceholder ? 0.3 : 1,
-                  cursor: !isPlaceholder ? 'pointer' : undefined,
-                  ...(isSelected ? { backgroundColor: 'var(--row-selected-bg, #1e3a5f)' } : {}),
+                  cursor: isPlaceholder ? undefined : isGroup ? "pointer" : "cell",
+                  ...(isSelected ? { backgroundColor: "var(--row-selected-bg, #1e3a5f)" } : {}),
                 }}
                 className={`utbl-vrow ${rowClass}`}
-                onClick={!isPlaceholder ? (e) => handleRowClick(row, virtualRow.index, e) : undefined}
-                onDoubleClick={!isPlaceholder && !isGroupRow(row) ? (e) => handleRowDoubleClick(row, virtualRow.index, e) : undefined}
+                onClick={
+                  !isPlaceholder ? (e) => handleRowClick(row, virtualRow.index, e) : undefined
+                }
+                onDoubleClick={
+                  !isPlaceholder && !isGroupRow(row)
+                    ? (e) => handleRowDoubleClick(row, virtualRow.index, e)
+                    : undefined
+                }
               >
                 {isPlaceholder ? (
-                  <div className="utbl-placeholder-text" style={{ padding: `${density.py}px ${density.px}px`, color: '#666', fontSize: '0.75rem' }}>
+                  <div
+                    className="utbl-placeholder-text"
+                    style={{
+                      padding: `${density.py}px ${density.px}px`,
+                      color: "#666",
+                      fontSize: "0.75rem",
+                    }}
+                  >
                     Loading...
                   </div>
                 ) : isGroupRow(row) ? (
@@ -788,31 +1050,40 @@ export function TableView({
                     activeCell={ctx.activeCell}
                     virtualIndex={virtualRow.index}
                     isGroupSelected={isGroupSelected}
-                    onToggle={(gk, d) => ctx.emit('group:toggle', { groupKey: gk, depth: d })}
+                    onToggle={(gk, d) => ctx.emit("group:toggle", { groupKey: gk, depth: d })}
                   />
                 ) : (
                   columns.map((col, colIdx) => {
                     const inSpan = isInAnySpan(virtualRow.index, colIdx, selection);
-                    const isActive = ctx.activeCell?.rowIndex === virtualRow.index && ctx.activeCell?.colIndex === colIdx;
-                    const isEditingThis = ctx.editing?.editingCell?.rowIndex === virtualRow.index && ctx.editing?.editingCell?.colIndex === colIdx;
+                    const isActive =
+                      ctx.activeCell?.rowIndex === virtualRow.index &&
+                      ctx.activeCell?.colIndex === colIdx;
+                    const isEditingThis =
+                      ctx.editing?.editingCell?.rowIndex === virtualRow.index &&
+                      ctx.editing?.editingCell?.colIndex === colIdx;
 
                     if (isEditingThis) {
                       const isFormulaEdit = col._isFormula && ctx.formulas;
                       const editorCell = isFormulaEdit
-                        ? { ...ctx.editing!.editingCell!, value: ctx.formulas!.getExpression(col.field) ?? '' }
+                        ? {
+                            ...ctx.editing!.editingCell!,
+                            value: ctx.formulas!.getExpression(col.field) ?? "",
+                          }
                         : ctx.editing!.editingCell!;
                       const handleCommit = isFormulaEdit
                         ? (value: unknown) => {
-                            ctx.formulas!.updateExpression(col.field, String(value))
+                            ctx
+                              .formulas!.updateExpression(col.field, String(value))
                               .then(() => ctx.editing!.cancelEdit())
-                              .catch((err) => ctx.emit('error', err));
+                              .catch((err) => ctx.emit("error", err));
                           }
-                        : (value: unknown) => ctx.editing!.commitEdit(ctx.editing!.editingCell!, value);
+                        : (value: unknown) =>
+                            ctx.editing!.commitEdit(ctx.editing!.editingCell!, value);
 
                       return (
                         <InlineEditor
                           key={col.field}
-                          column={isFormulaEdit ? { ...col, editor: 'text' } : col}
+                          column={isFormulaEdit ? { ...col, editor: "text" } : col}
                           cell={editorCell}
                           styles={styles}
                           px={density.px}
@@ -824,8 +1095,13 @@ export function TableView({
                     }
 
                     return (
-                      <TableRow key={col.field} column={col} row={row}
-                        styles={styles} px={density.px} py={density.py}
+                      <TableRow
+                        key={col.field}
+                        column={col}
+                        row={row}
+                        styles={styles}
+                        px={density.px}
+                        py={density.py}
                         isCellSelected={inSpan}
                         isActiveCell={isActive}
                       />
@@ -839,28 +1115,50 @@ export function TableView({
 
         {/* Empty state */}
         {displayCount === 0 && !isLoading && (
-          <div className={styles.empty ?? ''} style={{ padding: '3rem', textAlign: 'center' }}>
+          <div className={styles.empty ?? ""} style={{ padding: "3rem", textAlign: "center" }}>
             No data
           </div>
         )}
       </div>
 
       {/* Plugin renderBelow */}
-      {plugins?.map((p, i) => p.renderBelow ? <div key={`below-${p.name}-${i}`} className={(styles as Record<string, string | undefined>)[p.name] ?? ''}>{p.renderBelow(ctx)}</div> : null)}
+      {plugins?.map((p, i) =>
+        p.renderBelow ? (
+          <div
+            key={`below-${p.name}-${i}`}
+            className={(styles as Record<string, string | undefined>)[p.name] ?? ""}
+          >
+            {p.renderBelow(ctx)}
+          </div>
+        ) : null,
+      )}
 
       {/* Footer — plugins with renderFooter replace the default content */}
-      <div className={styles.footer ?? ''} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${density.py}px ${density.px}px` }}>
+      <div
+        className={styles.footer ?? ""}
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: `${density.py}px ${density.px}px`,
+        }}
+      >
         {renderFooter
           ? renderFooter({ totalCount, isLoading, selection })
           : (() => {
               const pluginFooter = plugins?.find((p) => p.renderFooter)?.renderFooter?.(ctx);
-              return pluginFooter ?? <span>{isLoading ? 'Loading...' : `${totalCount.toLocaleString()} rows`}</span>;
-            })()
-        }
+              return (
+                pluginFooter ?? (
+                  <span>{isLoading ? "Loading..." : `${totalCount.toLocaleString()} rows`}</span>
+                )
+              );
+            })()}
       </div>
 
       {/* Plugin renderOverlay */}
-      {plugins?.map((p, i) => p.renderOverlay ? <div key={`overlay-${p.name}-${i}`}>{p.renderOverlay(ctx)}</div> : null)}
+      {plugins?.map((p, i) =>
+        p.renderOverlay ? <div key={`overlay-${p.name}-${i}`}>{p.renderOverlay(ctx)}</div> : null,
+      )}
     </div>
   );
 }

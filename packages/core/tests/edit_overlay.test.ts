@@ -252,3 +252,79 @@ describe('EditOverlay', () => {
     expect(sql).toContain("'Restored'");
   });
 });
+
+describe('error handling', () => {
+  it('init() wraps engine errors', async () => {
+    const engine = mockEngine();
+    const cause = new Error('SQL execution failed');
+    engine.execute.mockRejectedValueOnce(cause);
+
+    const ov = createEditOverlay(engine, 'trades', '50');
+
+    await expect(ov.init(testColumns, 'id')).rejects.toThrow(
+      'EditOverlay.init failed for "__utbl_ov_50"',
+    );
+    engine.execute.mockRejectedValueOnce(cause);
+    try {
+      await ov.init(testColumns, 'id');
+    } catch (err) {
+      expect((err as any).cause).toBe(cause);
+    }
+  });
+
+  it('apply() wraps engine errors with rowId/field context', async () => {
+    const engine = mockEngine();
+    const cause = new Error('SQL execution failed');
+
+    const ov = createEditOverlay(engine, 'trades', '51');
+    await ov.init(testColumns, 'id');
+
+    // Make query (the COUNT check) reject
+    engine.query.mockRejectedValueOnce(cause);
+
+    await expect(ov.apply(42, 'name', 'Test')).rejects.toThrow(
+      'EditOverlay.apply failed for rowId=42, field="name"',
+    );
+    engine.query.mockRejectedValueOnce(cause);
+    try {
+      await ov.apply(42, 'name', 'Test');
+    } catch (err) {
+      expect((err as any).cause).toBe(cause);
+    }
+  });
+
+  it('save() wraps engine errors', async () => {
+    const engine = mockEngine();
+    const cause = new Error('SQL execution failed');
+
+    const ov = createEditOverlay(engine, 'trades', '52');
+    await ov.init(testColumns, 'id');
+
+    engine.execute.mockRejectedValueOnce(cause);
+
+    await expect(ov.save()).rejects.toThrow(
+      'EditOverlay.save failed for "__utbl_ov_52"',
+    );
+    engine.execute.mockRejectedValueOnce(cause);
+    try {
+      await ov.save();
+    } catch (err) {
+      expect((err as any).cause).toBe(cause);
+    }
+  });
+
+  it('destroy() does not throw (swallows error)', async () => {
+    const engine = mockEngine();
+    const cause = new Error('SQL execution failed');
+
+    const ov = createEditOverlay(engine, 'trades', '53');
+    await ov.init(testColumns, 'id');
+
+    engine.execute.mockRejectedValueOnce(cause);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(ov.destroy()).resolves.toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+});

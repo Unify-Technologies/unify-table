@@ -89,14 +89,24 @@ export function createViewManager(
     },
 
     async sync(filters, sort) {
-      const body = buildViewSelect(_baseTable, filters, sort, _extraExpressions);
-      _viewSql = `CREATE OR REPLACE VIEW ${quoteIdent(viewName)} AS ${body}`;
-      await engine.execute(_viewSql);
+      try {
+        const body = buildViewSelect(_baseTable, filters, sort, _extraExpressions);
+        _viewSql = `CREATE OR REPLACE VIEW ${quoteIdent(viewName)} AS ${body}`;
+        await engine.execute(_viewSql);
+      } catch (err) {
+        const msg = `ViewManager.sync failed for view "${viewName}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async drop() {
-      await engine.execute(`DROP VIEW IF EXISTS ${quoteIdent(viewName)}`);
-      _viewSql = '';
+      try {
+        await engine.execute(`DROP VIEW IF EXISTS ${quoteIdent(viewName)}`);
+        _viewSql = '';
+      } catch (err) {
+        const msg = `ViewManager.drop failed for view "${viewName}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
   };
 }

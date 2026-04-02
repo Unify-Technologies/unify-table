@@ -4,7 +4,8 @@ import { ChevronDown } from 'lucide-react';
 import type { DisplayConfig, ColumnInfo } from '@unify/table-core';
 import { useTableContext } from '../hooks/useTableContext.js';
 import { HeaderRow } from './HeaderRow.js';
-import { TableRow, formatValue, parseCellStyle } from './TableRow.js';
+import { TableRow } from './TableRow.js';
+import { GroupRow } from './GroupRow.js';
 import { isGroupRow, serializeGroupKey } from '../plugins/row_grouping.js';
 import { PanelShell } from '../panels/PanelShell.js';
 import { DisplayRenderer } from '../displays/DisplayRenderer.js';
@@ -14,7 +15,7 @@ import type { PanelConfig } from '../panels/types.js';
 import type { AggFn } from '../panels/types.js';
 import type { TableProps, TableContext, TablePlugin, TableStyles, MenuItem, ColumnDef, CellRef, ResolvedColumn } from '../types.js';
 import { isInAnySpan, isFullRowSpan } from '../types.js';
-import { getRowId } from '../utils.js';
+import { getRowId, buildPinStyle } from '../utils.js';
 
 // Register built-in display types on first import
 registerDefaultDisplays();
@@ -92,14 +93,7 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
   const stopClick = (e: React.MouseEvent) => e.stopPropagation();
   const stopMouseDown = (e: React.MouseEvent) => e.stopPropagation();
 
-  const pinStyle: React.CSSProperties = column.pin
-    ? {
-        position: 'sticky',
-        zIndex: 2,
-        backgroundColor: 'var(--utbl-row-bg, inherit)',
-        ...(column.pin === 'left' ? { left: column._pinOffset ?? 0 } : { right: column._pinOffset ?? 0 }),
-      }
-    : {};
+  const pinStyle = buildPinStyle(column, 2);
 
   const cellCss: React.CSSProperties = {
     width: column.currentWidth,
@@ -594,29 +588,21 @@ export function TableView({
     requestRange(startRow, endRow);
   }, [virtualRows, requestRange]);
 
-  // Collect context menu items from all plugins
-  const collectMenuItems = useCallback((cell: import('../types.js').CellRef | null): MenuItem[] => {
+  const collectPluginItems = useCallback(<T,>(method: 'contextMenuItems' | 'headerContextMenuItems', arg: T): MenuItem[] => {
     if (!plugins) return [];
     const items: MenuItem[] = [];
     for (const plugin of plugins) {
-      if (plugin.contextMenuItems) {
-        items.push(...plugin.contextMenuItems(ctx, cell!));
-      }
+      const fn = plugin[method] as ((ctx: TableContext, arg: T) => MenuItem[]) | undefined;
+      if (fn) items.push(...fn(ctx, arg));
     }
     return items;
   }, [plugins, ctx]);
 
-  // Collect header context menu items from all plugins
-  const collectHeaderMenuItems = useCallback((column: import('../types.js').ResolvedColumn): MenuItem[] => {
-    if (!plugins) return [];
-    const items: MenuItem[] = [];
-    for (const plugin of plugins) {
-      if (plugin.headerContextMenuItems) {
-        items.push(...plugin.headerContextMenuItems(ctx, column));
-      }
-    }
-    return items;
-  }, [plugins, ctx]);
+  const collectMenuItems = useCallback((cell: import('../types.js').CellRef | null): MenuItem[] =>
+    collectPluginItems('contextMenuItems', cell!), [collectPluginItems]);
+
+  const collectHeaderMenuItems = useCallback((column: import('../types.js').ResolvedColumn): MenuItem[] =>
+    collectPluginItems('headerContextMenuItems', column), [collectPluginItems]);
 
   // Find which column index a clientX falls in
   const findColIndex = useCallback((clientX: number): number => {
@@ -722,7 +708,7 @@ export function TableView({
   }, [ctx, findColIndex, columns]);
 
   return (
-    <div className={`${styles.root ?? ''} ${className ?? ''}`} style={{ fontSize: density.fontSize, position: 'relative', display: 'flex', flexDirection: 'column', height: height === '100%' ? '100%' : undefined }}>
+    <div role="grid" aria-rowcount={totalCount + 1} aria-colcount={columns.length} className={`${styles.root ?? ''} ${className ?? ''}`} style={{ fontSize: density.fontSize, position: 'relative', display: 'flex', flexDirection: 'column', height: height === '100%' ? '100%' : undefined }}>
       {/* Plugin renderAbove */}
       {plugins?.map((p, i) => p.renderAbove ? <div key={`above-${p.name}-${i}`}>{p.renderAbove(ctx)}</div> : null)}
 
@@ -730,22 +716,25 @@ export function TableView({
       <div
         ref={containerRef as React.RefObject<HTMLDivElement>}
         tabIndex={0}
+        aria-busy={isLoading} aria-live="polite"
         style={{ height: height === '100%' ? undefined : (typeof height === 'number' ? `${height}px` : height), flex: height === '100%' ? 1 : undefined, overflow: 'auto', position: 'relative', userSelect: 'none', WebkitUserSelect: 'none', outline: 'none' }}
-        className={isLoading ? (styles.loading ?? '') : ''}
+        className={`utbl-scroll ${isLoading ? (styles.loading ?? '') : ''}`}
         onContextMenu={handleContextMenu}
         onClick={() => containerRef.current?.focus()}
       >
         {/* Header */}
-        <div className={styles.header ?? ''} style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 10, minWidth: 'fit-content' }}>
-          {columns.map((col) => (
-            <HeaderRow key={col.field} column={col} sort={headerSort} onSort={ctx.setSort}
-              onResize={setColumnWidth} styles={styles} px={density.px} py={density.py}
-            />
-          ))}
+        <div role="rowgroup" className={`utbl-header-row ${styles.header ?? ''}`} style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 10, minWidth: 'fit-content' }}>
+          <div role="row" style={{ display: 'contents' }}>
+            {columns.map((col) => (
+              <HeaderRow key={col.field} column={col} sort={headerSort} onSort={ctx.setSort}
+                onResize={setColumnWidth} styles={styles} px={density.px} py={density.py}
+              />
+            ))}
+          </div>
         </div>
 
         {/* Virtual rows */}
-        <div style={{ height: `${totalHeight}px`, position: 'relative', minWidth: 'fit-content' }}>
+        <div role="rowgroup" className="utbl-vlist" style={{ height: `${totalHeight}px`, position: 'relative', minWidth: 'fit-content' }}>
           {virtualRows.map((virtualRow) => {
             const row = rows[virtualRow.index] ?? PLACEHOLDER_ROW;
             const isPlaceholder = row.__placeholder === true;
@@ -770,6 +759,9 @@ export function TableView({
                 key={virtualRow.key}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
+                role="row"
+                aria-rowindex={virtualRow.index + 2}
+                aria-selected={isSelected || isGroupSelected || undefined}
                 style={{
                   position: 'absolute', top: 0, left: 0, width: '100%', minWidth: 'fit-content',
                   transform: `translateY(${virtualRow.start}px)`,
@@ -778,110 +770,26 @@ export function TableView({
                   cursor: !isPlaceholder ? 'pointer' : undefined,
                   ...(isSelected ? { backgroundColor: 'var(--row-selected-bg, #1e3a5f)' } : {}),
                 }}
-                className={rowClass}
+                className={`utbl-vrow ${rowClass}`}
                 onClick={!isPlaceholder ? (e) => handleRowClick(row, virtualRow.index, e) : undefined}
                 onDoubleClick={!isPlaceholder && !isGroupRow(row) ? (e) => handleRowDoubleClick(row, virtualRow.index, e) : undefined}
               >
                 {isPlaceholder ? (
-                  <div style={{ padding: `${density.py}px ${density.px}px`, color: '#666', fontSize: '0.75rem' }}>
+                  <div className="utbl-placeholder-text" style={{ padding: `${density.py}px ${density.px}px`, color: '#666', fontSize: '0.75rem' }}>
                     Loading...
                   </div>
                 ) : isGroupRow(row) ? (
-                  (() => {
-                    const groupKey = row.__groupKey as Record<string, unknown>;
-                    const aggs = (row.__aggs as Record<string, unknown> | undefined) ?? {};
-                    const depth = (row.__depth as number) ?? 0;
-                    const expanded = row.__expanded as boolean;
-                    const groupedFields = new Set(groupBy);
-                    const groupField = groupBy[depth];
-                    const groupFieldCol = columns.find((c) => c.field === groupField);
-
-                    return columns.map((col, colIdx) => {
-                      const isGroupedCol = groupedFields.has(col.field);
-                      const aggValue = aggs[col.field];
-                      const isActiveCellHere = ctx.activeCell?.rowIndex === virtualRow.index && ctx.activeCell?.colIndex === colIdx;
-                      const isCellInGroupSel = isGroupSelected && !isActiveCellHere;
-
-                      const activeCellStyle: React.CSSProperties = isActiveCellHere
-                        ? { outline: '2px solid #3b82f6', outlineOffset: -2, zIndex: col.pin ? 3 : 1, ...(col.pin ? {} : { position: 'relative' }) }
-                        : isCellInGroupSel
-                          ? { backgroundColor: 'var(--row-selected-bg, #1e3a5f)' }
-                          : {};
-
-                      const groupPinStyle: React.CSSProperties = col.pin
-                        ? {
-                            position: 'sticky',
-                            zIndex: 1,
-                            backgroundColor: 'var(--utbl-row-bg, inherit)',
-                            ...(col.pin === 'left' ? { left: col._pinOffset ?? 0 } : { right: col._pinOffset ?? 0 }),
-                            ...(col._pinEdge ? { boxShadow: col.pin === 'left' ? '4px 0 8px -4px rgba(0,0,0,0.15)' : '-4px 0 8px -4px rgba(0,0,0,0.15)' } : {}),
-                          }
-                        : {};
-
-                      const cellStyle: React.CSSProperties = {
-                        width: col.currentWidth,
-                        minWidth: col.minWidth ?? 50,
-                        maxWidth: col.maxWidth,
-                        flexShrink: 0,
-                        flexGrow: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        boxSizing: 'border-box',
-                        padding: `${density.py}px ${density.px}px`,
-                        fontWeight: 600,
-                        textAlign: col.align ?? 'left',
-                        ...groupPinStyle,
-                        ...activeCellStyle,
-                      };
-
-                      if (colIdx === 0) {
-                        const groupValue = groupField ? groupKey[groupField] : undefined;
-                        const fmt = groupFieldCol?.format;
-                        return (
-                          <div key={col.field} className={`${styles.cell ?? ''} ${styles.groupRow ?? ''}`} style={{ ...cellStyle, paddingLeft: density.px + depth * 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span
-                              role="button"
-                              onClick={(e) => { e.stopPropagation(); ctx.emit('group:toggle', { groupKey, depth }); }}
-                              style={{ fontSize: '0.65em', transition: 'transform 0.15s', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', flexShrink: 0, cursor: 'pointer', padding: 4, margin: -4, borderRadius: 3 }}
-                            >
-                              {'\u25B6'}
-                            </span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flexShrink: 1, minWidth: 0 }}>
-                              {formatValue(groupValue, fmt) || '\u2014'}
-                            </span>
-                            <span style={{ opacity: 0.5, fontSize: '0.75em', flexShrink: 0 }}>
-                              ({(row.__groupCount as number).toLocaleString()})
-                            </span>
-                          </div>
-                        );
-                      }
-
-                      if (isGroupedCol) {
-                        return (
-                          <div key={col.field} className={`${styles.cell ?? ''} ${styles.groupRow ?? ''}`} style={{ ...cellStyle, opacity: 0.25 }}>
-                            {'\u2014'}
-                          </div>
-                        );
-                      }
-
-                      if (aggValue !== undefined && aggValue !== null) {
-                        const rawCellStyle = typeof col.cellStyle === 'function' ? col.cellStyle(aggValue, row) : col.cellStyle ?? '';
-                        const { className: dynClass, inlineStyle } = parseCellStyle(rawCellStyle);
-                        return (
-                          <div key={col.field} className={`${styles.cell ?? ''} ${styles.groupRow ?? ''} ${dynClass}`} style={{ ...cellStyle, ...inlineStyle }}>
-                            {formatValue(aggValue, col.format)}
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div key={col.field} className={`${styles.cell ?? ''} ${styles.groupRow ?? ''}`} style={{ ...cellStyle, opacity: 0.25 }}>
-                          {'\u2014'}
-                        </div>
-                      );
-                    });
-                  })()
+                  <GroupRow
+                    row={row}
+                    columns={columns}
+                    groupBy={groupBy}
+                    styles={styles}
+                    density={density}
+                    activeCell={ctx.activeCell}
+                    virtualIndex={virtualRow.index}
+                    isGroupSelected={isGroupSelected}
+                    onToggle={(gk, d) => ctx.emit('group:toggle', { groupKey: gk, depth: d })}
+                  />
                 ) : (
                   columns.map((col, colIdx) => {
                     const inSpan = isInAnySpan(virtualRow.index, colIdx, selection);

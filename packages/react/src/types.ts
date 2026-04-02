@@ -39,9 +39,16 @@ export interface ColumnDef {
   editorFreeform?: boolean;
   autoComplete?: boolean;
   validate?: (value: unknown) => true | string;
-  cellStyle?: string | ((value: unknown, row: Row) => string);
+  cellStyle?: CellStyleValue | ((value: unknown, row: Row) => CellStyleValue);
   headerStyle?: string;
 }
+
+export interface CellStyleResult {
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export type CellStyleValue = string | CellStyleResult;
 
 // --- Styling ---
 
@@ -208,6 +215,8 @@ export interface TableContext {
 
   // Plugin access
   getPlugin<T extends TablePlugin>(name: string): T | undefined;
+  /** @internal All registered plugins — used by keyboard plugin for shortcut collection. */
+  _allPlugins(): TablePlugin[];
 
   /** Get the latest context state (avoids stale closures in plugin init). */
   getLatest(): TableContext;

@@ -9,7 +9,7 @@
     "node": ">=21.0.0"
   },
   "scripts": {
-    "build": "tsgo -b tsconfig.build.json && cp packages/react/src/panels/panel.css packages/react/dist/panel.css && cp packages/react/src/styles/themes.css packages/react/dist/themes.css && cp packages/react/src/displays/display.css packages/react/dist/displays/display.css",
+    "build": "tsgo -b tsconfig.build.json && cp packages/react/src/panels/panel.css packages/react/dist/panel.css && cp packages/react/src/styles/themes.css packages/react/dist/themes.css && cp packages/react/src/styles/table.css packages/react/dist/table.css && cp packages/react/src/displays/display.css packages/react/dist/displays/display.css",
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
     "format": "pnpm -r run format",

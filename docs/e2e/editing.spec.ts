@@ -6,7 +6,7 @@ function waitForDuckDB(page: any) {
   return page.waitForFunction(
     () => {
       const root = document.getElementById("root");
-      return root && root.innerHTML.length > 500 && !root.innerHTML.includes("INITIALIZING");
+      return root && !root.innerHTML.includes("INITIALIZING") && root.querySelector('[data-index], .utbl-scroll, h1');
     },
     { timeout: 30000 },
   );
@@ -14,7 +14,6 @@ function waitForDuckDB(page: any) {
 
 async function waitForTable(page: any) {
   await waitForDuckDB(page);
-  await page.waitForTimeout(2000);
   await page.locator('[data-index="0"]').waitFor({ timeout: 10000 });
 }
 
@@ -37,10 +36,9 @@ test.describe("Editing Plugin E2E", () => {
     const firstRow = page.locator('[data-index="0"]');
     const cells = firstRow.locator('[class*="cell"]');
     await cells.first().dblclick();
-    await page.waitForTimeout(500);
 
     const editor = page.locator('[data-index="0"] input, [data-index="0"] select, [data-index="0"] textarea');
-    await expect(editor.first()).toBeVisible({ timeout: 3000 });
+    await expect(editor.first()).toBeVisible({ timeout: 5000 });
     await page.screenshot({ path: "e2e/screenshots/editing_02_edit_mode.png" });
   });
 
@@ -63,7 +61,7 @@ test.describe("Editing Plugin E2E", () => {
     const firstRow = page.locator('[data-index="0"]');
     const firstCell = firstRow.locator('[class*="cell"]').first();
     await firstCell.dblclick();
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select').first().waitFor({ timeout: 5000 });
 
     // Change value via select
     const select = firstRow.locator('select').first();
@@ -71,7 +69,7 @@ test.describe("Editing Plugin E2E", () => {
       await select.selectOption("MSFT");
     }
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(1500);
+    await page.locator('[data-index] input, [data-index] select').waitFor({ state: 'detached', timeout: 5000 });
 
     const afterEdit = await getRowTexts();
 
@@ -92,11 +90,10 @@ test.describe("Editing Plugin E2E", () => {
     const pnlCell = cells.nth(1);
 
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
 
     // The input should be type="text" with inputMode="decimal", not type="number"
     const input = firstRow.locator('input').first();
-    await expect(input).toBeVisible({ timeout: 3000 });
+    await expect(input).toBeVisible({ timeout: 5000 });
     const inputType = await input.getAttribute('type');
     expect(inputType).toBe('text'); // NOT 'number' — no spinner arrows
     const inputMode = await input.getAttribute('inputmode');
@@ -112,9 +109,9 @@ test.describe("Editing Plugin E2E", () => {
     const originalText = await firstCell.textContent();
 
     await firstCell.dblclick();
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select, [data-index] textarea').first().waitFor({ timeout: 5000 });
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select, [data-index] textarea').waitFor({ state: 'detached', timeout: 5000 });
 
     const editor = firstRow.locator('input, select, textarea');
     expect(await editor.count()).toBe(0);
@@ -126,12 +123,11 @@ test.describe("Editing Plugin E2E", () => {
     const firstRow = page.locator('[data-index="0"]');
     const cells = firstRow.locator('[class*="cell"]');
     await cells.first().click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(200);
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(500);
 
     const editor = firstRow.locator('input, select, textarea');
-    await expect(editor.first()).toBeVisible({ timeout: 3000 });
+    await expect(editor.first()).toBeVisible({ timeout: 5000 });
   });
 
   test("arrow keys move caret inside editor, not the active cell", async ({ page }) => {
@@ -140,10 +136,9 @@ test.describe("Editing Plugin E2E", () => {
 
     // Double-click PnL to edit
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
 
     const input = firstRow.locator('input').first();
-    await expect(input).toBeVisible({ timeout: 3000 });
+    await expect(input).toBeVisible({ timeout: 5000 });
     await expect(input).toBeFocused();
 
     const initialValue = await input.inputValue();
@@ -151,7 +146,6 @@ test.describe("Editing Plugin E2E", () => {
     // Press arrow keys — they should NOT navigate away from the input
     await page.keyboard.press("ArrowLeft");
     await page.keyboard.press("ArrowRight");
-    await page.waitForTimeout(200);
 
     // Input should still be focused (not lost to table navigation)
     await expect(input).toBeFocused();
@@ -174,9 +168,9 @@ test.describe("Editing Plugin E2E", () => {
     const pnlCell = firstRow.locator('[class*="cell"]').nth(1);
 
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
 
     const input = firstRow.locator('input').first();
+    await expect(input).toBeVisible({ timeout: 5000 });
     await expect(input).toBeFocused();
 
     // The selection should be collapsed (caret, not full selection)
@@ -200,9 +194,9 @@ test.describe("Editing Plugin E2E", () => {
 
     // Double-click PnL to edit
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
 
     const input = firstRow.locator('input').first();
+    await expect(input).toBeVisible({ timeout: 5000 });
     await expect(input).toBeFocused();
 
     // Click inside the input at a different position — focus should stay
@@ -228,9 +222,9 @@ test.describe("Editing Plugin E2E", () => {
     const pnlCell = firstRow.locator('[class*="cell"]').nth(1);
 
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
 
     const input = firstRow.locator('input').first();
+    await expect(input).toBeVisible({ timeout: 5000 });
     await expect(input).toBeFocused();
 
     // Triple-click to select all (more reliable than Ctrl+A for inputs)
@@ -260,13 +254,13 @@ test.describe("Editing Plugin E2E", () => {
 
     // Double-click to edit
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select').first().waitFor({ timeout: 5000 });
 
     // Type a value and commit with Enter
     const input = firstRow.locator('input').first();
     await input.fill("999");
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(1500);
+    await page.locator('[data-index] input, [data-index] select').waitFor({ state: 'detached', timeout: 5000 });
 
     // The editor should be gone
     const editors = firstRow.locator('input, select, textarea');
@@ -278,18 +272,26 @@ test.describe("Editing Plugin E2E", () => {
 
     // Arrow down should move the active cell
     await page.keyboard.press("ArrowDown");
-    await page.waitForTimeout(300);
+    await page.waitForFunction(
+      () => {
+        const cells = document.querySelectorAll('[data-index] > div');
+        for (const cell of cells) {
+          if ((cell as HTMLElement).style.outline?.includes('3b82f6')) return true;
+        }
+        return false;
+      },
+      { timeout: 3000 },
+    );
 
     // Take screenshot to see if active cell moved to row 1
     await page.screenshot({ path: "e2e/screenshots/editing_07_nav_after_edit.png" });
 
     // Press Enter to start editing the new active cell
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(500);
 
     // An editor should appear (active cell moved down one row)
     const anyEditor = page.locator('[data-index] input, [data-index] select, [data-index] textarea');
-    await expect(anyEditor.first()).toBeVisible({ timeout: 3000 });
+    await expect(anyEditor.first()).toBeVisible({ timeout: 5000 });
 
     await page.keyboard.press("Escape");
     await page.screenshot({ path: "e2e/screenshots/editing_07_nav_after_edit.png" });
@@ -302,7 +304,7 @@ test.describe("Editing Plugin E2E", () => {
 
     // Double-click to edit
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select').first().waitFor({ timeout: 5000 });
 
     const input = firstRow.locator('input').first();
     await input.fill("888");
@@ -310,20 +312,37 @@ test.describe("Editing Plugin E2E", () => {
     // Click away to a different cell to commit via blur
     const tickerCell = cells.nth(0);
     await tickerCell.click({ force: true });
-    await page.waitForTimeout(1500);
+    await page.locator('[data-index] input, [data-index] select').waitFor({ state: 'detached', timeout: 5000 });
 
     // Arrow keys should navigate
     await page.keyboard.press("ArrowDown");
-    await page.waitForTimeout(300);
+    await page.waitForFunction(
+      () => {
+        const cells = document.querySelectorAll('[data-index] > div');
+        for (const cell of cells) {
+          if ((cell as HTMLElement).style.outline?.includes('3b82f6')) return true;
+        }
+        return false;
+      },
+      { timeout: 3000 },
+    );
     await page.keyboard.press("ArrowDown");
-    await page.waitForTimeout(300);
+    await page.waitForFunction(
+      () => {
+        const cells = document.querySelectorAll('[data-index] > div');
+        for (const cell of cells) {
+          if ((cell as HTMLElement).style.outline?.includes('3b82f6')) return true;
+        }
+        return false;
+      },
+      { timeout: 3000 },
+    );
 
     // Should be able to enter edit mode on the new cell
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(500);
 
     const activeRowEditor = page.locator('[data-index] input, [data-index] select, [data-index] textarea');
-    await expect(activeRowEditor.first()).toBeVisible({ timeout: 3000 });
+    await expect(activeRowEditor.first()).toBeVisible({ timeout: 5000 });
 
     await page.keyboard.press("Escape");
     await page.screenshot({ path: "e2e/screenshots/editing_08_nav_after_clickaway.png" });
@@ -336,12 +355,12 @@ test.describe("Editing Plugin E2E", () => {
 
     // Double-click PnL cell
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select').first().waitFor({ timeout: 5000 });
 
     const input = firstRow.locator('input').first();
     await input.fill("12345.67");
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(1500);
+    await page.locator('[data-index] input, [data-index] select').waitFor({ state: 'detached', timeout: 5000 });
 
     // The cell should show the new value
     const newText = await cells.nth(1).textContent();
@@ -366,7 +385,7 @@ test.describe("Editing blocked without editing plugin", () => {
     const originalText = await cells.first().textContent();
 
     await cells.first().dblclick();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
 
     const editor = firstRow.locator('input, select, textarea');
     expect(await editor.count()).toBe(0);
@@ -380,10 +399,10 @@ test.describe("Editing blocked without editing plugin", () => {
     const cells = firstRow.locator('[class*="cell"]');
 
     await cells.first().click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(200);
 
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
 
     const editor = firstRow.locator('input, select, textarea');
     expect(await editor.count()).toBe(0);
@@ -394,10 +413,10 @@ test.describe("Editing blocked without editing plugin", () => {
     const cells = firstRow.locator('[class*="cell"]');
 
     await cells.first().click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(200);
 
     await page.keyboard.press("F2");
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(200);
 
     const editor = firstRow.locator('input, select, textarea');
     expect(await editor.count()).toBe(0);

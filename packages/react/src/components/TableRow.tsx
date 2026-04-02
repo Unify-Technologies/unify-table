@@ -1,5 +1,7 @@
-import type { ResolvedColumn, TableStyles } from '../types.js';
+import { memo } from 'react';
+import type { ResolvedColumn, TableStyles, CellStyleValue } from '../types.js';
 import type { Row } from '@unify/table-core';
+import { buildPinStyle } from '../utils.js';
 
 interface TableRowProps {
   column: ResolvedColumn;
@@ -95,15 +97,21 @@ export function formatValue(value: unknown, format?: string): string {
 }
 
 /**
- * Parse the `__style__....__end__` prefix from cellStyle strings.
- * The formatting plugin encodes inline styles this way so they survive
- * the className-based cellStyle pipeline.
+ * Resolve a cellStyle value into a className + inlineStyle pair.
+ * Accepts both the new `CellStyleResult` object format and legacy
+ * `__style__...__end__` encoded strings for backwards compatibility.
  */
-export function parseCellStyle(raw: string): { className: string; inlineStyle: React.CSSProperties } {
-  const inlineStyle: Record<string, string> = {};
-  let className = raw;
+export function resolveCellStyle(raw: CellStyleValue): { className: string; inlineStyle: React.CSSProperties } {
+  if (typeof raw === 'object' && raw !== null) {
+    return { className: raw.className ?? '', inlineStyle: raw.style ?? {} };
+  }
 
-  const match = raw.match(/^__style__(.+?)__end__\s*(.*)/);
+  // Legacy string path: parse __style__...__end__ encoded prefix
+  const str = raw ?? '';
+  const inlineStyle: Record<string, string> = {};
+  let className = str;
+
+  const match = str.match(/^__style__(.+?)__end__\s*(.*)/);
   if (match) {
     const styleStr = match[1];
     className = match[2] ?? '';
@@ -116,11 +124,14 @@ export function parseCellStyle(raw: string): { className: string; inlineStyle: R
   return { className, inlineStyle };
 }
 
-export function TableRow({ column, row, styles, px, py, isCellSelected, isActiveCell }: TableRowProps) {
+/** @deprecated Use resolveCellStyle instead */
+export const parseCellStyle = resolveCellStyle;
+
+export const TableRow = memo(function TableRow({ column, row, styles, px, py, isCellSelected, isActiveCell }: TableRowProps) {
   const value = row[column.field];
   const rawStyle =
     typeof column.cellStyle === 'function' ? column.cellStyle(value, row) : column.cellStyle ?? '';
-  const { className: dynamicClass, inlineStyle } = parseCellStyle(rawStyle);
+  const { className: dynamicClass, inlineStyle } = resolveCellStyle(rawStyle);
 
   const selectionStyle: React.CSSProperties = isActiveCell
     ? { outline: '2px solid #3b82f6', outlineOffset: -2, zIndex: column.pin ? 3 : 1, ...(column.pin ? {} : { position: 'relative' }) }
@@ -128,15 +139,7 @@ export function TableRow({ column, row, styles, px, py, isCellSelected, isActive
       ? { backgroundColor: 'var(--row-selected-bg, #1e3a5f)' }
       : {};
 
-  const pinStyle: React.CSSProperties = column.pin
-    ? {
-        position: 'sticky',
-        zIndex: 1,
-        backgroundColor: 'var(--utbl-row-bg, inherit)',
-        ...(column.pin === 'left' ? { left: column._pinOffset ?? 0 } : { right: column._pinOffset ?? 0 }),
-        ...(column._pinEdge ? { boxShadow: column.pin === 'left' ? '4px 0 8px -4px rgba(0,0,0,0.15)' : '-4px 0 8px -4px rgba(0,0,0,0.15)' } : {}),
-      }
-    : {};
+  const pinStyle = buildPinStyle(column);
 
   const cellCss: React.CSSProperties = {
     width: column.currentWidth,
@@ -155,18 +158,20 @@ export function TableRow({ column, row, styles, px, py, isCellSelected, isActive
     ...selectionStyle,
   };
 
+  const ariaSelected = isCellSelected || isActiveCell || undefined;
+
   if (column.render) {
     return (
-      <div className={`${styles.cell ?? ''} ${dynamicClass}`} style={cellCss}>
+      <div role="gridcell" aria-selected={ariaSelected} className={`${styles.cell ?? ''} ${dynamicClass}`} style={cellCss}>
         {column.render(value, row)}
       </div>
     );
   }
 
   return (
-    <div className={`${styles.cell ?? ''} ${dynamicClass}`} style={cellCss}
+    <div role="gridcell" aria-selected={ariaSelected} className={`${styles.cell ?? ''} ${dynamicClass}`} style={cellCss}
       title={value != null ? String(value) : ''}>
       {formatValue(value, column.format)}
     </div>
   );
-}
+});

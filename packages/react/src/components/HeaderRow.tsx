@@ -104,6 +104,7 @@ export function HeaderRow({ column, sort, onSort, onResize, styles, px, py }: He
       }}
       onClick={handleClick}
       role="columnheader"
+      aria-sort={currentSort ? (currentSort.dir === 'asc' ? 'ascending' : 'descending') : (sortable ? 'none' : undefined)}
       data-field={column.field}
       tabIndex={0}
     >

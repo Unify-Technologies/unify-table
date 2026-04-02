@@ -96,123 +96,172 @@ export function createEditOverlay(
     },
 
     async init(columns, rowIdField) {
-      _columns = columns;
-      _rowIdField = rowIdField;
+      try {
+        _columns = columns;
+        _rowIdField = rowIdField;
 
-      // Create overlay table with same schema as source (empty)
-      await engine.execute(
-        `CREATE TABLE IF NOT EXISTS ${qOv()} AS SELECT * FROM ${qSrc()} WHERE false`,
-      );
-      // Add state column
-      await engine.execute(
-        `ALTER TABLE ${qOv()} ADD COLUMN IF NOT EXISTS "__utbl_state" VARCHAR DEFAULT 'edited'`,
-      );
-      await rebuildView();
+        // Create overlay table with same schema as source (empty)
+        await engine.execute(
+          `CREATE TABLE IF NOT EXISTS ${qOv()} AS SELECT * FROM ${qSrc()} WHERE false`,
+        );
+        // Add state column
+        await engine.execute(
+          `ALTER TABLE ${qOv()} ADD COLUMN IF NOT EXISTS "__utbl_state" VARCHAR DEFAULT 'edited'`,
+        );
+        await rebuildView();
+      } catch (err) {
+        const msg = `EditOverlay.init failed for "${overlayTable}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async apply(rowId, field, value) {
-      // Copy row from source to overlay if not already there
-      const existing = await engine.query<{ cnt: number }>(
-        `SELECT COUNT(*) AS cnt FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-      );
-      if (Number(existing[0]?.cnt) === 0) {
-        await engine.execute(
-          `INSERT INTO ${qOv()} SELECT *, 'edited' AS "__utbl_state" FROM ${qSrc()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+      try {
+        // Copy row from source to overlay if not already there
+        const existing = await engine.query<{ cnt: number }>(
+          `SELECT COUNT(*) AS cnt FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
         );
+        if (Number(existing[0]?.cnt) === 0) {
+          await engine.execute(
+            `INSERT INTO ${qOv()} SELECT *, 'edited' AS "__utbl_state" FROM ${qSrc()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+          );
+        }
+        // Update the specific cell
+        await engine.execute(
+          `UPDATE ${qOv()} SET ${quoteIdent(field)} = ${toSqlLiteral(value)} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+        );
+      } catch (err) {
+        const msg = `EditOverlay.apply failed for rowId=${String(rowId)}, field="${field}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
       }
-      // Update the specific cell
-      await engine.execute(
-        `UPDATE ${qOv()} SET ${quoteIdent(field)} = ${toSqlLiteral(value)} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-      );
     },
 
     async addRow(data) {
-      const fields = Object.keys(data);
-      const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(', ');
-      const vals = [...fields.map((f) => toSqlLiteral(data[f])), "'added'"].join(', ');
-      await engine.execute(`INSERT INTO ${qOv()} (${cols}) VALUES (${vals})`);
+      try {
+        const fields = Object.keys(data);
+        const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(', ');
+        const vals = [...fields.map((f) => toSqlLiteral(data[f])), "'added'"].join(', ');
+        await engine.execute(`INSERT INTO ${qOv()} (${cols}) VALUES (${vals})`);
+      } catch (err) {
+        const msg = `EditOverlay.addRow failed for "${overlayTable}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async deleteRow(rowId) {
-      // Check if row is already in overlay
-      const existing = await engine.query<{ state: string }>(
-        `SELECT "__utbl_state" AS state FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-      );
+      try {
+        // Check if row is already in overlay
+        const existing = await engine.query<{ state: string }>(
+          `SELECT "__utbl_state" AS state FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+        );
 
-      if (existing.length > 0) {
-        if (existing[0].state === 'added') {
-          // Row was added in this session -- truly remove it
-          await engine.execute(
-            `DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-          );
+        if (existing.length > 0) {
+          if (existing[0].state === 'added') {
+            // Row was added in this session -- truly remove it
+            await engine.execute(
+              `DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+            );
+          } else {
+            // Row was edited -- mark as deleted
+            await engine.execute(
+              `UPDATE ${qOv()} SET "__utbl_state" = 'deleted' WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+            );
+          }
         } else {
-          // Row was edited -- mark as deleted
+          // Source row not in overlay -- insert as deleted
           await engine.execute(
-            `UPDATE ${qOv()} SET "__utbl_state" = 'deleted' WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+            `INSERT INTO ${qOv()} (${qRowId()}, "__utbl_state") VALUES (${toSqlLiteral(rowId)}, 'deleted')`,
           );
         }
-      } else {
-        // Source row not in overlay -- insert as deleted
-        await engine.execute(
-          `INSERT INTO ${qOv()} (${qRowId()}, "__utbl_state") VALUES (${toSqlLiteral(rowId)}, 'deleted')`,
-        );
+      } catch (err) {
+        const msg = `EditOverlay.deleteRow failed for rowId=${String(rowId)}: ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
       }
     },
 
     async restoreRow(data, state) {
-      const fields = Object.keys(data);
-      const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(', ');
-      const vals = [...fields.map((f) => toSqlLiteral(data[f])), toSqlLiteral(state)].join(', ');
-      await engine.execute(`INSERT INTO ${qOv()} (${cols}) VALUES (${vals})`);
+      try {
+        const fields = Object.keys(data);
+        const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(', ');
+        const vals = [...fields.map((f) => toSqlLiteral(data[f])), toSqlLiteral(state)].join(', ');
+        await engine.execute(`INSERT INTO ${qOv()} (${cols}) VALUES (${vals})`);
+      } catch (err) {
+        const msg = `EditOverlay.restoreRow failed for rowId=${String(data[_rowIdField])}: ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async revert(rowId) {
-      await engine.execute(
-        `DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-      );
+      try {
+        await engine.execute(
+          `DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
+        );
+      } catch (err) {
+        const msg = `EditOverlay.revert failed for rowId=${String(rowId)}: ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async revertAll() {
-      await engine.execute(`DELETE FROM ${qOv()}`);
+      try {
+        await engine.execute(`DELETE FROM ${qOv()}`);
+      } catch (err) {
+        const msg = `EditOverlay.revertAll failed for "${overlayTable}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async getDirtyRows() {
-      const rows = await engine.query<{ rowId: unknown; state: string }>(
-        `SELECT ${qRowId()} AS "rowId", "__utbl_state" AS state FROM ${qOv()}`,
-      );
-      return rows.map((r) => ({
-        rowId: r.rowId,
-        state: r.state as DirtyRow['state'],
-      }));
+      try {
+        const rows = await engine.query<{ rowId: unknown; state: string }>(
+          `SELECT ${qRowId()} AS "rowId", "__utbl_state" AS state FROM ${qOv()}`,
+        );
+        return rows.map((r) => ({
+          rowId: r.rowId,
+          state: r.state as DirtyRow['state'],
+        }));
+      } catch (err) {
+        const msg = `EditOverlay.getDirtyRows failed for "${overlayTable}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async save() {
-      const cols = sourceColList();
-      const setClauses = _columns
-        .filter((c) => c.name !== _rowIdField)
-        .map((c) => `${quoteIdent(c.name)} = __ov.${quoteIdent(c.name)}`)
-        .join(', ');
+      try {
+        const cols = sourceColList();
+        const setClauses = _columns
+          .filter((c) => c.name !== _rowIdField)
+          .map((c) => `${quoteIdent(c.name)} = __ov.${quoteIdent(c.name)}`)
+          .join(', ');
 
-      // Apply edits: overwrite source rows with overlay versions
-      await engine.execute(
-        `UPDATE ${qSrc()} SET ${setClauses} FROM ${qOv()} AS __ov ` +
-        `WHERE ${qSrc()}.${qRowId()} = __ov.${qRowId()} AND __ov."__utbl_state" = 'edited'`,
-      );
-      // Apply adds: insert new rows into source
-      await engine.execute(
-        `INSERT INTO ${qSrc()} (${cols}) SELECT ${cols} FROM ${qOv()} WHERE "__utbl_state" = 'added'`,
-      );
-      // Apply deletes: remove from source
-      await engine.execute(
-        `DELETE FROM ${qSrc()} WHERE ${qRowId()} IN (SELECT ${qRowId()} FROM ${qOv()} WHERE "__utbl_state" = 'deleted')`,
-      );
-      // Clear overlay
-      await engine.execute(`DELETE FROM ${qOv()}`);
+        // Apply edits: overwrite source rows with overlay versions
+        await engine.execute(
+          `UPDATE ${qSrc()} SET ${setClauses} FROM ${qOv()} AS __ov ` +
+          `WHERE ${qSrc()}.${qRowId()} = __ov.${qRowId()} AND __ov."__utbl_state" = 'edited'`,
+        );
+        // Apply adds: insert new rows into source
+        await engine.execute(
+          `INSERT INTO ${qSrc()} (${cols}) SELECT ${cols} FROM ${qOv()} WHERE "__utbl_state" = 'added'`,
+        );
+        // Apply deletes: remove from source
+        await engine.execute(
+          `DELETE FROM ${qSrc()} WHERE ${qRowId()} IN (SELECT ${qRowId()} FROM ${qOv()} WHERE "__utbl_state" = 'deleted')`,
+        );
+        // Clear overlay
+        await engine.execute(`DELETE FROM ${qOv()}`);
+      } catch (err) {
+        const msg = `EditOverlay.save failed for "${overlayTable}" -> "${sourceTable}": ${err instanceof Error ? err.message : err}`;
+        throw Object.assign(new Error(msg), { cause: err });
+      }
     },
 
     async destroy() {
-      await engine.execute(`DROP VIEW IF EXISTS ${qView()}`);
-      await engine.execute(`DROP TABLE IF EXISTS ${qOv()}`);
+      try {
+        await engine.execute(`DROP VIEW IF EXISTS ${qView()}`);
+        await engine.execute(`DROP TABLE IF EXISTS ${qOv()}`);
+      } catch (err) {
+        console.warn(`EditOverlay.destroy failed for "${overlayTable}"`, err);
+      }
     },
   };
 }

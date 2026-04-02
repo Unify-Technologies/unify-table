@@ -1,5 +1,5 @@
 import type { TablePlugin, TableContext } from '../types.js';
-import { getRowId } from '../utils.js';
+import { getRowId, normalizeShortcut, normalizeShortcutKey } from '../utils.js';
 
 export function keyboard(): TablePlugin {
   const plugin: TablePlugin = {
@@ -11,13 +11,8 @@ export function keyboard(): TablePlugin {
       ArrowLeft: (ctx) => moveActiveCell(ctx, -1, 0),
       ArrowRight: (ctx) => moveActiveCell(ctx, 1, 0),
       Tab: (ctx) => moveActiveCell(ctx, 1, 0),
-      'Ctrl+z': (ctx) => { if (ctx.editing?.canUndo) ctx.editing.undo(); else if (ctx.formulas?.canUndo) ctx.formulas.undo(); },
-      'Ctrl+y': (ctx) => { if (ctx.editing?.canRedo) ctx.editing.redo(); else if (ctx.formulas?.canRedo) ctx.formulas.redo(); },
-      'Ctrl+Shift+z': (ctx) => { if (ctx.editing?.canRedo) ctx.editing.redo(); else if (ctx.formulas?.canRedo) ctx.formulas.redo(); },
       Enter: (ctx) => {
-        if (ctx.editing?.editingCell) {
-          // Commit would be handled by the editing cell component
-        } else if (ctx.activeCell && ctx.editing) {
+        if (ctx.activeCell && ctx.editing) {
           ctx.editing.startEditing(ctx.activeCell);
         }
       },
@@ -38,32 +33,41 @@ export function keyboard(): TablePlugin {
       const el = ctx.containerRef.current;
       if (!el) return;
 
-      const shortcuts = plugin.shortcuts!;
+      // Build a merged, normalized shortcut map from all plugins
+      const allShortcuts: Record<string, (ctx: TableContext) => void> = {};
+      for (const p of ctx.getLatest()._allPlugins()) {
+        if (p.shortcuts) {
+          for (const [key, fn] of Object.entries(p.shortcuts)) {
+            allShortcuts[normalizeShortcutKey(key)] = fn;
+          }
+        }
+      }
+
       const hasSelectionPlugin = !!ctx.getLatest().getPlugin('selection');
 
       const handler = (e: KeyboardEvent) => {
-        const latest = ctx.getLatest();
+        const current = ctx.getLatest();
 
         // Undo / Redo — handled before editingCell check so they work in all states
         if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
           e.preventDefault();
-          if (latest.editing?.canUndo) latest.editing.undo();
-          else if (latest.formulas?.canUndo) latest.formulas.undo();
+          if (current.editing?.canUndo) current.editing.undo();
+          else if (current.formulas?.canUndo) current.formulas.undo();
           return;
         }
         if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
           e.preventDefault();
-          if (latest.editing?.canRedo) latest.editing.redo();
-          else if (latest.formulas?.canRedo) latest.formulas.redo();
+          if (current.editing?.canRedo) current.editing.redo();
+          else if (current.formulas?.canRedo) current.formulas.redo();
           return;
         }
 
         // When a cell is being edited, let the editor handle all keys
         // except Escape (cancel) and Enter (commit, handled by editor's onKeyDown)
-        if (latest.editing?.editingCell) {
+        if (current.editing?.editingCell) {
           if (e.key === 'Escape') {
             e.preventDefault();
-            latest.editing.cancelEdit();
+            current.editing.cancelEdit();
           }
           // All other keys pass through to the inline editor
           return;
@@ -74,10 +78,12 @@ export function keyboard(): TablePlugin {
         const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
         if (isArrow && hasSelectionPlugin) return;
 
-        const shortcut = shortcuts[e.key];
+        // Normalized lookup dispatches all plugin shortcuts (including modifier combos)
+        const normalized = normalizeShortcut(e);
+        const shortcut = allShortcuts[normalized];
         if (shortcut) {
           e.preventDefault();
-          shortcut(latest);
+          shortcut(current);
         }
       };
 

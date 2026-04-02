@@ -6,29 +6,8 @@ export function clipboard(): TablePlugin {
     name: 'clipboard',
     dependencies: ['selection'],
     shortcuts: {
-      'Ctrl+c': (ctx) => copySelection(ctx),
-      'Ctrl+v': (ctx) => pasteFromClipboard(ctx),
-    },
-    init(ctx: TableContext) {
-      const el = ctx.containerRef.current;
-      if (!el) return;
-
-      const handler = (e: KeyboardEvent) => {
-        // When a cell is being edited, let the editor handle Ctrl+C/V natively
-        if (ctx.getLatest().editing?.editingCell) return;
-
-        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-          e.preventDefault();
-          copySelection(ctx);
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-          e.preventDefault();
-          pasteFromClipboard(ctx);
-        }
-      };
-
-      el.addEventListener('keydown', handler);
-      return () => el.removeEventListener('keydown', handler);
+      'ctrl+c': (ctx) => copySelection(ctx),
+      'ctrl+v': (ctx) => pasteFromClipboard(ctx),
     },
   };
 }

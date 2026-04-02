@@ -207,7 +207,7 @@ function buildAxis(
   // Only show legend when there are multiple series
   if (config.legend !== false && (Array.isArray(series) && series.length > 1)) {
     const pos = typeof config.legend === 'string' ? config.legend : 'top';
-    option.legend = { ...tufteLegend(t), show: true, [pos === 'left' || pos === 'right' ? pos : (pos === 'bottom' ? 'bottom' : 'top')]: 0 };
+    option.legend = { ...tufteLegend(t), show: true, [pos]: 0 };
   }
   if (config.zoom) {
     option.dataZoom = [
@@ -392,10 +392,11 @@ export function buildPieOption(rows: Row[], config: ChartOptionConfig): EChartsC
 export function buildScatterOption(rows: Row[], config: ChartOptionConfig): EChartsCoreOption {
   const t = config.theme ?? DARK_CHART_THEME;
   const xKey = config.x;
-  const yFields = normalizeY(config.y);
-  const yKey = yFields[0].field;
+  const yKey = normalizeY(config.y)[0].field;
   const sizeField = config.size;
+  const symbolSize = sizeField ? (val: number[]) => Math.sqrt(val[2]) * 2 : undefined;
 
+  let series;
   if (config.series) {
     const seriesKey = config.series;
     const groups = new Map<string, number[][]>();
@@ -406,32 +407,15 @@ export function buildScatterOption(rows: Row[], config: ChartOptionConfig): ECha
       if (sizeField) point.push(Number(r[sizeField.field]) || 0);
       groups.get(sv)!.push(point);
     }
-
-    const series = [...groups.entries()].map(([name, data]) => ({
-      name,
-      type: 'scatter' as const,
-      data,
-      symbolSize: sizeField ? (val: number[]) => Math.sqrt(val[2]) * 2 : undefined,
-    }));
-
-    return {
-      color: resolveColors(config.colorScheme),
-      backgroundColor: 'transparent',
-      tooltip: { ...tufteTooltip(t), trigger: 'item' },
-      grid: TUFTE_GRID,
-      xAxis: { type: 'value', name: config.xAxis?.label, axisLine: TUFTE_AXIS_LINE, axisTick: TUFTE_AXIS_TICK, axisLabel: tufteAxisLabel(t), splitLine: TUFTE_SPLIT_LINE },
-      yAxis: { type: 'value', name: config.yAxis?.label, axisLine: TUFTE_AXIS_LINE, axisTick: TUFTE_AXIS_TICK, axisLabel: tufteAxisLabel(t), splitLine: TUFTE_SPLIT_LINE },
-      series,
-      title: config.title ? { text: config.title, subtext: config.subtitle, textStyle: { color: t.text, fontSize: 13 } } : undefined,
-      legend: config.legend !== false ? { ...tufteLegend(t), show: true } : undefined,
-    };
+    series = [...groups.entries()].map(([name, data]) => ({ name, type: 'scatter' as const, data, symbolSize }));
+  } else {
+    const data = rows.map((r) => {
+      const point: number[] = [Number(r[xKey]) || 0, Number(r[yKey]) || 0];
+      if (sizeField) point.push(Number(r[sizeField.field]) || 0);
+      return point;
+    });
+    series = [{ type: 'scatter' as const, data, symbolSize }];
   }
-
-  const data = rows.map((r) => {
-    const point: number[] = [Number(r[xKey]) || 0, Number(r[yKey]) || 0];
-    if (sizeField) point.push(Number(r[sizeField.field]) || 0);
-    return point;
-  });
 
   return {
     color: resolveColors(config.colorScheme),
@@ -440,12 +424,9 @@ export function buildScatterOption(rows: Row[], config: ChartOptionConfig): ECha
     grid: TUFTE_GRID,
     xAxis: { type: 'value', name: config.xAxis?.label, axisLine: TUFTE_AXIS_LINE, axisTick: TUFTE_AXIS_TICK, axisLabel: tufteAxisLabel(t), splitLine: TUFTE_SPLIT_LINE },
     yAxis: { type: 'value', name: config.yAxis?.label, axisLine: TUFTE_AXIS_LINE, axisTick: TUFTE_AXIS_TICK, axisLabel: tufteAxisLabel(t), splitLine: TUFTE_SPLIT_LINE },
-    series: [{
-      type: 'scatter',
-      data,
-      symbolSize: sizeField ? (val: number[]) => Math.sqrt(val[2]) * 2 : undefined,
-    }],
+    series,
     title: config.title ? { text: config.title, subtext: config.subtitle, textStyle: { color: t.text, fontSize: 13 } } : undefined,
+    ...(config.series && config.legend !== false ? { legend: { ...tufteLegend(t), show: true } } : {}),
   };
 }
 
@@ -513,13 +494,12 @@ export function buildHeatmapOption(rows: Row[], config: ChartOptionConfig): ECha
 }
 
 // ---------------------------------------------------------------------------
-// Treemap
+// Treemap / Funnel (shared structure)
 // ---------------------------------------------------------------------------
 
-export function buildTreemapOption(rows: Row[], config: ChartOptionConfig): EChartsCoreOption {
+function buildNameValueOption(rows: Row[], config: ChartOptionConfig, chartType: 'treemap' | 'funnel'): EChartsCoreOption {
   const t = config.theme ?? DARK_CHART_THEME;
-  const yFields = normalizeY(config.y);
-  const vf = yFields[0];
+  const vf = normalizeY(config.y)[0];
   const labelKey = config.x;
   const valKey = aggAlias(vf);
 
@@ -528,39 +508,26 @@ export function buildTreemapOption(rows: Row[], config: ChartOptionConfig): ECha
     value: Number(r[valKey]) || 0,
   }));
 
+  const series = chartType === 'treemap'
+    ? [{ type: 'treemap' as const, data, label: { color: t.text, fontSize: 10 }, breadcrumb: { show: false } }]
+    : [{ type: 'funnel' as const, data, sort: 'descending' as const, label: { color: t.text, fontSize: 10 } }];
+
   return {
     color: resolveColors(config.colorScheme),
     backgroundColor: 'transparent',
     tooltip: { ...tufteTooltip(t), trigger: 'item' },
-    series: [{ type: 'treemap', data, label: { color: t.text, fontSize: 10 }, breadcrumb: { show: false } }],
+    series,
     title: config.title ? { text: config.title, subtext: config.subtitle, textStyle: { color: t.text, fontSize: 13 } } : undefined,
+    ...(chartType === 'funnel' && config.legend !== false ? { legend: { ...tufteLegend(t), show: true } } : {}),
   };
 }
 
-// ---------------------------------------------------------------------------
-// Funnel
-// ---------------------------------------------------------------------------
+export function buildTreemapOption(rows: Row[], config: ChartOptionConfig): EChartsCoreOption {
+  return buildNameValueOption(rows, config, 'treemap');
+}
 
 export function buildFunnelOption(rows: Row[], config: ChartOptionConfig): EChartsCoreOption {
-  const t = config.theme ?? DARK_CHART_THEME;
-  const yFields = normalizeY(config.y);
-  const vf = yFields[0];
-  const labelKey = config.x;
-  const valKey = aggAlias(vf);
-
-  const data = rows.map((r) => ({
-    name: String(r[labelKey]),
-    value: Number(r[valKey]) || 0,
-  }));
-
-  return {
-    color: resolveColors(config.colorScheme),
-    backgroundColor: 'transparent',
-    tooltip: { ...tufteTooltip(t), trigger: 'item' },
-    series: [{ type: 'funnel', data, sort: 'descending', label: { color: t.text, fontSize: 10 } }],
-    title: config.title ? { text: config.title, subtext: config.subtitle, textStyle: { color: t.text, fontSize: 13 } } : undefined,
-    legend: config.legend !== false ? { ...tufteLegend(t), show: true } : undefined,
-  };
+  return buildNameValueOption(rows, config, 'funnel');
 }
 
 // ---------------------------------------------------------------------------

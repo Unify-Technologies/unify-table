@@ -1,6 +1,6 @@
 import { createElement, useCallback, useEffect, useRef, useState } from 'react';
 import type { TablePlugin, TableContext, CellRef, MenuItem } from '../types.js';
-import { getRowId } from '../utils.js';
+import { getRowId, MENU_SEPARATOR } from '../utils.js';
 
 // ─── Pattern Detection ──────────────────────────────────────
 
@@ -122,12 +122,8 @@ function useFillHandle(ctx: TableContext) {
     const sel = ctx.selection.span;
     if (!sel) return;
 
-    const r0 = Math.min(sel.anchor.row, sel.focus.row);
-    const r1 = Math.max(sel.anchor.row, sel.focus.row);
-    const c0 = Math.min(sel.anchor.col, sel.focus.col);
-    const c1 = Math.max(sel.anchor.col, sel.focus.col);
-
-    setState({ isDragging: true, dragRow: r1, dragCol: c1, sourceSpan: { r0, r1, c0, c1 } });
+    const bounds = spanBounds(sel);
+    setState({ isDragging: true, dragRow: bounds.r1, dragCol: bounds.c1, sourceSpan: bounds });
 
     const onMouseMove = (me: MouseEvent) => {
       const cell = findCellFromPoint(me.clientX, me.clientY);
@@ -175,10 +171,7 @@ function useFillHandle(ctx: TableContext) {
     const sel = ctx.selection.span;
     if (!sel) return;
 
-    const r0 = Math.min(sel.anchor.row, sel.focus.row);
-    const r1 = Math.max(sel.anchor.row, sel.focus.row);
-    const c0 = Math.min(sel.anchor.col, sel.focus.col);
-    const c1 = Math.max(sel.anchor.col, sel.focus.col);
+    const { r0, r1, c0, c1 } = spanBounds(sel);
 
     // Auto-fill: find the extent of the adjacent column
     const refCol = c0 > 0 ? c0 - 1 : c1 + 1;
@@ -275,32 +268,26 @@ async function executeFill(
 
 // ─── Fill Down / Fill Right ─────────────────────────────────
 
-function fillDown(ctx: TableContext) {
-  const sel = ctx.selection.span;
-  if (!sel || !ctx.editing) return;
-
-  const r0 = Math.min(sel.anchor.row, sel.focus.row);
-  const r1 = Math.max(sel.anchor.row, sel.focus.row);
-  const c0 = Math.min(sel.anchor.col, sel.focus.col);
-  const c1 = Math.max(sel.anchor.col, sel.focus.col);
-  if (r1 <= r0) return;
-
-  // Source is the top row, fill the rest
-  executeFill(ctx, { r0, r1: r0, c0, c1 }, r1, c1);
+function spanBounds(span: { anchor: { row: number; col: number }; focus: { row: number; col: number } }) {
+  return {
+    r0: Math.min(span.anchor.row, span.focus.row),
+    r1: Math.max(span.anchor.row, span.focus.row),
+    c0: Math.min(span.anchor.col, span.focus.col),
+    c1: Math.max(span.anchor.col, span.focus.col),
+  };
 }
 
-function fillRight(ctx: TableContext) {
+function fillDirection(ctx: TableContext, dir: 'down' | 'right') {
   const sel = ctx.selection.span;
   if (!sel || !ctx.editing) return;
-
-  const r0 = Math.min(sel.anchor.row, sel.focus.row);
-  const r1 = Math.max(sel.anchor.row, sel.focus.row);
-  const c0 = Math.min(sel.anchor.col, sel.focus.col);
-  const c1 = Math.max(sel.anchor.col, sel.focus.col);
-  if (c1 <= c0) return;
-
-  // Source is the leftmost column, fill the rest
-  executeFill(ctx, { r0, r1, c0, c1: c0 }, r1, c1);
+  const { r0, r1, c0, c1 } = spanBounds(sel);
+  if (dir === 'down') {
+    if (r1 <= r0) return;
+    executeFill(ctx, { r0, r1: r0, c0, c1 }, r1, c1);
+  } else {
+    if (c1 <= c0) return;
+    executeFill(ctx, { r0, r1, c0, c1: c0 }, r1, c1);
+  }
 }
 
 // ─── FillHandleOverlay React Component ──────────────────────
@@ -415,33 +402,29 @@ export function fillHandle(_options?: FillHandleOptions): TablePlugin {
       const sel = ctx.selection?.span;
       if (!sel || !ctx.editing) return [];
 
-      const r0 = Math.min(sel.anchor.row, sel.focus.row);
-      const r1 = Math.max(sel.anchor.row, sel.focus.row);
-      const c0 = Math.min(sel.anchor.col, sel.focus.col);
-      const c1 = Math.max(sel.anchor.col, sel.focus.col);
-
+      const { r0, r1, c0, c1 } = spanBounds(sel);
       const items: MenuItem[] = [];
-      items.push({ label: '', action: () => {}, type: 'separator' });
+      items.push(MENU_SEPARATOR);
       if (r1 > r0) {
         items.push({
           label: 'Fill Down',
           shortcut: 'Ctrl+D',
-          action: () => fillDown(ctx.getLatest()),
+          action: () => fillDirection(ctx.getLatest(), 'down'),
         });
       }
       if (c1 > c0) {
         items.push({
           label: 'Fill Right',
           shortcut: 'Ctrl+R',
-          action: () => fillRight(ctx.getLatest()),
+          action: () => fillDirection(ctx.getLatest(), 'right'),
         });
       }
       return items;
     },
 
     shortcuts: {
-      'ctrl+d': (ctx: TableContext) => fillDown(ctx),
-      'ctrl+r': (ctx: TableContext) => fillRight(ctx),
+      'ctrl+d': (ctx: TableContext) => fillDirection(ctx, 'down'),
+      'ctrl+r': (ctx: TableContext) => fillDirection(ctx, 'right'),
     },
   };
 }

@@ -3,6 +3,7 @@ import {
   createQueryEngine,
   createDataSource,
   createViewManager,
+  isNumericType,
 } from '@unify/table-core';
 import type {
   TableConnection,
@@ -52,7 +53,7 @@ function resolveColumn(def: ColumnDef, info?: ColumnInfo): ResolvedColumn {
     resizable: def.resizable ?? true,
     currentWidth: def.width ?? DEFAULT_WIDTH,
     columnInfo: info,
-    align: def.align ?? (info?.mappedType === 'number' || info?.mappedType === 'bigint' ? 'right' : 'left'),
+    align: def.align ?? (info && isNumericType(info.mappedType) ? 'right' : 'left'),
   };
 }
 
@@ -349,6 +350,8 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       setSelection, setActiveCell,
       on, emit,
       getPlugin: <T extends TablePlugin>(name: string) => pluginMap.current.get(name) as T | undefined,
+      /** @internal All registered plugins — used by keyboard plugin for shortcut collection. */
+      _allPlugins: () => [...pluginMap.current.values()],
       getLatest: () => ctxRef.current!,
       containerRef,
       refresh: fetchData,
@@ -371,8 +374,23 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   // Initialize plugins only when the plugins array changes (not on every ctx change)
   useEffect(() => {
     const cleanups: (() => void)[] = [];
+    const initialized = new Set<string>();
+    const allNames = new Set(plugins.map((p) => p.name));
+
     for (const plugin of plugins) {
+      // Validate declared dependencies
+      if (plugin.dependencies) {
+        for (const dep of plugin.dependencies) {
+          if (!allNames.has(dep)) {
+            console.error(`[unify-table] Plugin "${plugin.name}" requires "${dep}" which is not registered.`);
+          } else if (!initialized.has(dep)) {
+            console.warn(`[unify-table] Plugin "${plugin.name}" depends on "${dep}" which has not been initialized yet. Move "${dep}" before "${plugin.name}" in the plugins array.`);
+          }
+        }
+      }
+
       pluginMap.current.set(plugin.name, plugin);
+      initialized.add(plugin.name);
       if (plugin.init) {
         const cleanup = plugin.init(ctx);
         if (cleanup) cleanups.push(cleanup);

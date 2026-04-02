@@ -107,6 +107,9 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
           try {
             await _viewManager.sync(_filters, _sort);
           } catch (err) {
+            // Catch without rethrow is intentional — rethrowing from a microtask
+            // would create an unhandled rejection. Errors are emitted to subscribers
+            // via the 'error' event.
             emit('error', err);
             return;
           }

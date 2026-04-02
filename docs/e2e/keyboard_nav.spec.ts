@@ -6,7 +6,7 @@ function waitForDuckDB(page: any) {
   return page.waitForFunction(
     () => {
       const root = document.getElementById("root");
-      return root && root.innerHTML.length > 500 && !root.innerHTML.includes("INITIALIZING");
+      return root && !root.innerHTML.includes("INITIALIZING") && root.querySelector('[data-index], .utbl-scroll, h1');
     },
     { timeout: 30000 },
   );
@@ -14,8 +14,21 @@ function waitForDuckDB(page: any) {
 
 async function waitForTable(page: any) {
   await waitForDuckDB(page);
-  await page.waitForTimeout(2000);
   await page.locator('[data-index="0"]').waitFor({ timeout: 10000 });
+}
+
+/** Wait until an active cell outline is visible somewhere in the table */
+async function waitForActiveCell(page: any) {
+  await page.waitForFunction(
+    () => {
+      const cells = document.querySelectorAll('[data-index] > div');
+      for (const cell of cells) {
+        if ((cell as HTMLElement).style.outline?.includes('3b82f6')) return true;
+      }
+      return false;
+    },
+    { timeout: 3000 },
+  );
 }
 
 /** Get the active cell position by finding the element with the blue outline */
@@ -49,14 +62,14 @@ test.describe("Keyboard Navigation E2E", () => {
     // Click first cell to activate
     const firstRow = page.locator('[data-index="0"]');
     await firstRow.locator('[class*="cell"]').first().click();
-    await page.waitForTimeout(300);
+    await waitForActiveCell(page);
 
     const positions: number[] = [];
 
     // Press ArrowDown 5 times and record row position each time
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(200);
+      await waitForActiveCell(page);
       const pos = await getActiveCellPosition(page);
       positions.push(pos?.row ?? -1);
     }
@@ -70,13 +83,13 @@ test.describe("Keyboard Navigation E2E", () => {
   test("ArrowRight moves exactly one column at a time", async ({ page }) => {
     const firstRow = page.locator('[data-index="0"]');
     await firstRow.locator('[class*="cell"]').first().click();
-    await page.waitForTimeout(300);
+    await waitForActiveCell(page);
 
     const positions: number[] = [];
 
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press("ArrowRight");
-      await page.waitForTimeout(200);
+      await waitForActiveCell(page);
       const pos = await getActiveCellPosition(page);
       positions.push(pos?.col ?? -1);
     }
@@ -91,20 +104,19 @@ test.describe("Keyboard Navigation E2E", () => {
     // Start at row 5
     const firstRow = page.locator('[data-index="0"]');
     await firstRow.locator('[class*="cell"]').first().click();
-    await page.waitForTimeout(300);
+    await waitForActiveCell(page);
 
     // Move down 5 rows first
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(100);
+      await waitForActiveCell(page);
     }
-    await page.waitForTimeout(200);
 
     const positions: number[] = [];
     // Now move up 5 rows
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("ArrowUp");
-      await page.waitForTimeout(200);
+      await waitForActiveCell(page);
       const pos = await getActiveCellPosition(page);
       positions.push(pos?.row ?? -1);
     }
@@ -119,12 +131,12 @@ test.describe("Keyboard Navigation E2E", () => {
     const firstRow = page.locator('[data-index="0"]');
     // Click last cell (index 4)
     await firstRow.locator('[class*="cell"]').nth(4).click();
-    await page.waitForTimeout(300);
+    await waitForActiveCell(page);
 
     const positions: number[] = [];
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press("ArrowLeft");
-      await page.waitForTimeout(200);
+      await waitForActiveCell(page);
       const pos = await getActiveCellPosition(page);
       positions.push(pos?.col ?? -1);
     }
@@ -141,15 +153,15 @@ test.describe("Keyboard Navigation E2E", () => {
 
     // Double-click to edit, then commit with Enter
     await pnlCell.dblclick();
-    await page.waitForTimeout(500);
+    await page.locator('[data-index] input, [data-index] select').first().waitFor({ timeout: 5000 });
     await page.keyboard.press("Enter");
-    await page.waitForTimeout(1500);
+    await page.locator('[data-index] input, [data-index] select').waitFor({ state: 'detached', timeout: 5000 });
 
     // Now navigate down — should be 1 row per press
     const positions: number[] = [];
     for (let i = 0; i < 3; i++) {
       await page.keyboard.press("ArrowDown");
-      await page.waitForTimeout(200);
+      await waitForActiveCell(page);
       const pos = await getActiveCellPosition(page);
       positions.push(pos?.row ?? -1);
     }

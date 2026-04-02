@@ -1,5 +1,6 @@
 {
   "name": "@unify/table-charts",
+  "sideEffects": false,
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

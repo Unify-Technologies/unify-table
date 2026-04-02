@@ -89,9 +89,10 @@ describe('formatting plugin', async () => {
     // ticker column should be unchanged
     expect(transformed[1].cellStyle).toBeUndefined();
 
-    // Test the function — negative() now uses inline styles encoded in __style__ prefix
-    const styleFn = transformed[0].cellStyle as (v: unknown, r: Record<string, unknown>) => string;
-    expect(styleFn(-50, {})).toContain('#ef4444');
+    // Test the function — negative() returns CellStyleResult with inline styles
+    const styleFn = transformed[0].cellStyle as (v: unknown, r: Record<string, unknown>) => unknown;
+    const negResult = styleFn(-50, {}) as { style?: Record<string, string> };
+    expect(negResult.style?.color).toBe('#ef4444');
     expect(styleFn(100, {})).toBe('');
   });
 
@@ -107,8 +108,8 @@ describe('formatting plugin', async () => {
 
     const transformed = plugin.transformColumns!(columns);
     for (const col of transformed) {
-      const styleFn = col.cellStyle as (v: unknown, r: Record<string, unknown>) => string;
-      expect(styleFn(null, {})).toContain('null-cell');
+      const styleFn = col.cellStyle as (v: unknown, r: Record<string, unknown>) => unknown;
+      expect(styleFn(null, {})).toBe('null-cell');
       expect(styleFn('hello', {})).toBe('');
     }
   });

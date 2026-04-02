@@ -1,0 +1,84 @@
+/* ── unify-table structural styles ────────────────────────── */
+
+/* Scroll container */
+.utbl-scroll {
+  overflow: auto;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+
+/* Header row (sticky) */
+.utbl-header-row {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  min-width: fit-content;
+}
+
+/* Virtual height container */
+.utbl-vlist {
+  position: relative;
+  min-width: fit-content;
+}
+
+/* Virtual row item */
+.utbl-vrow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-width: fit-content;
+  display: flex;
+  align-items: center;
+}
+
+.utbl-vrow--placeholder { opacity: 0.3; }
+.utbl-vrow--clickable { cursor: pointer; }
+
+/* Placeholder loading text */
+.utbl-placeholder-text {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+/* Group toggle button */
+.utbl-group-toggle {
+  font-size: 0.65em;
+  transition: transform 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 3px;
+}
+.utbl-group-toggle--expanded { transform: rotate(90deg); }
+.utbl-group-toggle--collapsed { transform: rotate(0deg); }
+
+/* Group cell content */
+.utbl-group-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.utbl-group-count {
+  opacity: 0.5;
+  font-size: 0.75em;
+  flex-shrink: 0;
+}
+
+/* Muted cell (grouped columns / empty agg) */
+.utbl-cell-muted { opacity: 0.25; }
+
+/* Active cell outline (use CSS var for themability) */
+.utbl-cell-active {
+  outline: 2px solid var(--utbl-active-color, #3b82f6);
+  outline-offset: -2px;
+}

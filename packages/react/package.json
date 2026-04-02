@@ -1,5 +1,6 @@
 {
   "name": "@unify/table-react",
+  "sideEffects": false,
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -11,13 +12,14 @@
     },
     "./styles": "./dist/panel.css",
     "./themes": "./dist/themes.css",
-    "./displays": "./dist/displays/display.css"
+    "./displays": "./dist/displays/display.css",
+    "./table": "./dist/table.css"
   },
   "files": [
     "/dist"
   ],
   "scripts": {
-    "build": "tsgo -p tsconfig.json && cp src/panels/panel.css dist/panel.css && cp src/styles/themes.css dist/themes.css",
+    "build": "tsgo -p tsconfig.json && cp src/panels/panel.css dist/panel.css && cp src/styles/themes.css dist/themes.css && cp src/styles/table.css dist/table.css && mkdir -p dist/displays && cp src/displays/display.css dist/displays/display.css",
     "lint": "oxlint src/",
     "lint:fix": "oxlint --fix src/",
     "format": "oxfmt --write src/",

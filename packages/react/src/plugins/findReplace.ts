@@ -1,5 +1,6 @@
 import type { TablePlugin, TableContext } from '../types.js';
 import { quoteIdent, escapeString } from '@unify/table-core';
+import { detectIdColumnByName } from '../utils.js';
 
 export function findReplace(): TablePlugin {
   return {
@@ -7,36 +8,15 @@ export function findReplace(): TablePlugin {
     dependencies: [],
 
     shortcuts: {
-      'Ctrl+f': (ctx) => {
+      'ctrl+f': (ctx) => {
         ctx.emit('findReplace:open');
       },
-      'Ctrl+h': (ctx) => {
+      'ctrl+h': (ctx) => {
         ctx.emit('findReplace:openReplace');
       },
-      Escape: (ctx) => {
+      'escape': (ctx) => {
         ctx.emit('findReplace:close');
       },
-    },
-
-    init(ctx: TableContext) {
-      const el = ctx.containerRef.current;
-      if (!el) return;
-
-      const handler = (e: KeyboardEvent) => {
-        if (ctx.getLatest().editing?.editingCell) return;
-
-        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-          e.preventDefault();
-          ctx.emit('findReplace:open');
-        }
-        if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
-          e.preventDefault();
-          ctx.emit('findReplace:openReplace');
-        }
-      };
-
-      el.addEventListener('keydown', handler);
-      return () => el.removeEventListener('keydown', handler);
     },
   };
 }
@@ -97,13 +77,7 @@ export async function replaceInTable(
   let idField = rowIdField;
   if (!idField) {
     const cols = await engine.columns(table);
-    const candidates = ['id', 'ID', '_id', 'rowid', '__table_rid'];
-    for (const c of candidates) {
-      if (cols.some((col) => col.name === c)) {
-        idField = c;
-        break;
-      }
-    }
+    idField = detectIdColumnByName(cols) || undefined;
   }
 
   // If we have a rowIdField, route through commitEdit for non-destructive editing

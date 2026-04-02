@@ -3,7 +3,7 @@ import { createViewManager, buildViewSelect } from '../src/view.js';
 import type { QueryEngine } from '../src/engine.js';
 import { eq, gt } from '../src/sql/filters.js';
 
-function mockEngine(): QueryEngine {
+function mockEngine(): QueryEngine & { execute: ReturnType<typeof vi.fn>; query: ReturnType<typeof vi.fn> } {
   return {
     query: vi.fn().mockResolvedValue([]),
     execute: vi.fn().mockResolvedValue(undefined),
@@ -213,5 +213,45 @@ describe('ViewManager', () => {
     expect(engine.execute).toHaveBeenLastCalledWith(
       'CREATE OR REPLACE VIEW "__utbl_v_8" AS SELECT * FROM "trades"',
     );
+  });
+});
+
+describe('error handling', () => {
+  it('sync() wraps engine errors with context message', async () => {
+    const engine = mockEngine();
+    const cause = new Error('SQL execution failed');
+    engine.execute.mockRejectedValueOnce(cause);
+
+    const vm = createViewManager(engine, 'trades', '99');
+
+    await expect(vm.sync([], [])).rejects.toThrow('ViewManager.sync failed for view "__utbl_v_99"');
+    try {
+      await vm.sync([], []);
+    } catch (err) {
+      // reset mock for second call
+    }
+    // Verify cause is preserved
+    engine.execute.mockRejectedValueOnce(cause);
+    try {
+      await vm.sync([], []);
+    } catch (err) {
+      expect((err as any).cause).toBe(cause);
+    }
+  });
+
+  it('drop() wraps engine errors with context message', async () => {
+    const engine = mockEngine();
+    const cause = new Error('SQL execution failed');
+    engine.execute.mockRejectedValueOnce(cause);
+
+    const vm = createViewManager(engine, 'trades', '99');
+
+    await expect(vm.drop()).rejects.toThrow('ViewManager.drop failed for view "__utbl_v_99"');
+    engine.execute.mockRejectedValueOnce(cause);
+    try {
+      await vm.drop();
+    } catch (err) {
+      expect((err as any).cause).toBe(cause);
+    }
   });
 });

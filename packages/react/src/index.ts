@@ -93,6 +93,8 @@ export type {
   EditBackend,
   EditingState,
   FormulasState,
+  CellStyleResult,
+  CellStyleValue,
 } from './types.js';
 export type { EditingOptions } from './plugins/editing.js';
 

@@ -1,4 +1,4 @@
-import type { TablePlugin, ResolvedColumn } from '../types.js';
+import type { TablePlugin, ResolvedColumn, CellStyleValue } from '../types.js';
 import type { Row } from '@unify/table-core';
 
 export interface ConditionalRule {
@@ -29,14 +29,19 @@ export function formatting(rules: RulesMap = {}): TablePlugin {
 
         return {
           ...col,
-          cellStyle: (value: unknown, row: Row) => {
+          cellStyle: (value: unknown, row: Row): CellStyleValue => {
             const classes: string[] = [];
             const inlineStyles: Record<string, string> = {};
 
             // Apply original cellStyle
             if (typeof originalCellStyle === 'function') {
               const result = originalCellStyle(value, row);
-              if (result) classes.push(result);
+              if (typeof result === 'object' && result !== null) {
+                if (result.className) classes.push(result.className);
+                if (result.style) Object.assign(inlineStyles, result.style as Record<string, string>);
+              } else if (typeof result === 'string' && result) {
+                classes.push(result);
+              }
             } else if (typeof originalCellStyle === 'string' && originalCellStyle) {
               classes.push(originalCellStyle);
             }
@@ -49,13 +54,10 @@ export function formatting(rules: RulesMap = {}): TablePlugin {
               }
             }
 
-            // Encode inline styles into a special prefix so TableRow can extract them
-            const styleStr = Object.entries(inlineStyles)
-              .map(([k, v]) => `${k}:${v}`)
-              .join(';');
-
             const classStr = classes.join(' ');
-            return styleStr ? `__style__${styleStr}__end__ ${classStr}` : classStr;
+            const hasStyles = Object.keys(inlineStyles).length > 0;
+            if (!hasStyles) return classStr;
+            return { className: classStr, style: inlineStyles };
           },
         };
       });

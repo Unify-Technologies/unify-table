@@ -1,15 +1,16 @@
-import type { TablePlugin, TableContext } from '../types.js';
-import type { FilterExpr } from '@unify/table-core';
+import type { TablePlugin } from '../types.js';
 
 interface FiltersOptions {
   debounce?: number;
 }
 
-export function filters(options: FiltersOptions = {}): TablePlugin {
+/**
+ * Marker plugin — signals that filter UI should be shown in panels.
+ * Filter logic is handled by DataSource; this plugin enables the filter panel
+ * and allows other plugins to declare 'filters' as a dependency.
+ */
+export function filters(_options: FiltersOptions = {}): TablePlugin {
   return {
     name: 'filters',
-    init(ctx: TableContext) {
-      // Plugin initialized — filter state lives in TableContext
-    },
   };
 }

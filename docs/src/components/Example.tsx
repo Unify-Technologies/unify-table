@@ -28,7 +28,7 @@ export function Example({ id, title, description, height }: ExampleProps) {
     <div className="doc-example-card my-6" style={{ border: `1px solid ${border}` }}>
       {/* Header */}
       {(title || description) && (
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${border}` }}>
           {title && (
             <h3 className="text-sm font-semibold mb-1" style={{ color: dark ? "var(--color-dark-text)" : "var(--color-text)" }}>
               {title}

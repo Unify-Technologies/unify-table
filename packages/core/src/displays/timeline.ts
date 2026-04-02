@@ -1,5 +1,5 @@
 import type { DisplayType } from '../display.js';
-import { quoteIdent, isIdentityColumn } from '../sql/utils.js';
+import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
 import { aggToSql } from '../sql/agg.js';
 
 export type BucketInterval = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -68,7 +68,7 @@ export const timelineDisplayType: DisplayType<TimelineDisplayConfig> = {
       (c) => c.mappedType === 'timestamp' || c.mappedType === 'date',
     );
     const numCol = columns.find(
-      (c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name),
+      (c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name),
     );
 
     return {

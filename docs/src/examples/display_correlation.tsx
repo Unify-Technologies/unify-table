@@ -19,8 +19,11 @@ export default function DisplayCorrelationExample({ db }: { db: TableConnection 
           type: "correlation",
           label: "Correlation Matrix",
           config: {
+            selectedColumns: ["pnl", "volume", "notional"],
+            maxAutoColumns: 20,
             highlightThreshold: 0.5,
             showValues: true,
+            colorScheme: "diverging",
           },
         },
       ]}

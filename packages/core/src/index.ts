@@ -24,7 +24,7 @@ export {
   parseFilterExpr,
 } from './sql/filters.js';
 export { sum, avg, count, min, max, countDistinct, first, last, any, mode, stddev, variance, stringAgg, aggToSql, registerAgg, BUILT_IN_AGGS } from './sql/agg.js';
-export { quoteIdent, escapeString, toSqlLiteral, isIdentityColumn, pickNumericColumn, pickStringColumn } from './sql/utils.js';
+export { quoteIdent, escapeString, toSqlLiteral, isIdentityColumn, isNumericType, pickNumericColumn, pickStringColumn } from './sql/utils.js';
 
 // Engine
 export { createQueryEngine } from './engine.js';
@@ -75,7 +75,7 @@ export { outliersDisplayType } from './displays/outliers.js';
 export type { OutliersDisplayConfig, OutlierMethod } from './displays/outliers.js';
 
 // Chart SQL builders
-export { barLineSql, pieSql, scatterSql, histogramSql, heatmapSql, buildChartSql } from './sql/chart.js';
+export { barLineSql, pieSql, scatterSql, histogramSql, heatmapSql, buildChartSql, normalizeY, aggAlias } from './sql/chart.js';
 export type { BarLineSqlOpts, PieSqlOpts, ScatterSqlOpts, HistogramSqlOpts, HeatmapSqlOpts } from './sql/chart.js';
 
 // Types

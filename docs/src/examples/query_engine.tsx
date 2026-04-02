@@ -27,51 +27,60 @@ export default function QueryEngineExample({ db }: { db: TableConnection }) {
     });
   }, [db]);
 
-  const text = dark ? "#e0e0e0" : "#1e293b";
-  const textMuted = dark ? "#94a3b8" : "#64748b";
-  const border = dark ? "#334155" : "#e2e8f0";
-  const surface = dark ? "#1e293b" : "#f1f5f9";
-  const cardBg = dark ? "#0f172a" : "#ffffff";
+  const text = dark ? "var(--color-dark-text)" : "var(--color-text)";
+  const textMuted = dark ? "var(--color-dark-text-muted)" : "var(--color-text-muted)";
+  const textSecondary = dark ? "var(--color-dark-text-secondary)" : "var(--color-text-secondary)";
+  const border = dark ? "var(--color-dark-border)" : "var(--color-border)";
+  const accent = dark ? "var(--color-dark-accent)" : "var(--color-accent)";
+  const codeBg = dark ? "#12151e" : "#eee8d5";
+  const tagBg = dark ? "rgba(59,130,246,0.08)" : "rgba(37,99,235,0.06)";
+  const tagBorder = dark ? "rgba(59,130,246,0.2)" : "rgba(37,99,235,0.15)";
 
-  const cardStyle: React.CSSProperties = {
-    padding: 12,
-    borderRadius: 8,
-    border: `1px solid ${border}`,
-    background: cardBg,
-  };
+  const label = (code: string): React.CSSProperties => ({
+    fontSize: 11,
+    fontFamily: "monospace",
+    padding: "3px 8px",
+    borderRadius: 4,
+    background: codeBg,
+    color: textSecondary,
+    marginBottom: 8,
+    display: "inline-block",
+  });
 
   return (
     <div style={{ padding: 16, height: "100%", overflow: "auto", color: text }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-        <div style={cardStyle}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6 }}>engine.count("trades_sample")</div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>{totalCount.toLocaleString()}</div>
+      {/* count + distinct row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, paddingBottom: 14, borderBottom: `1px solid ${border}` }}>
+        <div>
+          <div style={label("count")}>.count("trades_sample")</div>
+          <div style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>{totalCount.toLocaleString()}</div>
           <div style={{ fontSize: 11, color: textMuted }}>total rows</div>
         </div>
-
-        <div style={cardStyle}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6 }}>engine.distinct("trades_sample", "desk")</div>
+        <div>
+          <div style={label("distinct")}>.distinct("trades_sample", "desk")</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
             {desks.map((d) => (
-              <span key={d} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 4, background: surface }}>{d}</span>
+              <span key={d} style={{ fontSize: 12, padding: "2px 10px", borderRadius: 4, border: `1px solid ${tagBorder}`, background: tagBg, color: textSecondary }}>{d}</span>
             ))}
           </div>
         </div>
       </div>
 
-      <div style={{ ...cardStyle, marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 8 }}>engine.columns("trades_sample")</div>
+      {/* columns */}
+      <div style={{ paddingTop: 14, paddingBottom: 14, borderBottom: `1px solid ${border}` }}>
+        <div style={label("columns")}>.columns("trades_sample")</div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {columns.map((c) => (
-            <span key={c.name} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: surface, fontFamily: "monospace" }}>
+            <span key={c.name} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, border: `1px solid ${tagBorder}`, background: tagBg, fontFamily: "monospace", color: textSecondary }}>
               {c.name} <span style={{ color: textMuted }}>{c.type}</span>
             </span>
           ))}
         </div>
       </div>
 
-      <div style={cardStyle}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 8 }}>engine.query("SELECT ... ORDER BY pnl DESC LIMIT 5")</div>
+      {/* query */}
+      <div style={{ paddingTop: 14 }}>
+        <div style={label("query")}>.query("SELECT ... ORDER BY pnl DESC LIMIT 5")</div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>

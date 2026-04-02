@@ -24,32 +24,51 @@ export default function WithChartsExample({ db }: { db: TableConnection }) {
   const barOption = buildBarLineOption(data, {
     type: "bar",
     x: "ticker",
-    y: { field: "total_pnl", agg: "sum" },
+    y: { field: "total_pnl", agg: "sum", label: "total_pnl" },
     theme,
   });
 
   const pieOption = buildPieOption(data, {
     type: "pie",
     x: "ticker",
-    y: { field: "trades", agg: "sum" },
+    y: { field: "trades", agg: "sum", label: "trades" },
     theme,
   });
 
   const option = chartType === "bar" ? barOption : pieOption;
 
-  const btnBase = "px-3 py-1 text-xs font-medium rounded cursor-pointer transition-colors";
-  const btnActive = dark ? "bg-[#3b82f6] text-white" : "bg-[#2563eb] text-white";
-  const btnInactive = dark ? "bg-[#1e293b] text-[#94a3b8]" : "bg-[#f1f5f9] text-[#64748b]";
+  const accent = dark ? "#3b82f6" : "#2563eb";
+  const textInactive = dark ? "#64748b" : "#94a3b8";
+  const pillBg = dark ? "rgba(30,41,59,0.8)" : "rgba(241,245,249,0.9)";
+  const pillBorder = dark ? "rgba(51,65,85,0.6)" : "rgba(203,213,225,0.7)";
+  const segActiveBg = dark ? "rgba(59,130,246,0.15)" : "rgba(37,99,235,0.1)";
+
+  const seg = (active: boolean): React.CSSProperties => ({
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "5px 12px",
+    fontSize: 11,
+    fontWeight: active ? 600 : 500,
+    cursor: "pointer",
+    border: "none",
+    borderRadius: 6,
+    backgroundColor: active ? segActiveBg : "transparent",
+    color: active ? accent : textInactive,
+    transition: "all 0.15s ease",
+  });
 
   return (
     <div style={{ padding: 16, height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <button className={`${btnBase} ${chartType === "bar" ? btnActive : btnInactive}`} onClick={() => setChartType("bar")}>
-          Bar — PnL by Ticker
-        </button>
-        <button className={`${btnBase} ${chartType === "pie" ? btnActive : btnInactive}`} onClick={() => setChartType("pie")}>
-          Pie — Trade Count
-        </button>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "3px 4px", borderRadius: 9, backgroundColor: pillBg, border: `1px solid ${pillBorder}` }}>
+          <button onClick={() => setChartType("bar")} style={seg(chartType === "bar")}>
+            Bar — PnL by Ticker
+          </button>
+          <button onClick={() => setChartType("pie")} style={seg(chartType === "pie")}>
+            Pie — Trade Count
+          </button>
+        </div>
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <EChartsWrapper option={option} style={{ width: "100%", height: "100%" }} />

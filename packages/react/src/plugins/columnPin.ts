@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import type { TablePlugin, TableContext, ResolvedColumn, MenuItem } from '../types.js';
+import { MENU_SEPARATOR } from '../utils.js';
 import { Pin, PinOff } from 'lucide-react';
 
 export function columnPin(): TablePlugin {
@@ -61,7 +62,7 @@ export function columnPin(): TablePlugin {
       ];
 
       return [
-        { label: '', action: () => {}, type: 'separator' },
+        MENU_SEPARATOR,
         {
           label: 'Pin',
           icon: column.pin ? unpinIcon : pinIcon,

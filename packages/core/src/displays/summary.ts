@@ -20,7 +20,8 @@ export const summaryDisplayType: DisplayType<SummaryDisplayConfig> = {
   description: 'Auto-profile every column: distributions, nulls, uniques',
 
   buildSql(viewName, config, columns) {
-    const included = columns.filter((c) => !config.excludeColumns.includes(c.name));
+    const excluded = config.excludeColumns ?? [];
+    const included = columns.filter((c) => !excluded.includes(c.name));
     if (included.length === 0) {
       return `SUMMARIZE SELECT * FROM ${quoteIdent(viewName)}`;
     }

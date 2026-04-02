@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { correlationDisplayType, isIdentityColumn } from '@unify/table-core';
+import { correlationDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
 import type { CorrelationDisplayConfig } from '@unify/table-core';
 import { EChartsWrapper } from '@unify/table-charts';
 import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
@@ -18,7 +18,7 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
   const { matrix, colNames } = useMemo(() => {
     const cols = config.selectedColumns.length > 0
       ? config.selectedColumns
-      : columns.filter((c) => c.mappedType === 'number' || c.mappedType === 'bigint')
+      : columns.filter((c) => isNumericType(c.mappedType))
         .slice(0, config.maxAutoColumns).map((c) => c.name);
 
     const n = cols.length;
@@ -112,8 +112,8 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
         top: 'center' as const,
         itemHeight: 120,
         inRange: isDiverging
-          ? { color: ['#e07070', '#e8e8e8', '#6b9bd2'] }
-          : { color: [chartTheme.surface, '#6b9bd2'] },
+          ? { color: ['#f87171', chartTheme.surface, '#60a5fa'] }
+          : { color: [chartTheme.surface, '#60a5fa'] },
         textStyle: { color: chartTheme.textMuted, fontSize: 9 },
       },
       series: [{
@@ -156,7 +156,7 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
 // ---------------------------------------------------------------------------
 
 function CorrelationConfig({ config, onChange, columns }: DisplayConfigProps<CorrelationDisplayConfig>) {
-  const numericCols = columns.filter((c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name));
+  const numericCols = columns.filter((c) => (isNumericType(c.mappedType)) && !isIdentityColumn(c.name));
   const selected = new Set(config.selectedColumns);
 
   function toggleCol(name: string) {
@@ -191,6 +191,7 @@ function CorrelationConfig({ config, onChange, columns }: DisplayConfigProps<Cor
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input
             type="range"
+            className="utbl-range"
             min={0}
             max={1}
             step={0.05}

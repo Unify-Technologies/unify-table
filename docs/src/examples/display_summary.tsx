@@ -19,6 +19,7 @@ export default function DisplaySummaryExample({ db }: { db: TableConnection }) {
           type: "summary",
           label: "Data Profile",
           config: {
+            excludeColumns: [],
             showDistributions: true,
             histogramBins: 20,
           },

@@ -1,5 +1,5 @@
 import type { DisplayType } from '../display.js';
-import { quoteIdent, isIdentityColumn } from '../sql/utils.js';
+import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
 
 export type OutlierMethod = 'iqr' | 'zscore';
 
@@ -80,7 +80,7 @@ export const outliersDisplayType: DisplayType<OutliersDisplayConfig> = {
 
   defaultConfig(columns) {
     const numCol = columns.find(
-      (c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name),
+      (c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name),
     );
     const labelCol = columns.find((c) => c.mappedType === 'string');
 

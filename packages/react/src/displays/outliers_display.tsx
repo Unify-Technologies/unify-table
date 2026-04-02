@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { outliersDisplayType, isIdentityColumn } from '@unify/table-core';
+import { outliersDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
 import type { OutliersDisplayConfig, OutlierMethod } from '@unify/table-core';
 import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
 import { useDisplayData } from './useDisplayData.js';
 import { SearchX } from 'lucide-react';
+import { selectStyle } from './shared.js';
 
 // ---------------------------------------------------------------------------
 // Box plot SVG
@@ -223,21 +224,9 @@ function OutliersRender({ config, sql, engine }: DisplayRenderProps<OutliersDisp
 // Config panel
 // ---------------------------------------------------------------------------
 
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '3px 6px',
-  background: 'var(--utbl-input-bg)',
-  border: '1px solid var(--utbl-input-border)',
-  color: 'var(--utbl-text)',
-  borderRadius: 3,
-  fontSize: '0.625rem',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
-};
-
 function OutliersConfig({ config, onChange, columns }: DisplayConfigProps<OutliersDisplayConfig>) {
   const cols = columns.filter((c) => !isIdentityColumn(c.name));
-  const numericCols = cols.filter((c) => c.mappedType === 'number' || c.mappedType === 'bigint');
+  const numericCols = cols.filter((c) => isNumericType(c.mappedType));
 
   function switchMethod(method: OutlierMethod) {
     const defaultThresholds: Record<OutlierMethod, number> = { iqr: 1.5, zscore: 3.0 };

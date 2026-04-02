@@ -1,6 +1,6 @@
 import type { DisplayType, CardSize } from '../display.js';
 import type { ColumnInfo } from '../engine.js'; // used in defaultConfig parameter type
-import { quoteIdent, isIdentityColumn } from '../sql/utils.js';
+import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
 import { aggToSql } from '../sql/agg.js';
 
 export type StatAgg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'median' | 'stddev' | 'count_distinct';
@@ -43,7 +43,7 @@ export const statsDisplayType: DisplayType<StatsDisplayConfig> = {
 
   defaultConfig(columns) {
     const numericCols = columns.filter(
-      (c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name),
+      (c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name),
     );
     const fields: StatField[] = numericCols.slice(0, 3).map((c) => ({
       field: c.name,

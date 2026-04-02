@@ -1,3 +1,8 @@
+/** Returns true for numeric mapped types (number, bigint). */
+export function isNumericType(mappedType: string): boolean {
+  return mappedType === 'number' || mappedType === 'bigint';
+}
+
 /** Returns true for identity/key columns (id, _id suffixes) that should be excluded from display defaults. */
 export function isIdentityColumn(name: string): boolean {
   const lower = name.toLowerCase();
@@ -6,7 +11,7 @@ export function isIdentityColumn(name: string): boolean {
 
 /** Pick the first numeric (non-identity) column from a column list. */
 export function pickNumericColumn(columns: { name: string; mappedType: string }[]): string {
-  const col = columns.find((c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name));
+  const col = columns.find((c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name));
   return col?.name ?? columns[0]?.name ?? '';
 }
 

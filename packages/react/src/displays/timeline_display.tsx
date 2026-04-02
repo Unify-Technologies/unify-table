@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { timelineDisplayType, isIdentityColumn } from '@unify/table-core';
+import { timelineDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
 import type { TimelineDisplayConfig, BucketInterval, TimelineAgg } from '@unify/table-core';
 import { buildBarLineOption, EChartsWrapper, type ChartOptionConfig } from '@unify/table-charts';
 import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
 import { useDisplayData } from './useDisplayData.js';
 import { useChartTheme } from './useChartTheme.js';
 import { CalendarRange, BarChart3, LineChart, AreaChart, Layers, ZoomIn } from 'lucide-react';
+import { selectStyle } from './shared.js';
 
 // ---------------------------------------------------------------------------
 // Bucket formatting
@@ -74,18 +75,6 @@ function TimelineRender({ config, sql, engine }: DisplayRenderProps<TimelineDisp
 const BUCKETS: BucketInterval[] = ['minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'];
 const AGG_OPTIONS: TimelineAgg[] = ['count', 'sum', 'avg', 'min', 'max'];
 
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '3px 6px',
-  background: 'var(--utbl-input-bg)',
-  border: '1px solid var(--utbl-input-border)',
-  color: 'var(--utbl-text)',
-  borderRadius: 3,
-  fontSize: '0.625rem',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
-};
-
 const iconProps = { size: 14, strokeWidth: 2 } as const;
 
 const CHART_STYLES: { type: 'bar' | 'line' | 'area'; icon: React.ReactNode }[] = [
@@ -97,7 +86,7 @@ const CHART_STYLES: { type: 'bar' | 'line' | 'area'; icon: React.ReactNode }[] =
 function TimelineConfig({ config, onChange, columns }: DisplayConfigProps<TimelineDisplayConfig>) {
   const cols = columns.filter((c) => !isIdentityColumn(c.name));
   const dateCols = cols.filter((c) => c.mappedType === 'timestamp' || c.mappedType === 'date');
-  const numericCols = cols.filter((c) => c.mappedType === 'number' || c.mappedType === 'bigint');
+  const numericCols = cols.filter((c) => isNumericType(c.mappedType));
   const chartType = config.chartType ?? 'bar';
 
   return (

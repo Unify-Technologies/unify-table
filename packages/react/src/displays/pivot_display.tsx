@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
-import { pivotDisplayType, isIdentityColumn } from '@unify/table-core';
+import { pivotDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
 import type { PivotDisplayConfig, PivotAgg } from '@unify/table-core';
 import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
 import { useDisplayData } from './useDisplayData.js';
 import { TableProperties } from 'lucide-react';
+import { selectStyle } from './shared.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -122,21 +123,9 @@ function PivotRender({ config, sql, engine }: DisplayRenderProps<PivotDisplayCon
 // Config panel
 // ---------------------------------------------------------------------------
 
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '3px 6px',
-  background: 'var(--utbl-input-bg)',
-  border: '1px solid var(--utbl-input-border)',
-  color: 'var(--utbl-text)',
-  borderRadius: 3,
-  fontSize: '0.625rem',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
-};
-
 function PivotConfig({ config, onChange, columns }: DisplayConfigProps<PivotDisplayConfig>) {
   const cols = columns.filter((c) => !isIdentityColumn(c.name));
-  const numericCols = cols.filter((c) => c.mappedType === 'number' || c.mappedType === 'bigint');
+  const numericCols = cols.filter((c) => isNumericType(c.mappedType));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.625rem' }}>

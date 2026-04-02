@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, createElement } from 'react';
 import { createPortal } from 'react-dom';
 import type { TablePlugin, TableContext, MenuItem, ResolvedColumn } from '../types.js';
 import { quoteIdent } from '@unify/table-core';
-import { detectIdColumn, downloadBlob } from '../utils.js';
+import { detectIdColumn, downloadBlob, spanDims, MENU_SEPARATOR } from '../utils.js';
 import { Copy, Table2, FileText, Braces, Database, ArrowUpDown, ArrowUp, ArrowDown, Eraser, Layers } from 'lucide-react';
 
 type MenuItemFactory = (ctx: TableContext) => MenuItem[];
@@ -21,20 +21,6 @@ const ICONS = {
   json: createElement(Braces, { size: 14 }),
   parquet: createElement(Database, { size: 14 }),
 };
-
-function spanDims(ctx: TableContext): { rows: number; cols: number } {
-  const sel = ctx.selection;
-  if (!sel.span) return { rows: 0, cols: 0 };
-  const allSpans = [sel.span, ...sel.additionalSpans];
-  let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
-  for (const s of allSpans) {
-    minR = Math.min(minR, s.anchor.row, s.focus.row);
-    maxR = Math.max(maxR, s.anchor.row, s.focus.row);
-    minC = Math.min(minC, s.anchor.col, s.focus.col);
-    maxC = Math.max(maxC, s.anchor.col, s.focus.col);
-  }
-  return { rows: maxR - minR + 1, cols: maxC - minC + 1 };
-}
 
 function fmt(n: number): string {
   return n.toLocaleString();
@@ -123,7 +109,7 @@ function defaultItems(ctx: TableContext): MenuItem[] {
     },
   });
 
-  items.push({ label: '', action: () => {}, type: 'separator' });
+  items.push(MENU_SEPARATOR);
 
   // Export items with submenus
   items.push({
@@ -191,7 +177,7 @@ function defaultHeaderItems(ctx: TableContext, column: ResolvedColumn): MenuItem
         },
       ],
     });
-    items.push({ label: '', action: () => {}, type: 'separator' });
+    items.push(MENU_SEPARATOR);
   }
 
   const isGrouped = live.groupBy.includes(column.field);
@@ -208,7 +194,7 @@ function defaultHeaderItems(ctx: TableContext, column: ResolvedColumn): MenuItem
     },
   });
 
-  items.push({ label: '', action: () => {}, type: 'separator' });
+  items.push(MENU_SEPARATOR);
 
   items.push({
     label: 'Copy Column Name',
@@ -343,7 +329,7 @@ export function contextMenu(extraItems?: MenuItemFactory): TablePlugin {
     contextMenuItems(ctx: TableContext) {
       const items = defaultItems(ctx);
       if (extraItems) {
-        items.push({ label: '', action: () => {}, type: 'separator' });
+        items.push(MENU_SEPARATOR);
         items.push(...extraItems(ctx));
       }
       return items;

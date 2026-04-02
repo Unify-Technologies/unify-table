@@ -19,7 +19,7 @@ function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
         to={item.path}
         className="doc-nav-item flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px]"
         style={{
-          paddingLeft: 12 + depth * 12,
+          paddingLeft: 24 + depth * 12,
           color: isActive
             ? dark ? "var(--color-dark-accent)" : "var(--color-accent)"
             : dark ? "var(--color-dark-text-secondary)" : "var(--color-text-secondary)",
@@ -41,7 +41,7 @@ function NavLink({ item, depth = 0 }: { item: NavItem; depth?: number }) {
         onClick={() => setExpanded((e) => !e)}
         className="doc-nav-item flex items-center gap-2 px-3 py-1.5 rounded-md text-[13px] w-full cursor-pointer"
         style={{
-          paddingLeft: 12 + depth * 12,
+          paddingLeft: 24 + depth * 12,
           color: isChildActive
             ? dark ? "var(--color-dark-accent)" : "var(--color-accent)"
             : dark ? "var(--color-dark-text-secondary)" : "var(--color-text-secondary)",
@@ -84,7 +84,7 @@ export function Sidebar({ className = "" }: { className?: string }) {
       {NAV_SECTIONS.map((section, i) => (
         <div key={section.title} className={i > 0 ? "mt-4" : ""}>
           <div
-            className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider"
+            className="px-6 pb-1.5 text-[10px] font-semibold uppercase tracking-wider"
             style={{ color: dark ? "var(--color-dark-text-muted)" : "var(--color-text-muted)" }}
           >
             {section.title}

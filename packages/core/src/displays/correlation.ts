@@ -1,6 +1,6 @@
 import type { DisplayType } from '../display.js';
 import type { ColumnInfo } from '../engine.js';
-import { quoteIdent, isIdentityColumn } from '../sql/utils.js';
+import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
 
 export interface CorrelationDisplayConfig {
   /** Numeric columns to include. Empty = auto-select all numeric columns. */
@@ -16,9 +16,9 @@ export interface CorrelationDisplayConfig {
 }
 
 function resolveColumns(config: CorrelationDisplayConfig, columns: ColumnInfo[]): string[] {
-  if (config.selectedColumns.length > 0) return config.selectedColumns;
+  if ((config.selectedColumns ?? []).length > 0) return config.selectedColumns;
   return columns
-    .filter((c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name))
+    .filter((c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name))
     .slice(0, config.maxAutoColumns)
     .map((c) => c.name);
 }
@@ -48,7 +48,7 @@ export const correlationDisplayType: DisplayType<CorrelationDisplayConfig> = {
 
   defaultConfig(columns) {
     const numericCols = columns
-      .filter((c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name))
+      .filter((c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name))
       .slice(0, 20);
     return {
       selectedColumns: numericCols.map((c) => c.name),
@@ -61,8 +61,9 @@ export const correlationDisplayType: DisplayType<CorrelationDisplayConfig> = {
 
   validate(config) {
     const errors: string[] = [];
-    if (config.selectedColumns.length < 2) errors.push('At least 2 numeric columns are required');
-    if (config.selectedColumns.length > 100) errors.push('Maximum 100 columns supported');
+    const cols = config.selectedColumns ?? [];
+    if (cols.length < 2) errors.push('At least 2 numeric columns are required');
+    if (cols.length > 100) errors.push('Maximum 100 columns supported');
     if (config.highlightThreshold < 0 || config.highlightThreshold > 1) {
       errors.push('Highlight threshold must be between 0 and 1');
     }

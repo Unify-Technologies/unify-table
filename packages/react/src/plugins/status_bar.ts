@@ -1,7 +1,7 @@
 import { createElement, useState, useEffect, useRef } from 'react';
 import type { TablePlugin, TableContext } from '../types.js';
 import { quoteIdent, toSqlLiteral } from '@unify/table-core';
-import { detectIdColumn } from '../utils.js';
+import { detectIdColumn, spanDims } from '../utils.js';
 
 type AggKind = 'sum' | 'avg' | 'min' | 'max' | 'count';
 
@@ -49,19 +49,7 @@ export function getNumericFields(ctx: TableContext): string[] {
 }
 
 /** Get selection dimensions from spans. */
-export function getSelectionDims(ctx: TableContext): { rows: number; cols: number } {
-  const sel = ctx.selection;
-  if (!sel.span) return { rows: 0, cols: 0 };
-  const allSpans = [sel.span, ...sel.additionalSpans];
-  let minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
-  for (const s of allSpans) {
-    minR = Math.min(minR, s.anchor.row, s.focus.row);
-    maxR = Math.max(maxR, s.anchor.row, s.focus.row);
-    minC = Math.min(minC, s.anchor.col, s.focus.col);
-    maxC = Math.max(maxC, s.anchor.col, s.focus.col);
-  }
-  return { rows: maxR - minR + 1, cols: maxC - minC + 1 };
-}
+export const getSelectionDims = spanDims;
 
 function formatAgg(value: number | null): string {
   if (value === null || value === undefined) return '-';

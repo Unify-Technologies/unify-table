@@ -1,21 +1,13 @@
-import { statsDisplayType, isIdentityColumn } from '@unify/table-core';
+import { statsDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
 import type { StatsDisplayConfig, StatField, StatAgg, CardSize } from '@unify/table-core';
 import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
 import { useDisplayData } from './useDisplayData.js';
 import { BarChart3 } from 'lucide-react';
+import { formatCompact } from './shared.js';
 
 // ---------------------------------------------------------------------------
 // Value formatting
 // ---------------------------------------------------------------------------
-
-function formatCompact(num: number): string {
-  const abs = Math.abs(num);
-  if (abs >= 1e12) return `${(num / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
-  if (abs >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
-  if (abs >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
-  return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
 
 function formatStatValue(value: unknown, format?: string): string {
   if (value === null || value === undefined) return '-';
@@ -254,7 +246,7 @@ function StatCard({ field, row, layout, sizes }: { field: StatField; row: Record
 const STAT_AGGS: StatAgg[] = ['count', 'sum', 'avg', 'min', 'max', 'median', 'stddev', 'count_distinct'];
 
 function StatsConfig({ config, onChange, columns }: DisplayConfigProps<StatsDisplayConfig>) {
-  const numericCols = columns.filter((c) => (c.mappedType === 'number' || c.mappedType === 'bigint') && !isIdentityColumn(c.name));
+  const numericCols = columns.filter((c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name));
   const selectedFields = new Set(config.fields.map((f) => f.field));
 
   function toggleField(colName: string) {

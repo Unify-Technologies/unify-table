@@ -422,6 +422,44 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* ── Range slider ────────────────────────────────────── */
+input[type="range"].utbl-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--utbl-input-border);
+  outline: none;
+}
+
+input[type="range"].utbl-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--utbl-accent);
+  border: 2px solid var(--utbl-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+input[type="range"].utbl-range::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+input[type="range"].utbl-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--utbl-accent);
+  border: 2px solid var(--utbl-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
 /* ── Tooltip ──────────────────────────────────────────── */
 .utbl-tooltip {
   position: relative;

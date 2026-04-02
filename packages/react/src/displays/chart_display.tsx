@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { chartDisplayType, isIdentityColumn } from '@unify/table-core';
+import { chartDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
 import type { ChartDisplayConfig, ChartType, ValueField } from '@unify/table-core';
 import { buildOption, EChartsWrapper, type ChartOptionConfig } from '@unify/table-charts';
 import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
 import { useDisplayData } from './useDisplayData.js';
 import { useChartTheme } from './useChartTheme.js';
 import { PieChart, BarChart3, LineChart, AreaChart, CircleDot, ChartScatter, Grid3x3, LayoutGrid, Filter, Layers, Columns2, ZoomIn } from 'lucide-react';
+import { selectStyle } from './shared.js';
 
 // ---------------------------------------------------------------------------
 // Chart types grid
@@ -60,21 +61,9 @@ function ChartRender({ config, sql, engine }: DisplayRenderProps<ChartDisplayCon
 // Config panel
 // ---------------------------------------------------------------------------
 
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '3px 6px',
-  background: 'var(--utbl-input-bg)',
-  border: '1px solid var(--utbl-input-border)',
-  color: 'var(--utbl-text)',
-  borderRadius: 3,
-  fontSize: '0.625rem',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
-};
-
 function ChartConfig({ config, onChange, columns }: DisplayConfigProps<ChartDisplayConfig>) {
   const cols = columns.filter((c) => !isIdentityColumn(c.name));
-  const numericCols = cols.filter((c) => c.mappedType === 'number' || c.mappedType === 'bigint');
+  const numericCols = cols.filter((c) => isNumericType(c.mappedType));
   const allCols = cols;
   const yArr = Array.isArray(config.y) ? config.y : [config.y];
 

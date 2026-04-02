@@ -14,9 +14,6 @@ const savedViews = new Map<string, ViewState>();
 export function views(): TablePlugin {
   return {
     name: 'views',
-    init(ctx: TableContext) {
-      // Views plugin — save/restore is called programmatically
-    },
   };
 }
 

@@ -1,6 +1,7 @@
 import { createEditOverlay } from '@unify/table-core';
 import type { EditOverlay, Row } from '@unify/table-core';
 import type { TablePlugin, TableContext, CellRef, EditBackend, EditingState, MenuItem } from '../types.js';
+import { detectIdColumnByName, MENU_SEPARATOR } from '../utils.js';
 
 export interface EditingOptions {
   /** Whether editing is initially enabled. Default: true. */
@@ -94,16 +95,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
 
         // Detect rowIdField
         const cols = await ctx.getLatest().engine.columns(ctx.getLatest().table);
-        const candidates = ['id', 'ID', '_id', 'rowid', '__table_rid'];
-        for (const c of candidates) {
-          if (cols.some((col) => col.name === c)) {
-            rowIdField = c;
-            break;
-          }
-        }
-        if (!rowIdField && cols.length > 0) {
-          rowIdField = cols[0].name;
-        }
+        rowIdField = detectIdColumnByName(cols) || cols[0]?.name || '';
 
         await overlay.init(cols, rowIdField);
 
@@ -362,13 +354,9 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       };
     },
 
-    transformRows(rows: Row[]) {
-      return rows;
-    },
-
     contextMenuItems(ctx: TableContext, cell: CellRef): MenuItem[] {
       const items: MenuItem[] = [];
-      items.push({ label: '', action: () => {}, type: 'separator' });
+      items.push(MENU_SEPARATOR);
       items.push({
         label: 'Delete row',
         action: () => ctx.editing?.deleteRows([cell.rowId]),

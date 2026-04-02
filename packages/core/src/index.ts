@@ -36,7 +36,7 @@ export type { DataSource, DataSourceOptions, DataPage, GetRowsParams, SortField,
 
 // View
 export { createViewManager, buildViewSelect } from './view.js';
-export type { ViewManager } from './view.js';
+export type { ViewManager, SelectExpression } from './view.js';
 
 // Edit overlay
 export { createEditOverlay } from './edit_overlay.js';

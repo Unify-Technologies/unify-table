@@ -151,6 +151,19 @@ export interface EditingState {
   canRedo: boolean;
 }
 
+export interface FormulasState {
+  /** Get the current expression for a formula column. */
+  getExpression(name: string): string | undefined;
+  /** Update a formula column's expression. Re-syncs the view and refreshes all rows. */
+  updateExpression(name: string, expression: string): Promise<void>;
+  /** Undo the last formula expression change. */
+  undo(): Promise<void>;
+  /** Redo a previously undone formula expression change. */
+  redo(): Promise<void>;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
 export interface TableContext {
   // Data
   datasource: DataSource;
@@ -176,6 +189,11 @@ export interface TableContext {
   editing: EditingState | null;
   /** @internal Used by the editing plugin to publish its state. */
   _setEditing(state: EditingState | null): void;
+
+  // Formulas (provided by formulas plugin — null when plugin is not registered)
+  formulas: FormulasState | null;
+  /** @internal Used by the formulas plugin to publish its state. */
+  _setFormulas(state: FormulasState | null): void;
 
   // Mutations
   setSort(sort: SortField[]): void;
@@ -259,6 +277,10 @@ export interface ResolvedColumn extends ColumnDef {
   _pinOffset?: number;
   /** True on last-left-pinned or first-right-pinned column (for edge shadow) */
   _pinEdge?: boolean;
+  /** True if this is a formula/computed column */
+  _isFormula?: boolean;
+  /** The SQL expression for a formula column (set by formulas plugin) */
+  _formulaExpression?: string;
 }
 
 // --- Table Props ---

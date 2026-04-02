@@ -29,9 +29,6 @@ export {
   findInTable,
   replaceInTable,
   formulas,
-  addFormulaColumn,
-  removeFormulaColumn,
-  formulaViewSql,
   rowGrouping,
   isGroupRow,
   serializeGroupKey,
@@ -42,8 +39,10 @@ export {
   negative,
   positive,
   statusBar,
+  fillHandle,
+  detectPattern,
 } from './plugins/index.js';
-export type { TableIOHandle, GroupRow, ConditionalRule, StatusBarOptions } from './plugins/index.js';
+export type { TableIOHandle, GroupRow, ConditionalRule, StatusBarOptions, FormulaColumnDef, FormulasConfig, FillHandleOptions } from './plugins/index.js';
 
 // Presets
 export { spreadsheet, dataViewer, readOnly } from './presets.js';
@@ -93,6 +92,7 @@ export type {
   SelectionSpan,
   EditBackend,
   EditingState,
+  FormulasState,
 } from './types.js';
 export type { EditingOptions } from './plugins/editing.js';
 

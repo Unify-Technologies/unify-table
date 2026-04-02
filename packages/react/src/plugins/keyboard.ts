@@ -11,9 +11,9 @@ export function keyboard(): TablePlugin {
       ArrowLeft: (ctx) => moveActiveCell(ctx, -1, 0),
       ArrowRight: (ctx) => moveActiveCell(ctx, 1, 0),
       Tab: (ctx) => moveActiveCell(ctx, 1, 0),
-      'Ctrl+z': (ctx) => { ctx.editing?.undo(); },
-      'Ctrl+y': (ctx) => { ctx.editing?.redo(); },
-      'Ctrl+Shift+z': (ctx) => { ctx.editing?.redo(); },
+      'Ctrl+z': (ctx) => { if (ctx.editing?.canUndo) ctx.editing.undo(); else if (ctx.formulas?.canUndo) ctx.formulas.undo(); },
+      'Ctrl+y': (ctx) => { if (ctx.editing?.canRedo) ctx.editing.redo(); else if (ctx.formulas?.canRedo) ctx.formulas.redo(); },
+      'Ctrl+Shift+z': (ctx) => { if (ctx.editing?.canRedo) ctx.editing.redo(); else if (ctx.formulas?.canRedo) ctx.formulas.redo(); },
       Enter: (ctx) => {
         if (ctx.editing?.editingCell) {
           // Commit would be handled by the editing cell component
@@ -47,12 +47,14 @@ export function keyboard(): TablePlugin {
         // Undo / Redo — handled before editingCell check so they work in all states
         if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
           e.preventDefault();
-          latest.editing?.undo();
+          if (latest.editing?.canUndo) latest.editing.undo();
+          else if (latest.formulas?.canUndo) latest.formulas.undo();
           return;
         }
         if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
           e.preventDefault();
-          latest.editing?.redo();
+          if (latest.editing?.canRedo) latest.editing.redo();
+          else if (latest.formulas?.canRedo) latest.formulas.redo();
           return;
         }
 

@@ -7,6 +7,11 @@ export interface SortSpec {
   dir: SortDir;
 }
 
+export interface SelectExpression {
+  expression: string;
+  alias: string;
+}
+
 export interface ViewManager {
   /** The DuckDB view name, e.g. "__utbl_v_0" */
   readonly viewName: string;
@@ -14,6 +19,8 @@ export interface ViewManager {
   readonly viewSql: string;
   /** Change the base table used in view creation (e.g. to an edit overlay view). */
   setBaseTable(table: string): void;
+  /** Set extra computed columns to include in the SELECT (e.g. formula expressions). */
+  setSelectExpressions(exprs: SelectExpression[]): void;
   /** Recreate the VIEW from the given filters and sort. */
   sync(filters: SqlFragment[], sort: SortSpec[]): Promise<void>;
   /** Drop the VIEW (cleanup). */
@@ -28,8 +35,13 @@ export function buildViewSelect(
   table: string,
   filters: SqlFragment[],
   sort: SortSpec[],
+  extraExpressions?: SelectExpression[],
 ): string {
-  let sql = `SELECT * FROM ${quoteIdent(table)}`;
+  const extras = (extraExpressions ?? [])
+    .map((e) => `(${e.expression}) AS ${quoteIdent(e.alias)}`)
+    .join(', ');
+  const selectList = extras ? `*, ${extras}` : '*';
+  let sql = `SELECT ${selectList} FROM ${quoteIdent(table)}`;
 
   if (filters.length > 0) {
     sql += ` WHERE ${filters.map((f) => f.sql).join(' AND ')}`;
@@ -58,6 +70,7 @@ export function createViewManager(
   const viewName = `__utbl_v_${id}`;
   let _viewSql = '';
   let _baseTable = table;
+  let _extraExpressions: SelectExpression[] = [];
 
   return {
     get viewName() {
@@ -71,8 +84,12 @@ export function createViewManager(
       _baseTable = t;
     },
 
+    setSelectExpressions(exprs: SelectExpression[]) {
+      _extraExpressions = exprs;
+    },
+
     async sync(filters, sort) {
-      const body = buildViewSelect(_baseTable, filters, sort);
+      const body = buildViewSelect(_baseTable, filters, sort, _extraExpressions);
       _viewSql = `CREATE OR REPLACE VIEW ${quoteIdent(viewName)} AS ${body}`;
       await engine.execute(_viewSql);
     },

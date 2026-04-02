@@ -889,15 +889,27 @@ export function TableView({
                     const isEditingThis = ctx.editing?.editingCell?.rowIndex === virtualRow.index && ctx.editing?.editingCell?.colIndex === colIdx;
 
                     if (isEditingThis) {
+                      const isFormulaEdit = col._isFormula && ctx.formulas;
+                      const editorCell = isFormulaEdit
+                        ? { ...ctx.editing!.editingCell!, value: ctx.formulas!.getExpression(col.field) ?? '' }
+                        : ctx.editing!.editingCell!;
+                      const handleCommit = isFormulaEdit
+                        ? (value: unknown) => {
+                            ctx.formulas!.updateExpression(col.field, String(value))
+                              .then(() => ctx.editing!.cancelEdit())
+                              .catch((err) => ctx.emit('error', err));
+                          }
+                        : (value: unknown) => ctx.editing!.commitEdit(ctx.editing!.editingCell!, value);
+
                       return (
                         <InlineEditor
                           key={col.field}
-                          column={col}
-                          cell={ctx.editing!.editingCell!}
+                          column={isFormulaEdit ? { ...col, editor: 'text' } : col}
+                          cell={editorCell}
                           styles={styles}
                           px={density.px}
                           py={density.py}
-                          onCommit={(value) => ctx.editing!.commitEdit(ctx.editing!.editingCell!, value)}
+                          onCommit={handleCommit}
                           onCancel={() => ctx.editing!.cancelEdit()}
                         />
                       );

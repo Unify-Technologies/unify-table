@@ -10,7 +10,8 @@ export { views, saveView, applyView, listViews, serializeViews } from './views.j
 export { tableIO } from './tableIO.js';
 export type { TableIOHandle } from './tableIO.js';
 export { findReplace, findInTable, replaceInTable } from './findReplace.js';
-export { formulas, addFormulaColumn, removeFormulaColumn, formulaViewSql } from './formulas.js';
+export { formulas } from './formulas.js';
+export type { FormulaColumnDef, FormulasConfig } from './formulas.js';
 export { rowGrouping, isGroupRow, serializeGroupKey, toggleGroup } from './row_grouping.js';
 export type { GroupRow } from './row_grouping.js';
 export { columnReorder } from './column_reorder.js';
@@ -18,3 +19,5 @@ export { formatting, threshold, negative, positive } from './formatting.js';
 export type { ConditionalRule } from './formatting.js';
 export { statusBar } from './status_bar.js';
 export type { StatusBarOptions } from './status_bar.js';
+export { fillHandle, detectPattern } from './fill_handle.js';
+export type { FillHandleOptions } from './fill_handle.js';

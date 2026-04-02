@@ -11,6 +11,7 @@ import { columnReorder } from './plugins/column_reorder.js';
 import { rowGrouping } from './plugins/row_grouping.js';
 import { formatting } from './plugins/formatting.js';
 import { statusBar } from './plugins/status_bar.js';
+import { fillHandle } from './plugins/fill_handle.js';
 
 /** Spreadsheet preset: editing + clipboard + keyboard + filters + contextMenu + selection + columnResize + columnReorder + formatting */
 export function spreadsheet(): TablePlugin[] {
@@ -25,6 +26,7 @@ export function spreadsheet(): TablePlugin[] {
     contextMenu(),
     formatting(),
     statusBar(),
+    fillHandle(),
   ];
 }
 

@@ -44,6 +44,33 @@ describe('buildViewSelect', () => {
     const sql = buildViewSelect('my "table"', [], []);
     expect(sql).toBe('SELECT * FROM "my ""table"""');
   });
+
+  it('includes extra SELECT expressions for formula columns', () => {
+    const sql = buildViewSelect('trades', [], [], [
+      { expression: 'ROUND(pnl / NULLIF(volume, 0), 4)', alias: 'pnl_per_unit' },
+      { expression: "DATE_PART('year', trade_date)::INTEGER", alias: 'trade_year' },
+    ]);
+    expect(sql).toBe(
+      `SELECT *, (ROUND(pnl / NULLIF(volume, 0), 4)) AS "pnl_per_unit", (DATE_PART('year', trade_date)::INTEGER) AS "trade_year" FROM "trades"`,
+    );
+  });
+
+  it('combines extra expressions with filters and sort', () => {
+    const sql = buildViewSelect(
+      'trades',
+      [eq('region', 'US')],
+      [{ field: 'pnl', dir: 'desc' }],
+      [{ expression: 'price * quantity', alias: 'total' }],
+    );
+    expect(sql).toBe(
+      `SELECT *, (price * quantity) AS "total" FROM "trades" WHERE "region" = 'US' ORDER BY "pnl" DESC`,
+    );
+  });
+
+  it('handles empty extra expressions array', () => {
+    const sql = buildViewSelect('trades', [], [], []);
+    expect(sql).toBe('SELECT * FROM "trades"');
+  });
 });
 
 describe('ViewManager', () => {
@@ -131,6 +158,60 @@ describe('ViewManager', () => {
 
     expect(engine.execute).toHaveBeenCalledWith(
       `CREATE OR REPLACE VIEW "__utbl_v_1" AS SELECT * FROM "__utbl_ev_1" WHERE "region" = 'US' ORDER BY "pnl" DESC`,
+    );
+  });
+
+  it('setSelectExpressions includes formula columns in sync', async () => {
+    const engine = mockEngine();
+    const vm = createViewManager(engine, 'trades', '5');
+
+    vm.setSelectExpressions([
+      { expression: 'price * quantity', alias: 'total' },
+    ]);
+    await vm.sync([], []);
+
+    expect(engine.execute).toHaveBeenCalledWith(
+      'CREATE OR REPLACE VIEW "__utbl_v_5" AS SELECT *, (price * quantity) AS "total" FROM "trades"',
+    );
+  });
+
+  it('setSelectExpressions persists across multiple sync calls', async () => {
+    const engine = mockEngine();
+    const vm = createViewManager(engine, 'trades', '6');
+
+    vm.setSelectExpressions([{ expression: 'a + b', alias: 'sum' }]);
+    await vm.sync([], []);
+    await vm.sync([eq('region', 'US')], []);
+
+    expect(engine.execute).toHaveBeenLastCalledWith(
+      `CREATE OR REPLACE VIEW "__utbl_v_6" AS SELECT *, (a + b) AS "sum" FROM "trades" WHERE "region" = 'US'`,
+    );
+  });
+
+  it('setSelectExpressions works after setBaseTable (editing compat)', async () => {
+    const engine = mockEngine();
+    const vm = createViewManager(engine, 'trades', '7');
+
+    vm.setSelectExpressions([{ expression: 'pnl / volume', alias: 'ratio' }]);
+    vm.setBaseTable('__utbl_ev_7');
+    await vm.sync([], []);
+
+    expect(engine.execute).toHaveBeenCalledWith(
+      'CREATE OR REPLACE VIEW "__utbl_v_7" AS SELECT *, (pnl / volume) AS "ratio" FROM "__utbl_ev_7"',
+    );
+  });
+
+  it('setSelectExpressions can be cleared', async () => {
+    const engine = mockEngine();
+    const vm = createViewManager(engine, 'trades', '8');
+
+    vm.setSelectExpressions([{ expression: 'a + b', alias: 'sum' }]);
+    await vm.sync([], []);
+    vm.setSelectExpressions([]);
+    await vm.sync([], []);
+
+    expect(engine.execute).toHaveBeenLastCalledWith(
+      'CREATE OR REPLACE VIEW "__utbl_v_8" AS SELECT * FROM "trades"',
     );
   });
 });

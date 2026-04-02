@@ -21,6 +21,7 @@ import type {
   ResolvedColumn,
   ColumnDef,
   EditingState,
+  FormulasState,
 } from '../types.js';
 import { createPageCache } from '../page_cache.js';
 import { emptySelection } from '../utils.js';
@@ -89,6 +90,9 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
 
   // Editing extension — populated by the editing plugin
   const [editingExt, setEditingExt] = useState<EditingState | null>(null);
+
+  // Formulas extension — populated by the formulas plugin
+  const [formulasExt, setFormulasExt] = useState<FormulasState | null>(null);
 
   // Events
   const listenersRef = useRef(new Map<TableEvent, Set<TableEventHandler>>());
@@ -340,6 +344,7 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       columns: transformedColumns, rows: transformedRows, sort, filters, groupBy,
       totalCount, isLoading, selection, activeCell,
       editing: editingExt, _setEditing: setEditingExt,
+      formulas: formulasExt, _setFormulas: setFormulasExt,
       setSort: handleSetSort, setFilters: handleSetFilters, setGroupBy: handleSetGroupBy,
       setSelection, setActiveCell,
       on, emit,
@@ -354,7 +359,7 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     }),
     [
       datasource, engine, table, viewManager, transformedColumns, transformedRows, sort, filters, groupBy,
-      totalCount, isLoading, selection, activeCell, editingExt,
+      totalCount, isLoading, selection, activeCell, editingExt, formulasExt,
       handleSetSort, handleSetFilters, handleSetGroupBy,
       on, emit, fetchData, requestRange, setColumnWidth, setColumnOrder, setColumnPin,
     ]

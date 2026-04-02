@@ -36,6 +36,7 @@ export interface ColumnDef {
     | 'checkbox'
     | ((value: unknown, onChange: (v: unknown) => void) => ReactNode);
   editorOptions?: unknown[];
+  editorFreeform?: boolean;
   autoComplete?: boolean;
   validate?: (value: unknown) => true | string;
   cellStyle?: string | ((value: unknown, row: Row) => string);

@@ -83,8 +83,8 @@ export default function EditingPlugin() {
           <li><strong>Tab</strong> — confirm the edit and move right</li>
           <li><strong>Escape</strong> — cancel the edit, revert to the previous value</li>
           <li><strong>Delete</strong> — clear the cell contents</li>
-          <li><strong>Ctrl+Z</strong> — undo the last edit</li>
-          <li><strong>Ctrl+Y</strong> — redo</li>
+          <li><strong>Ctrl+Z</strong> / <strong>⌘Z</strong> — undo the last edit</li>
+          <li><strong>Ctrl+Y</strong> / <strong>Ctrl+Shift+Z</strong> / <strong>⌘⇧Z</strong> — redo</li>
         </ul>
       </div>
 
@@ -118,6 +118,20 @@ export default function EditingPlugin() {
         coercion happens automatically before validation runs.
       </Callout>
 
+      <Heading level={2} id="select-editor">Select Editor</Heading>
+      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
+        Set <code>editor: 'select'</code> with <code>editorOptions</code> to restrict a cell to a fixed list of values.
+        Add <code>editorFreeform: true</code> to also allow arbitrary values — the input becomes a combobox where
+        the user can pick from the list or type a new value.
+      </p>
+      <CodeBlock code={`const columns = [
+  // Strict: only the listed values are allowed
+  { field: 'status', editor: 'select', editorOptions: ['Open', 'Closed', 'Pending'] },
+
+  // Freeform: suggestions from the list, but any value accepted
+  { field: 'category', editor: 'select', editorOptions: ['Bug', 'Feature', 'Chore'], editorFreeform: true },
+];`} language="tsx" />
+
       <Heading level={2} id="save-discard">Save & Discard</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
         Edits accumulate in the overlay without touching the source table. You control when
@@ -146,8 +160,8 @@ ctx.emit('editing:toggle');`} language="tsx" />
 
       <Heading level={2} id="undo-redo">Undo & Redo</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Every edit, row addition, and row deletion is tracked in an operation log. <code>Ctrl+Z</code> undoes
-        the last operation, <code>Ctrl+Y</code> redoes it. The undo stack supports all operation types — cell
+        Every edit, row addition, and row deletion is tracked in an operation log. <code>Ctrl+Z</code> (<code>⌘Z</code> on macOS) undoes
+        the last operation, <code>Ctrl+Y</code> or <code>Ctrl+Shift+Z</code> (<code>⌘⇧Z</code> on macOS) redoes it. The undo stack supports all operation types — cell
         edits, row additions, and row deletions — and correctly restores the previous state including
         reverting overlay rows back to the source when all edits to a row are undone.
       </p>

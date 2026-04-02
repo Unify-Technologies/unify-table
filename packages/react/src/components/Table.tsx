@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { ChevronDown } from 'lucide-react';
 import type { DisplayConfig, ColumnInfo } from '@unify/table-core';
 import { useTableContext } from '../hooks/useTableContext.js';
 import { HeaderRow } from './HeaderRow.js';
@@ -138,7 +139,34 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
       ...inputCss,
       appearance: 'none',
       WebkitAppearance: 'none',
+      paddingRight: 24,
     };
+
+    if (column.editorFreeform) {
+      const listId = `utbl-dl-${column.field}`;
+      const allOptions = column.editorOptions.map(String);
+      if (draft && !allOptions.includes(draft)) allOptions.push(draft);
+      return (
+        <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
+          <input
+            ref={inputRef as React.RefObject<HTMLInputElement>}
+            list={listId}
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); }}
+            onBlur={commit}
+            onKeyDown={handleKeyDown}
+            style={selectCss}
+          />
+          <datalist id={listId}>
+            {allOptions.map((opt) => (
+              <option key={opt} value={opt} />
+            ))}
+          </datalist>
+          <ChevronDown size={14} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
+        </div>
+      );
+    }
+
     return (
       <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
         <select
@@ -153,6 +181,7 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
             <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
           ))}
         </select>
+        <ChevronDown size={14} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }} />
       </div>
     );
   }

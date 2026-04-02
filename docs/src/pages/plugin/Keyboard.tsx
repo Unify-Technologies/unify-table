@@ -41,7 +41,8 @@ export default function KeyboardPlugin() {
         { name: "Delete", type: "", description: "Clear cell contents (requires editing plugin)" },
         { name: "Ctrl+A", type: "", description: "Select all cells" },
         { name: "Ctrl+C / Ctrl+V", type: "", description: "Copy/paste (requires clipboard plugin)" },
-        { name: "Ctrl+Z", type: "", description: "Undo last edit (requires editing plugin)" },
+        { name: "Ctrl+Z / ⌘Z", type: "", description: "Undo last edit (requires editing plugin)" },
+        { name: "Ctrl+Y / Ctrl+⇧Z / ⌘⇧Z", type: "", description: "Redo last edit (requires editing plugin)" },
         { name: "Shift+Arrow", type: "", description: "Extend selection range (requires selection('range'))" },
       ]} />
 

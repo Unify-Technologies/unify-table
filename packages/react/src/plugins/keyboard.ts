@@ -11,6 +11,9 @@ export function keyboard(): TablePlugin {
       ArrowLeft: (ctx) => moveActiveCell(ctx, -1, 0),
       ArrowRight: (ctx) => moveActiveCell(ctx, 1, 0),
       Tab: (ctx) => moveActiveCell(ctx, 1, 0),
+      'Ctrl+z': (ctx) => { ctx.editing?.undo(); },
+      'Ctrl+y': (ctx) => { ctx.editing?.redo(); },
+      'Ctrl+Shift+z': (ctx) => { ctx.editing?.redo(); },
       Enter: (ctx) => {
         if (ctx.editing?.editingCell) {
           // Commit would be handled by the editing cell component
@@ -40,6 +43,18 @@ export function keyboard(): TablePlugin {
 
       const handler = (e: KeyboardEvent) => {
         const latest = ctx.getLatest();
+
+        // Undo / Redo — handled before editingCell check so they work in all states
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+          e.preventDefault();
+          latest.editing?.undo();
+          return;
+        }
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+          e.preventDefault();
+          latest.editing?.redo();
+          return;
+        }
 
         // When a cell is being edited, let the editor handle all keys
         // except Escape (cancel) and Enter (commit, handled by editor's onKeyDown)

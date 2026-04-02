@@ -134,6 +134,11 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
   const editor = column.editor ?? 'text';
 
   if (editor === 'select' && column.editorOptions) {
+    const selectCss: React.CSSProperties = {
+      ...inputCss,
+      appearance: 'none',
+      WebkitAppearance: 'none',
+    };
     return (
       <div className={`${styles.cell ?? ''} ${styles.cellEditing ?? ''}`} style={cellCss} onClick={stopClick} onMouseDown={stopMouseDown}>
         <select
@@ -142,7 +147,7 @@ function InlineEditor({ column, cell, styles, px, py, onCommit, onCancel }: Inli
           onChange={(e) => { setDraft(e.target.value); }}
           onBlur={commit}
           onKeyDown={handleKeyDown}
-          style={inputCss}
+          style={selectCss}
         >
           {column.editorOptions.map((opt) => (
             <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
@@ -678,12 +683,13 @@ export function TableView({
 
   // Handle row double-click — start editing the cell
   const handleRowDoubleClick = useCallback((row: Record<string, unknown>, index: number, e: React.MouseEvent) => {
+    if (!ctx.editing) return;
     if (isGroupRow(row)) return;
     const colIndex = findColIndex(e.clientX);
     const col = columns[colIndex];
     if (!col || col.editable === false) return;
     const rowId = getRowId(row, index);
-    ctx.startEditing({ rowIndex: index, colIndex, rowId, field: col.field, value: row[col.field] });
+    ctx.editing.startEditing({ rowIndex: index, colIndex, rowId, field: col.field, value: row[col.field] });
   }, [ctx, findColIndex, columns]);
 
   return (
@@ -851,19 +857,19 @@ export function TableView({
                   columns.map((col, colIdx) => {
                     const inSpan = isInAnySpan(virtualRow.index, colIdx, selection);
                     const isActive = ctx.activeCell?.rowIndex === virtualRow.index && ctx.activeCell?.colIndex === colIdx;
-                    const isEditingThis = ctx.editingCell?.rowIndex === virtualRow.index && ctx.editingCell?.colIndex === colIdx;
+                    const isEditingThis = ctx.editing?.editingCell?.rowIndex === virtualRow.index && ctx.editing?.editingCell?.colIndex === colIdx;
 
                     if (isEditingThis) {
                       return (
                         <InlineEditor
                           key={col.field}
                           column={col}
-                          cell={ctx.editingCell!}
+                          cell={ctx.editing!.editingCell!}
                           styles={styles}
                           px={density.px}
                           py={density.py}
-                          onCommit={(value) => ctx.commitEdit(ctx.editingCell!, value)}
-                          onCancel={() => ctx.cancelEdit()}
+                          onCommit={(value) => ctx.editing!.commitEdit(ctx.editing!.editingCell!, value)}
+                          onCancel={() => ctx.editing!.cancelEdit()}
                         />
                       );
                     }

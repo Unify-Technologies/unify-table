@@ -23,7 +23,7 @@ export function findReplace(): TablePlugin {
       if (!el) return;
 
       const handler = (e: KeyboardEvent) => {
-        if (ctx.getLatest().editingCell) return;
+        if (ctx.getLatest().editing?.editingCell) return;
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
           e.preventDefault();
@@ -114,7 +114,7 @@ export async function replaceInTable(
     for (const row of affectedRows) {
       const oldValue = String(row[column] ?? '');
       const newValue = oldValue.replace(new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacement);
-      await ctx.commitEdit(
+      await ctx.editing?.commitEdit(
         { rowIndex: 0, colIndex: 0, rowId: String(row[idField]), field: column, value: oldValue },
         newValue,
       );

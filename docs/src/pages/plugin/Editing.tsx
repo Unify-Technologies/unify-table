@@ -170,9 +170,9 @@ ctx.emit('editing:toggle');`} language="tsx" />
       <Heading level={2} id="architecture">Architecture</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
         The editing plugin uses the <code>EditOverlay</code> from <code>@unify/table-core</code> and
-        registers itself as the <code>EditBackend</code> on the table context. This means
-        all edit operations — including those triggered by clipboard paste or find-and-replace — automatically
-        route through the overlay.
+        publishes an <code>EditingState</code> to <code>ctx.editing</code>. When the plugin is not registered,
+        <code>ctx.editing</code> is <code>null</code> and no editing is possible. All edit operations — including
+        those triggered by clipboard paste or find-and-replace — automatically route through the overlay.
       </p>
       <CodeBlock code={`// The overlay is lazy — created on first edit, not on mount
 // Access the core EditOverlay via @unify/table-core if building custom integrations

@@ -350,3 +350,56 @@ test.describe("Editing Plugin E2E", () => {
     await page.screenshot({ path: "e2e/screenshots/editing_05_numeric_edit.png" });
   });
 });
+
+test.describe("Editing blocked without editing plugin", () => {
+  test.setTimeout(120000);
+
+  test.beforeEach(async ({ page }) => {
+    // Selection page has no editing plugin
+    await page.goto(BASE + "plugins/selection");
+    await waitForTable(page);
+  });
+
+  test("double-click does not open an editor when editing plugin is absent", async ({ page }) => {
+    const firstRow = page.locator('[data-index="0"]');
+    const cells = firstRow.locator('[class*="cell"]');
+    const originalText = await cells.first().textContent();
+
+    await cells.first().dblclick();
+    await page.waitForTimeout(500);
+
+    const editor = firstRow.locator('input, select, textarea');
+    expect(await editor.count()).toBe(0);
+
+    const afterText = await cells.first().textContent();
+    expect(afterText).toBe(originalText);
+  });
+
+  test("Enter key does not open an editor when editing plugin is absent", async ({ page }) => {
+    const firstRow = page.locator('[data-index="0"]');
+    const cells = firstRow.locator('[class*="cell"]');
+
+    await cells.first().click();
+    await page.waitForTimeout(300);
+
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(500);
+
+    const editor = firstRow.locator('input, select, textarea');
+    expect(await editor.count()).toBe(0);
+  });
+
+  test("F2 does not open an editor when editing plugin is absent", async ({ page }) => {
+    const firstRow = page.locator('[data-index="0"]');
+    const cells = firstRow.locator('[class*="cell"]');
+
+    await cells.first().click();
+    await page.waitForTimeout(300);
+
+    await page.keyboard.press("F2");
+    await page.waitForTimeout(500);
+
+    const editor = firstRow.locator('input, select, textarea');
+    expect(await editor.count()).toBe(0);
+  });
+});

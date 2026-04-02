@@ -69,7 +69,7 @@ function CustomTable() {
         <strong>State:</strong> <code>columns</code>, <code>rows</code>, <code>sort</code>, <code>filters</code>, <code>groupBy</code>, <code>totalCount</code>, <code>isLoading</code>, <code>selection</code>.
       </p>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        <strong>Mutations:</strong> <code>setSort()</code>, <code>setFilters()</code>, <code>startEditing()</code>, <code>commitEdit()</code>, and more — depending on which plugins you've enabled.
+        <strong>Mutations:</strong> <code>setSort()</code>, <code>setFilters()</code>, and more. Editing methods like <code>startEditing()</code> and <code>commitEdit()</code> are available via <code>ctx.editing</code> when the editing plugin is active.
       </p>
       <Callout type="info" title="Plugins Still Work">
         All plugins (selection, editing, keyboard, clipboard, etc.) work in headless mode. They extend the context with additional state and methods. The only difference is that you're responsible for rendering the UI that uses them.

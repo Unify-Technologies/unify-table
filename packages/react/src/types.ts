@@ -137,6 +137,19 @@ export interface EditBackend {
   canRedo(): boolean;
 }
 
+export interface EditingState {
+  editingCell: CellRef | null;
+  startEditing(cell: CellRef): void;
+  commitEdit(cell: CellRef, value: unknown): Promise<void>;
+  cancelEdit(): void;
+  addRow(data: Row): Promise<void>;
+  deleteRows(ids: string[]): Promise<void>;
+  undo(): Promise<void>;
+  redo(): Promise<void>;
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
 export interface TableContext {
   // Data
   datasource: DataSource;
@@ -157,7 +170,11 @@ export interface TableContext {
   isLoading: boolean;
   selection: SelectionState;
   activeCell: CellRef | null;
-  editingCell: CellRef | null;
+
+  // Editing (provided by editing plugin — null when plugin is not registered)
+  editing: EditingState | null;
+  /** @internal Used by the editing plugin to publish its state. */
+  _setEditing(state: EditingState | null): void;
 
   // Mutations
   setSort(sort: SortField[]): void;
@@ -165,22 +182,6 @@ export interface TableContext {
   setGroupBy(groupBy: string[]): void;
   setSelection(selection: SelectionState): void;
   setActiveCell(cell: CellRef | null): void;
-  startEditing(cell: CellRef): void;
-  commitEdit(cell: CellRef, value: unknown): Promise<void>;
-  cancelEdit(): void;
-
-  // Row operations
-  addRow(data: Row): Promise<void>;
-  deleteRows(ids: string[]): Promise<void>;
-
-  // Undo/redo
-  undo(): Promise<void>;
-  redo(): Promise<void>;
-  canUndo: boolean;
-  canRedo: boolean;
-
-  // Edit backend (set by editing plugin)
-  setEditBackend(backend: EditBackend | null): void;
 
   // Events
   on(event: TableEvent, handler: TableEventHandler): () => void;

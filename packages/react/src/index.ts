@@ -92,6 +92,7 @@ export type {
   SelectionState,
   SelectionSpan,
   EditBackend,
+  EditingState,
 } from './types.js';
 export type { EditingOptions } from './plugins/editing.js';
 

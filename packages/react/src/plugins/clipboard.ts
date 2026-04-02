@@ -15,7 +15,7 @@ export function clipboard(): TablePlugin {
 
       const handler = (e: KeyboardEvent) => {
         // When a cell is being edited, let the editor handle Ctrl+C/V natively
-        if (ctx.getLatest().editingCell) return;
+        if (ctx.getLatest().editing?.editingCell) return;
 
         if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
           e.preventDefault();
@@ -137,7 +137,7 @@ async function pasteFromClipboard(ctx: TableContext) {
           field,
           value: row[field],
         };
-        await live.commitEdit(cell, dataRows[r][c]);
+        await live.editing?.commitEdit(cell, dataRows[r][c]);
       }
     }
   } else {
@@ -147,7 +147,7 @@ async function pasteFromClipboard(ctx: TableContext) {
       for (let c = 0; c < dataRow.length && c < headerFields.length; c++) {
         rowData[headerFields[c]] = dataRow[c];
       }
-      await live.addRow(rowData);
+      await live.editing?.addRow(rowData);
     }
   }
 }

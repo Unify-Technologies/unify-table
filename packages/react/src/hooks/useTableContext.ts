@@ -3,8 +3,6 @@ import {
   createQueryEngine,
   createDataSource,
   createViewManager,
-  toSqlLiteral,
-  quoteIdent,
 } from '@unify/table-core';
 import type {
   TableConnection,
@@ -22,7 +20,7 @@ import type {
   SelectionState,
   ResolvedColumn,
   ColumnDef,
-  EditBackend,
+  EditingState,
 } from '../types.js';
 import { createPageCache } from '../page_cache.js';
 import { emptySelection } from '../utils.js';
@@ -60,7 +58,7 @@ function resolveColumn(def: ColumnDef, info?: ColumnInfo): ResolvedColumn {
 // ─── Hook ────────────────────────────────────────────────────
 
 export function useTableContext(options: UseTableContextOptions): TableContext {
-  const { db, table, columns: columnsProp, plugins = [], pageSize = DEFAULT_PAGE_SIZE, rowId } = options;
+  const { db, table, columns: columnsProp, plugins = [], pageSize = DEFAULT_PAGE_SIZE } = options;
 
   const engine = useMemo(() => createQueryEngine(db), [db]);
 
@@ -87,16 +85,10 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   const [groupBy, setGroupBy] = useState<string[]>([]);
   const [selection, setSelection] = useState<SelectionState>(emptySelection);
   const [activeCell, setActiveCell] = useState<CellRef | null>(null);
-  const [editingCell, setEditingCell] = useState<CellRef | null>(null);
   const groupColWidthRef = useRef<number | null>(null);
 
-  // Undo/redo
-  interface EditAction { type: 'update' | 'insert' | 'delete'; sql: string; undoSql: string; }
-  const undoStack = useRef<EditAction[]>([]);
-  const redoStack = useRef<EditAction[]>([]);
-
-  // Edit backend — set by the editing plugin to intercept edit operations
-  const editBackendRef = useRef<EditBackend | null>(null);
+  // Editing extension — populated by the editing plugin
+  const [editingExt, setEditingExt] = useState<EditingState | null>(null);
 
   // Events
   const listenersRef = useRef(new Map<TableEvent, Set<TableEventHandler>>());
@@ -282,22 +274,6 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     emit('column:pin', { field, pin });
   }, [emit]);
 
-  // ── Row ID detection ──────────────────────────────────────
-  const rowIdField = useMemo(() => {
-    if (rowId) return Array.isArray(rowId) ? rowId[0] : rowId;
-    const candidates = ['id', 'ID', '_id', 'rowid', '__table_rid'];
-    for (const c of candidates) {
-      if (resolvedColumns.some((col) => col.field === c)) return c;
-    }
-    return null;
-  }, [rowId, resolvedColumns]);
-
-  // ── Editing ───────────────────────────────────────────────
-  const startEditing = useCallback((cell: CellRef) => {
-    setEditingCell(cell);
-    emit('edit:start', cell);
-  }, [emit]);
-
   const fetchData = useCallback(async () => {
     cacheRef.current.clear();
     const page = await datasource.fetch({ offset: 0, limit: pageSize });
@@ -305,89 +281,6 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     setTotalCount(page.total);
     setRows(cacheRef.current.flatten(page.total, pageSize));
   }, [datasource, pageSize]);
-
-  const refocusContainer = useCallback(() => {
-    containerRef.current?.focus();
-  }, []);
-
-  const commitEdit = useCallback(async (cell: CellRef, value: unknown) => {
-    if (editBackendRef.current) {
-      await editBackendRef.current.commitEdit(cell, value);
-      setEditingCell(null);
-      refocusContainer();
-      return;
-    }
-    if (!rowIdField) return;
-    const oldValue = cell.value;
-    const qt = quoteIdent(table);
-    const qf = quoteIdent(cell.field);
-    const qid = quoteIdent(rowIdField);
-    const updateSql = `UPDATE ${qt} SET ${qf} = ${toSqlLiteral(value)} WHERE ${qid} = ${toSqlLiteral(cell.rowId)}`;
-    const undoSqlStr = `UPDATE ${qt} SET ${qf} = ${toSqlLiteral(oldValue)} WHERE ${qid} = ${toSqlLiteral(cell.rowId)}`;
-    await engine.execute(updateSql);
-    undoStack.current.push({ type: 'update', sql: updateSql, undoSql: undoSqlStr });
-    redoStack.current = [];
-    setEditingCell(null);
-    refocusContainer();
-    emit('edit:commit', { cell, value });
-    await fetchData();
-  }, [engine, table, rowIdField, emit, fetchData, refocusContainer]);
-
-  const cancelEdit = useCallback(() => { setEditingCell(null); refocusContainer(); emit('edit:cancel'); }, [emit, refocusContainer]);
-
-  const addRow = useCallback(async (data: Row) => {
-    if (editBackendRef.current) {
-      await editBackendRef.current.addRow(data);
-      return;
-    }
-    const cols = Object.keys(data);
-    const vals = cols.map((c) => toSqlLiteral(data[c]));
-    const sql = `INSERT INTO ${quoteIdent(table)} (${cols.map(quoteIdent).join(', ')}) VALUES (${vals.join(', ')})`;
-    await engine.execute(sql);
-    undoStack.current.push({ type: 'insert', sql, undoSql: '' });
-    redoStack.current = [];
-    emit('row:add', data);
-    await fetchData();
-  }, [engine, table, emit, fetchData]);
-
-  const deleteRows = useCallback(async (ids: string[]) => {
-    if (editBackendRef.current) {
-      await editBackendRef.current.deleteRows(ids);
-      return;
-    }
-    if (!rowIdField || ids.length === 0) return;
-    const idList = ids.map(toSqlLiteral).join(', ');
-    const sql = `DELETE FROM ${quoteIdent(table)} WHERE ${quoteIdent(rowIdField)} IN (${idList})`;
-    await engine.execute(sql);
-    undoStack.current.push({ type: 'delete', sql, undoSql: '' });
-    redoStack.current = [];
-    emit('row:delete', ids);
-    await fetchData();
-  }, [engine, table, rowIdField, emit, fetchData]);
-
-  const undo = useCallback(async () => {
-    if (editBackendRef.current) {
-      await editBackendRef.current.undo();
-      return;
-    }
-    const action = undoStack.current.pop();
-    if (!action) return;
-    await engine.execute(action.undoSql);
-    redoStack.current.push(action);
-    await fetchData();
-  }, [engine, fetchData]);
-
-  const redo = useCallback(async () => {
-    if (editBackendRef.current) {
-      await editBackendRef.current.redo();
-      return;
-    }
-    const action = redoStack.current.pop();
-    if (!action) return;
-    await engine.execute(action.sql);
-    undoStack.current.push(action);
-    await fetchData();
-  }, [engine, fetchData]);
 
   // ── Plugin transform pipeline ────────────────────────────
   const transformedColumns = useMemo(() => {
@@ -445,13 +338,10 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     () => ({
       datasource, engine, table, viewName: viewManager.viewName, viewManager,
       columns: transformedColumns, rows: transformedRows, sort, filters, groupBy,
-      totalCount, isLoading, selection, activeCell, editingCell,
+      totalCount, isLoading, selection, activeCell,
+      editing: editingExt, _setEditing: setEditingExt,
       setSort: handleSetSort, setFilters: handleSetFilters, setGroupBy: handleSetGroupBy,
-      setSelection, setActiveCell, startEditing, commitEdit, cancelEdit,
-      addRow, deleteRows, undo, redo,
-      canUndo: editBackendRef.current ? editBackendRef.current.canUndo() : undoStack.current.length > 0,
-      canRedo: editBackendRef.current ? editBackendRef.current.canRedo() : redoStack.current.length > 0,
-      setEditBackend: (backend: EditBackend | null) => { editBackendRef.current = backend; },
+      setSelection, setActiveCell,
       on, emit,
       getPlugin: <T extends TablePlugin>(name: string) => pluginMap.current.get(name) as T | undefined,
       getLatest: () => ctxRef.current!,
@@ -464,10 +354,9 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
     }),
     [
       datasource, engine, table, viewManager, transformedColumns, transformedRows, sort, filters, groupBy,
-      totalCount, isLoading, selection, activeCell, editingCell,
+      totalCount, isLoading, selection, activeCell, editingExt,
       handleSetSort, handleSetFilters, handleSetGroupBy,
-      startEditing, commitEdit, cancelEdit, addRow, deleteRows,
-      undo, redo, on, emit, fetchData, requestRange, setColumnWidth, setColumnOrder, setColumnPin,
+      on, emit, fetchData, requestRange, setColumnWidth, setColumnOrder, setColumnPin,
     ]
   );
 

@@ -872,28 +872,83 @@ selected area.
 
 # Editing
 
-Inline cell editing with validation. Double-click or press Enter to start editing.
+Non-destructive inline cell editing. The source table is never modified — edits live in
+a separate overlay and are merged on the fly via a DuckDB view.
 
-The editing plugin turns your table into a spreadsheet. Double-click a cell or start typing
-to enter edit mode. Changes follow commit/cancel semantics — press Enter or Tab to confirm,
-Escape to discard. Every confirmed edit is written directly to DuckDB via an UPDATE statement,
-so your data source stays in sync without manual refresh.
+The editing plugin turns your table into a spreadsheet. Double-click a cell, press Enter,
+or start typing to enter edit mode. Changes follow commit/cancel semantics — press Enter
+or Tab to confirm, Escape to discard.
 
-Column definitions can include validation rules that run before a commit. If validation
-fails, the cell reverts and the user sees the error — no bad data reaches the database.
+Under the hood, editing is **non-destructive**. The source table remains
+immutable — it can be shared by other views, queries, or users without interference.
+Each editable table instance gets its own overlay table in DuckDB that stores only the
+modified rows. A merge view combines the source with the overlay, and all downstream
+features (filters, sort, grouping) operate on this merged result transparently.
+
+## How It Works
+
+When the editing plugin is active, three DuckDB objects are created behind the scenes:
+
+- **Source table** — your original data, never modified by edits
+
+- **Overlay table** — stores only changed, added, or deleted rows
+
+- **Merge view** — a DuckDB VIEW that unions the source with the overlay, excluding deleted rows and preferring overlay versions of edited rows
+
+The existing ViewManager (which handles filters and sort) sits on top of the merge view.
+This means filtering, sorting, and grouping all work unchanged — they simply operate on
+the merged result instead of the raw table.
 
 ## Usage
 
 ```tsx
-import { Table, editing } from '@unify/table-react';
+import { Table, editing, keyboard, selection } from '@unify/table-react';
 
-<Table db={db} table="employees" plugins={[editing()]} />
+// Basic editing — source table is never modified
+<Table db={db} table="employees" plugins={[editing(), keyboard(), selection('range')]} />
 ```
+
+Tables are read-only by default. Adding the `editing()` plugin enables
+non-destructive editing. Pair it with `keyboard()` for Enter/Tab/Escape
+controls and `selection('range')` for spreadsheet-like cell selection.
+
+## Options
+
+```tsx
+editing({
+enabled: true,    // initial editing state (default: true)
+undoDepth: 50,    // max undo stack depth (default: 50)
+})
+```
+
+- `enabled` — whether editing is active on mount. Can be toggled at runtime via the `editing:toggle` event.
+
+- `undoDepth` — how many operations to keep in the undo stack. Oldest operations are dropped when the limit is exceeded.
 
 ## Example
 
-The same trade data, now with `editing()`, `keyboard()`, and `selection('range')`.
+Trade data with `editing()`, `keyboard()`, and `selection('range')`.
 Column definitions specify the editor type and validation rules for each field.
+
+## Controls
+
+- **Double-click** or **Enter** — start editing the active cell
+
+- **F2** — start editing without clearing the current value
+
+- **Start typing** — replace the cell value and enter edit mode
+
+- **Enter** — confirm the edit and move down
+
+- **Tab** — confirm the edit and move right
+
+- **Escape** — cancel the edit, revert to the previous value
+
+- **Delete** — clear the cell contents
+
+- **Ctrl+Z** — undo the last edit
+
+- **Ctrl+Y** — redo
 
 ## Validation
 
@@ -905,6 +960,7 @@ rejected and the cell reverts to its previous value.
 const columns = [
 {
 field: 'price',
+editor: 'number',
 validate: (value: unknown) => {
 if (typeof value !== 'number' || value < 0)
 return 'Price must be a positive number';
@@ -925,10 +981,64 @@ typeof value === 'string' && value.includes('@')
 boolean columns toggle directly, and text columns use a standard text field. Type
 coercion happens automatically before validation runs.
 
-## Controls
+## Save & Discard
 
-Press `Enter` or `Tab` to confirm. Press `Escape` to
-cancel. Changes are committed to the underlying DuckDB table via an UPDATE statement.
+Edits accumulate in the overlay without touching the source table. You control when
+(and whether) they are applied:
+
+```tsx
+// Save: flush all overlay edits into the source table
+ctx.emit('editing:save');
+
+// Discard: clear all pending edits, revert to original data
+ctx.emit('editing:discard');
+
+// Toggle: enable/disable editing mode (edits are preserved)
+ctx.emit('editing:toggle');
+```
+
+- `editing:save` — applies all pending edits, inserts, and deletes to the source table, then clears the overlay. This is the **only** moment the source table is modified.
+
+- `editing:discard` — drops all pending changes and resets to the original data.
+
+- `editing:toggle` — toggles editing mode on/off. When disabled, cells cannot be edited but pending changes remain visible. Toggle back on to resume editing.
+
+> **Warning: Save is explicit** The source table is never modified automatically. You must emit `editing:save` to
+persist changes. This makes it safe to use the editing plugin on shared tables — other
+consumers see the original data until you explicitly save.
+
+## Undo & Redo
+
+Every edit, row addition, and row deletion is tracked in an operation log. `Ctrl+Z` undoes
+the last operation, `Ctrl+Y` redoes it. The undo stack supports all operation types — cell
+edits, row additions, and row deletions — and correctly restores the previous state including
+reverting overlay rows back to the source when all edits to a row are undone.
+
+## Row Operations
+
+Adding and deleting rows also goes through the overlay:
+
+- **Add row** — inserted into the overlay with state `added`. The source table is not modified.
+
+- **Delete row** — marked as `deleted` in the overlay. The source row is hidden from the merge view but still exists in the source table.
+
+- **Delete an added row** — truly removed from the overlay (it never existed in the source).
+
+The right-click context menu includes a **Delete row** action when the editing plugin is active.
+
+## Architecture
+
+The editing plugin uses the `EditOverlay` from `@unify/table-core` and
+publishes an `EditingState` to `ctx.editing`. When the plugin is not registered,
+`ctx.editing` is `null` and no editing is possible. All edit operations — including
+those triggered by clipboard paste or find-and-replace — automatically route through the overlay.
+
+```tsx
+// The overlay is lazy — created on first edit, not on mount
+// Access the core EditOverlay via @unify/table-core if building custom integrations
+import { createEditOverlay } from '@unify/table-core';
+import type { EditOverlay, DirtyRow } from '@unify/table-core';
+```
 
 ---
 
@@ -1069,23 +1179,26 @@ import { Table, columnPin } from '@unify/table-react';
 
 ## Pinning Columns
 
-Right-click a column header and select "Pin Left" or "Pin Right" from the context
-menu. Pinned columns stay fixed at the edge while the rest of the table scrolls.
-Select "Unpin" to restore normal scrolling behavior.
-
-> **Tip: When to pin** Pin identifier columns (name, ticker, ID) so users always see which row they're looking at while scrolling through many columns. Combine with 
-[columnResize()](#/plugins/column-resize) and 
-[columnReorder()](#/plugins/column-reorder) for full column management.
-
-## Programmatic Pinning
+Set `pin: 'left'` or `pin: 'right'` on a column definition to pin it.
+Pinned columns stay fixed at the edge while the rest of the table scrolls horizontally,
+with a subtle shadow to indicate the boundary.
 
 ```tsx
-// Pin columns via column definitions
 const columns = [
 { field: 'ticker', pin: 'left' },
 { field: 'total', pin: 'right' },
 ];
 ```
+
+## Context Menu Pinning
+
+Right-click any column header to pin or unpin it at runtime.
+Requires both `columnPin()` and 
+`contextMenu()` plugins.
+
+> **Tip: When to pin** Pin identifier columns (name, ticker, ID) so users always see which row they're looking at while scrolling through many columns. Combine with 
+[columnResize()](/plugins/column-resize) and 
+[columnReorder()](/plugins/column-reorder) for full column management.
 
 ---
 
@@ -2467,7 +2580,7 @@ The `TableContext` object exposes both read-only state and mutation methods. Sta
 
 **State:** `columns`, `rows`, `sort`, `filters`, `groupBy`, `totalCount`, `isLoading`, `selection`.
 
-**Mutations:** `setSort()`, `setFilters()`, `startEditing()`, `commitEdit()`, and more — depending on which plugins you've enabled.
+**Mutations:** `setSort()`, `setFilters()`, and more. Editing methods like `startEditing()` and `commitEdit()` are available via `ctx.editing` when the editing plugin is active.
 
 > **Info: Plugins Still Work** All plugins (selection, editing, keyboard, clipboard, etc.) work in headless mode. They extend the context with additional state and methods. The only difference is that you're responsible for rendering the UI that uses them.
 

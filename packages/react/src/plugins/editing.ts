@@ -1,6 +1,6 @@
 import { createEditOverlay } from '@unify/table-core';
 import type { EditOverlay, Row } from '@unify/table-core';
-import type { TablePlugin, TableContext, CellRef, EditBackend, MenuItem } from '../types.js';
+import type { TablePlugin, TableContext, CellRef, EditBackend, EditingState, MenuItem } from '../types.js';
 
 export interface EditingOptions {
   /** Whether editing is initially enabled. Default: true. */
@@ -27,6 +27,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       let initialized = false;
       let enabled = initialEnabled;
       let rowIdField = '';
+      let editingCell: CellRef | null = null;
 
       const undoStack: EditOp[] = [];
       const redoStack: EditOp[] = [];
@@ -35,6 +36,52 @@ export function editing(options: EditingOptions = {}): TablePlugin {
 
       const id = String(overlayIdCounter++);
 
+      function refocusContainer() {
+        ctx.getLatest().containerRef.current?.focus();
+      }
+
+      function publishState() {
+        const state: EditingState = {
+          editingCell,
+          startEditing(cell: CellRef) {
+            editingCell = cell;
+            ctx.getLatest().emit('edit:start', cell);
+            publishState();
+          },
+          async commitEdit(cell: CellRef, value: unknown) {
+            await backend.commitEdit(cell, value);
+            editingCell = null;
+            refocusContainer();
+            publishState();
+          },
+          cancelEdit() {
+            editingCell = null;
+            refocusContainer();
+            ctx.getLatest().emit('edit:cancel');
+            publishState();
+          },
+          async addRow(data: Row) {
+            await backend.addRow(data);
+            publishState();
+          },
+          async deleteRows(ids: string[]) {
+            await backend.deleteRows(ids);
+            publishState();
+          },
+          async undo() {
+            await backend.undo();
+            publishState();
+          },
+          async redo() {
+            await backend.redo();
+            publishState();
+          },
+          canUndo: undoStack.length > 0,
+          canRedo: redoStack.length > 0,
+        };
+        ctx.getLatest()._setEditing(state);
+      }
+
       async function ensureInit(): Promise<EditOverlay> {
         if (overlay && initialized) return overlay;
 
@@ -42,7 +89,6 @@ export function editing(options: EditingOptions = {}): TablePlugin {
 
         // Detect rowIdField
         const cols = await ctx.getLatest().engine.columns(ctx.getLatest().table);
-        // Use the same detection logic as useTableContext
         const candidates = ['id', 'ID', '_id', 'rowid', '__table_rid'];
         for (const c of candidates) {
           if (cols.some((col) => col.name === c)) {
@@ -165,7 +211,6 @@ export function editing(options: EditingOptions = {}): TablePlugin {
 
           if (op.type === 'edit') {
             await overlay.apply(op.rowId, op.field, op.oldValue);
-            // Check if the row is now identical to source — if so, fully revert
             const dirty = dirtyMap.get(op.rowId);
             if (dirty) {
               dirty.fields.delete(op.field);
@@ -183,11 +228,8 @@ export function editing(options: EditingOptions = {}): TablePlugin {
                 await overlay.restoreRow(snap.data, 'added');
                 updateDirtyMap(snap.rowId, 'added');
               } else {
-                // Was an edited or original row — revert the delete
                 await overlay.revert(snap.rowId);
                 dirtyMap.delete(snap.rowId);
-                // If it was edited before deletion, re-apply edits
-                // For simplicity, restore the snapshot
                 const hasNonIdFields = Object.keys(snap.data).some((k) => k !== rowIdField);
                 if (hasNonIdFields) {
                   await overlay.restoreRow(snap.data, 'edited');
@@ -237,8 +279,8 @@ export function editing(options: EditingOptions = {}): TablePlugin {
         },
       };
 
-      // Register the edit backend
-      ctx.setEditBackend(backend);
+      // Publish initial editing state
+      publishState();
 
       // Listen for toggle events
       const offToggle = ctx.on('editing:toggle', () => {
@@ -253,6 +295,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
         redoStack.length = 0;
         dirtyMap.clear();
         await ctx.getLatest().refresh();
+        publishState();
       });
 
       // Listen for discard events
@@ -263,6 +306,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
         redoStack.length = 0;
         dirtyMap.clear();
         await ctx.getLatest().refresh();
+        publishState();
       });
 
       // Cleanup
@@ -270,7 +314,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
         offToggle();
         offSave();
         offDiscard();
-        ctx.getLatest().setEditBackend(null);
+        ctx.getLatest()._setEditing(null);
         if (overlay) {
           ctx.getLatest().viewManager.setBaseTable(ctx.getLatest().table);
           overlay.destroy().catch(() => {});
@@ -279,9 +323,6 @@ export function editing(options: EditingOptions = {}): TablePlugin {
     },
 
     transformRows(rows: Row[]) {
-      // Dirty state annotation is done via the dirtyMap inside init.
-      // Since transformRows doesn't have access to the closure, we use
-      // a row-level marker set during data fetch. For now, pass through.
       return rows;
     },
 
@@ -290,7 +331,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       items.push({ label: '', action: () => {}, type: 'separator' });
       items.push({
         label: 'Delete row',
-        action: () => ctx.deleteRows([cell.rowId]),
+        action: () => ctx.editing?.deleteRows([cell.rowId]),
         danger: true,
       });
       return items;

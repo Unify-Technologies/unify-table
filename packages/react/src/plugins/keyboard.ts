@@ -12,22 +12,22 @@ export function keyboard(): TablePlugin {
       ArrowRight: (ctx) => moveActiveCell(ctx, 1, 0),
       Tab: (ctx) => moveActiveCell(ctx, 1, 0),
       Enter: (ctx) => {
-        if (ctx.editingCell) {
+        if (ctx.editing?.editingCell) {
           // Commit would be handled by the editing cell component
-        } else if (ctx.activeCell) {
-          ctx.startEditing(ctx.activeCell);
+        } else if (ctx.activeCell && ctx.editing) {
+          ctx.editing.startEditing(ctx.activeCell);
         }
       },
       Escape: (ctx) => {
-        if (ctx.editingCell) {
-          ctx.cancelEdit();
+        if (ctx.editing?.editingCell) {
+          ctx.editing.cancelEdit();
         } else {
           ctx.setActiveCell(null);
         }
       },
       F2: (ctx) => {
-        if (ctx.activeCell && !ctx.editingCell) {
-          ctx.startEditing(ctx.activeCell);
+        if (ctx.activeCell && !ctx.editing?.editingCell && ctx.editing) {
+          ctx.editing.startEditing(ctx.activeCell);
         }
       },
     },
@@ -43,10 +43,10 @@ export function keyboard(): TablePlugin {
 
         // When a cell is being edited, let the editor handle all keys
         // except Escape (cancel) and Enter (commit, handled by editor's onKeyDown)
-        if (latest.editingCell) {
+        if (latest.editing?.editingCell) {
           if (e.key === 'Escape') {
             e.preventDefault();
-            latest.cancelEdit();
+            latest.editing.cancelEdit();
           }
           // All other keys pass through to the inline editor
           return;

@@ -342,6 +342,9 @@ function FindReplaceBar({ ctx, highlightRef }: BarProps) {
       const row = live.rows[m.rowIndex];
       if (!row) return;
 
+      const col = live.columns.find((c) => c.field === m.field);
+      if (col?.editable === false) return;
+
       const oldValue = String(row[m.field] ?? "");
       const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const newValue = oldValue.replace(new RegExp(escaped, caseSensitive ? "" : "i"), replacement);
@@ -398,9 +401,13 @@ function FindReplaceBar({ ctx, highlightRef }: BarProps) {
     setIsReplacing(true);
     try {
       const live = ctx.getLatest();
-      const cols = selectedColumn
+      const cols = (selectedColumn
         ? [selectedColumn]
-        : searchableColumns.map((c: ResolvedColumn) => c.field);
+        : searchableColumns.map((c: ResolvedColumn) => c.field)
+      ).filter((field) => {
+        const colDef = live.columns.find((c) => c.field === field);
+        return colDef?.editable !== false;
+      });
       for (const col of cols) {
         await replaceInTable(live, query, replacement, col);
       }
@@ -815,6 +822,9 @@ export async function replaceInTable(
   rowIdField?: string,
 ): Promise<number> {
   const { engine, table } = ctx;
+  const colDef = ctx.columns.find((c) => c.field === column);
+  if (colDef?.editable === false) return 0;
+
   const qt = quoteIdent(table);
   const qc = quoteIdent(column);
   const escapedQuery = query.replace(/'/g, "''").replace(/%/g, "\\%").replace(/_/g, "\\_");

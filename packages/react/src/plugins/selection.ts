@@ -1,12 +1,18 @@
-import type { TablePlugin, TableContext, SelectionState, SelectionSpan, CellRef } from '../types.js';
-import type { Row } from '@unify/table-core';
-import { getRowId, emptySelection } from '../utils.js';
-import { isGroupRow, serializeGroupKey } from './row_grouping.js';
+import type {
+  TablePlugin,
+  TableContext,
+  SelectionState,
+  SelectionSpan,
+  CellRef,
+} from "../types.js";
+import type { Row } from "@unify/table-core";
+import { getRowId, emptySelection } from "../utils.js";
+import { isGroupRow, serializeGroupKey } from "./row_grouping.js";
 
-type SelectionMode = 'single' | 'multi' | 'range';
+type SelectionMode = "single" | "multi" | "range";
 
 /** Derive selectedIds and selectedCells from spans (data rows only, clears group selection). */
-function deriveState(
+export function deriveState(
   span: SelectionSpan | null,
   additionalSpans: SelectionSpan[],
   ctx: TableContext,
@@ -45,7 +51,7 @@ function deriveState(
 }
 
 /** Create a SelectionState for group-only selection (clears data selection). */
-function deriveGroupState(groupKeys: Set<string>): SelectionState {
+export function deriveGroupState(groupKeys: Set<string>): SelectionState {
   return {
     span: null,
     additionalSpans: [],
@@ -58,32 +64,45 @@ function deriveGroupState(groupKeys: Set<string>): SelectionState {
   };
 }
 
-export function selection(mode: SelectionMode = 'multi'): TablePlugin {
+export function selection(mode: SelectionMode = "multi"): TablePlugin {
   return {
-    name: 'selection',
+    name: "selection",
 
     init(ctx: TableContext) {
       let anchorRow = -1;
       let anchorCol = -1;
 
-      function setActiveAndSpan(row: number, col: number, span: SelectionSpan | null, additional: SelectionSpan[] = []) {
+      function setActiveAndSpan(
+        row: number,
+        col: number,
+        span: SelectionSpan | null,
+        additional: SelectionSpan[] = [],
+      ) {
         const live = ctx.getLatest();
         const r = live.rows[row];
         const c = live.columns[col];
         if (r && c) {
           ctx.setActiveCell({
-            rowIndex: row, colIndex: col,
-            rowId: getRowId(r, row), field: c.field, value: r[c.field],
+            rowIndex: row,
+            colIndex: col,
+            rowId: getRowId(r, row),
+            field: c.field,
+            value: r[c.field],
           });
         }
         ctx.setSelection(deriveState(span, additional, live));
       }
 
       // ── Mouse: cell:click ──────────────────────────────
-      const unsubCell = ctx.on('cell:click', (payload: unknown) => {
+      const unsubCell = ctx.on("cell:click", (payload: unknown) => {
         const { rowIndex, colIndex, ctrlKey, shiftKey } = payload as {
-          rowIndex: number; colIndex: number; ctrlKey: boolean; shiftKey: boolean;
-          field: string; value: unknown; row: Row;
+          rowIndex: number;
+          colIndex: number;
+          ctrlKey: boolean;
+          shiftKey: boolean;
+          field: string;
+          value: unknown;
+          row: Row;
         };
 
         const live = ctx.getLatest();
@@ -101,8 +120,11 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
         }
 
         // Ctrl+click: add a new span (multi-select)
-        if (ctrlKey && mode !== 'single') {
-          const newSpan: SelectionSpan = { anchor: { row: rowIndex, col: colIndex }, focus: { row: rowIndex, col: colIndex } };
+        if (ctrlKey && mode !== "single") {
+          const newSpan: SelectionSpan = {
+            anchor: { row: rowIndex, col: colIndex },
+            focus: { row: rowIndex, col: colIndex },
+          };
           const prevSpans = live.selection.span
             ? [live.selection.span, ...live.selection.additionalSpans]
             : [...live.selection.additionalSpans];
@@ -113,23 +135,35 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
         }
 
         // Plain click: single cell
-        const span: SelectionSpan = { anchor: { row: rowIndex, col: colIndex }, focus: { row: rowIndex, col: colIndex } };
+        const span: SelectionSpan = {
+          anchor: { row: rowIndex, col: colIndex },
+          focus: { row: rowIndex, col: colIndex },
+        };
         setActiveAndSpan(rowIndex, colIndex, span);
         anchorRow = rowIndex;
         anchorCol = colIndex;
       });
 
       // ── Mouse: group:click ──────────────────────────────
-      const unsubGroupClick = ctx.on('group:click', (payload: unknown) => {
-        const { rowIndex, colIndex = 0, groupKey, ctrlKey, shiftKey } = payload as {
-          rowIndex: number; colIndex?: number; groupKey: Record<string, unknown>;
-          ctrlKey: boolean; shiftKey: boolean;
+      const unsubGroupClick = ctx.on("group:click", (payload: unknown) => {
+        const {
+          rowIndex,
+          colIndex = 0,
+          groupKey,
+          ctrlKey,
+          shiftKey,
+        } = payload as {
+          rowIndex: number;
+          colIndex?: number;
+          groupKey: Record<string, unknown>;
+          ctrlKey: boolean;
+          shiftKey: boolean;
         };
 
         const live = ctx.getLatest();
         const serialized = serializeGroupKey(groupKey);
 
-        if (ctrlKey && mode !== 'single') {
+        if (ctrlKey && mode !== "single") {
           // Toggle this group in existing group selection
           const next = new Set(live.selection.selectedGroups);
           if (next.has(serialized)) next.delete(serialized);
@@ -158,18 +192,24 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
         const col = live.columns[colIndex];
         if (col) {
           ctx.setActiveCell({
-            rowIndex, colIndex,
-            rowId: serialized, field: col.field,
+            rowIndex,
+            colIndex,
+            rowId: serialized,
+            field: col.field,
             value: live.rows[rowIndex]?.[col.field],
           });
         }
 
-        ctx.emit('group:select', { selectedGroups: live.selection.selectedGroups });
+        ctx.emit("group:select", { selectedGroups: live.selection.selectedGroups });
       });
 
       // ── Keyboard ───────────────────────────────────────
       const el = ctx.containerRef.current;
-      if (!el) { unsubCell(); unsubGroupClick(); return; }
+      if (!el) {
+        unsubCell();
+        unsubGroupClick();
+        return;
+      }
 
       const handleKey = (e: KeyboardEvent) => {
         const live = ctx.getLatest();
@@ -179,12 +219,15 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
         if (live.editing?.editingCell) return;
 
         // Ctrl+A: select all
-        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        if ((e.ctrlKey || e.metaKey) && e.key === "a") {
           e.preventDefault();
           const lastRow = live.rows.length - 1;
           const lastCol = live.columns.length - 1;
           if (lastRow < 0 || lastCol < 0) return;
-          const span: SelectionSpan = { anchor: { row: 0, col: 0 }, focus: { row: lastRow, col: lastCol } };
+          const span: SelectionSpan = {
+            anchor: { row: 0, col: 0 },
+            focus: { row: lastRow, col: lastCol },
+          };
           setActiveAndSpan(0, 0, span);
           anchorRow = 0;
           anchorCol = 0;
@@ -192,7 +235,7 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
         }
 
         // Escape: clear
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           ctx.setSelection(emptySelection());
           ctx.setActiveCell(null);
           anchorRow = -1;
@@ -202,35 +245,44 @@ export function selection(mode: SelectionMode = 'multi'): TablePlugin {
 
         if (!active) return;
 
-        const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key);
+        const isArrow = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key);
         if (!isArrow) return;
 
         e.preventDefault();
-        const dr = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
-        const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+        const dr = e.key === "ArrowUp" ? -1 : e.key === "ArrowDown" ? 1 : 0;
+        const dc = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
         const newRow = Math.max(0, Math.min(active.rowIndex + dr, live.rows.length - 1));
         const newCol = Math.max(0, Math.min(active.colIndex + dc, live.columns.length - 1));
         if (newRow === active.rowIndex && newCol === active.colIndex) return;
 
         if (e.shiftKey) {
           // Extend selection from anchor
-          if (anchorRow < 0) { anchorRow = active.rowIndex; anchorCol = active.colIndex; }
-          const span: SelectionSpan = { anchor: { row: anchorRow, col: anchorCol }, focus: { row: newRow, col: newCol } };
+          if (anchorRow < 0) {
+            anchorRow = active.rowIndex;
+            anchorCol = active.colIndex;
+          }
+          const span: SelectionSpan = {
+            anchor: { row: anchorRow, col: anchorCol },
+            focus: { row: newRow, col: newCol },
+          };
           setActiveAndSpan(newRow, newCol, span);
         } else {
           // Move single cell selection
-          const span: SelectionSpan = { anchor: { row: newRow, col: newCol }, focus: { row: newRow, col: newCol } };
+          const span: SelectionSpan = {
+            anchor: { row: newRow, col: newCol },
+            focus: { row: newRow, col: newCol },
+          };
           setActiveAndSpan(newRow, newCol, span);
           anchorRow = newRow;
           anchorCol = newCol;
         }
       };
 
-      el.addEventListener('keydown', handleKey);
+      el.addEventListener("keydown", handleKey);
       return () => {
         unsubCell();
         unsubGroupClick();
-        el.removeEventListener('keydown', handleKey);
+        el.removeEventListener("keydown", handleKey);
       };
     },
   };

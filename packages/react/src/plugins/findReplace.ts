@@ -56,7 +56,7 @@ interface Match {
   field: string;
 }
 
-function computeMatches(
+export function computeMatches(
   rows: Row[],
   columns: ResolvedColumn[],
   query: string,
@@ -774,7 +774,7 @@ export function findReplace(): TablePlugin {
    ═══════════════════════════════════════════════════════════ */
 
 /** Build the escaped ILIKE/SIMILAR TO pattern string. */
-function buildPattern(query: string, useRegex: boolean): string {
+export function buildPattern(query: string, useRegex: boolean): string {
   if (useRegex) return escapeString(query);
   const escaped = query.replace(/'/g, "''").replace(/%/g, "\\%").replace(/_/g, "\\_");
   return `'%${escaped}%'`;

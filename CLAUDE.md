@@ -198,3 +198,10 @@ Test patterns:
 - Use `@testing-library/react` for component tests with jsdom
 - Assert SQL output strings for builder tests
 - Test edge cases: NULL values, empty arrays, special characters in strings
+
+## Roadmap
+
+- **Unit test coverage** — add tests for remaining plugins (findReplace, selection, keyboard, contextMenu, editing, columnPin, tableIO, formulas)
+- **Performance & scale** — profile with large datasets, optimize virtualization edge cases, identify bottlenecks
+- **Mobile / responsive** — touch-friendly UI, responsive panels, small-screen experience
+- **Chart color picker** — allow users to change series colors within the official palette from the chart display config UI

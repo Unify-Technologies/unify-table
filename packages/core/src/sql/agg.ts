@@ -1,21 +1,21 @@
-import { quoteIdent } from './utils.js';
+import { quoteIdent } from "./utils.js";
 
 /** Built-in aggregation functions with display labels. */
 export const BUILT_IN_AGGS: readonly { key: string; label: string }[] = [
-  { key: 'sum', label: 'SUM' },
-  { key: 'avg', label: 'AVG' },
-  { key: 'count', label: 'CNT' },
-  { key: 'min', label: 'MIN' },
-  { key: 'max', label: 'MAX' },
-  { key: 'count_distinct', label: 'DCNT' },
-  { key: 'median', label: 'MED' },
-  { key: 'first', label: 'FIRST' },
-  { key: 'last', label: 'LAST' },
-  { key: 'any', label: 'ANY' },
-  { key: 'mode', label: 'MODE' },
-  { key: 'stddev', label: 'STDEV' },
-  { key: 'variance', label: 'VAR' },
-  { key: 'string_agg', label: 'CONCAT' },
+  { key: "sum", label: "SUM" },
+  { key: "avg", label: "AVG" },
+  { key: "count", label: "CNT" },
+  { key: "min", label: "MIN" },
+  { key: "max", label: "MAX" },
+  { key: "count_distinct", label: "DCNT" },
+  { key: "median", label: "MED" },
+  { key: "first", label: "FIRST" },
+  { key: "last", label: "LAST" },
+  { key: "any", label: "ANY" },
+  { key: "mode", label: "MODE" },
+  { key: "stddev", label: "STDEV" },
+  { key: "variance", label: "VAR" },
+  { key: "string_agg", label: "CONCAT" },
 ];
 
 /** Registry of custom aggregation functions */
@@ -31,33 +31,33 @@ export function aggToSql(agg: string, field: string): string {
   const qf = quoteIdent(field);
 
   switch (agg) {
-    case 'sum':
+    case "sum":
       return `SUM(${qf})`;
-    case 'avg':
+    case "avg":
       return `AVG(${qf})`;
-    case 'count':
+    case "count":
       return `COUNT(${qf})`;
-    case 'min':
+    case "min":
       return `MIN(${qf})`;
-    case 'max':
+    case "max":
       return `MAX(${qf})`;
-    case 'count_distinct':
+    case "count_distinct":
       return `COUNT(DISTINCT ${qf})`;
-    case 'median':
+    case "median":
       return `MEDIAN(${qf})`;
-    case 'first':
+    case "first":
       return `FIRST(${qf})`;
-    case 'last':
+    case "last":
       return `LAST(${qf})`;
-    case 'any':
+    case "any":
       return `ANY_VALUE(${qf})`;
-    case 'mode':
+    case "mode":
       return `MODE(${qf})`;
-    case 'stddev':
+    case "stddev":
       return `STDDEV_SAMP(${qf})`;
-    case 'variance':
+    case "variance":
       return `VARIANCE(${qf})`;
-    case 'string_agg':
+    case "string_agg":
       return `STRING_AGG(${qf}, ', ')`;
     default: {
       const custom = customAggs.get(agg);
@@ -69,41 +69,41 @@ export function aggToSql(agg: string, field: string): string {
 
 // Convenience helpers that return the SQL string for a specific aggregation
 export function sum(field: string): string {
-  return aggToSql('sum', field);
+  return aggToSql("sum", field);
 }
 export function avg(field: string): string {
-  return aggToSql('avg', field);
+  return aggToSql("avg", field);
 }
 export function count(field: string): string {
-  return aggToSql('count', field);
+  return aggToSql("count", field);
 }
 export function min(field: string): string {
-  return aggToSql('min', field);
+  return aggToSql("min", field);
 }
 export function max(field: string): string {
-  return aggToSql('max', field);
+  return aggToSql("max", field);
 }
 export function countDistinct(field: string): string {
-  return aggToSql('count_distinct', field);
+  return aggToSql("count_distinct", field);
 }
 export function first(field: string): string {
-  return aggToSql('first', field);
+  return aggToSql("first", field);
 }
 export function last(field: string): string {
-  return aggToSql('last', field);
+  return aggToSql("last", field);
 }
 export function any(field: string): string {
-  return aggToSql('any', field);
+  return aggToSql("any", field);
 }
 export function mode(field: string): string {
-  return aggToSql('mode', field);
+  return aggToSql("mode", field);
 }
 export function stddev(field: string): string {
-  return aggToSql('stddev', field);
+  return aggToSql("stddev", field);
 }
 export function variance(field: string): string {
-  return aggToSql('variance', field);
+  return aggToSql("variance", field);
 }
 export function stringAgg(field: string): string {
-  return aggToSql('string_agg', field);
+  return aggToSql("string_agg", field);
 }

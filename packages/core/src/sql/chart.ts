@@ -1,6 +1,6 @@
-import { quoteIdent } from './utils.js';
-import { aggToSql } from './agg.js';
-import type { SqlFragment } from '../types.js';
+import { quoteIdent } from "./utils.js";
+import { aggToSql } from "./agg.js";
+import type { SqlFragment } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Chart value field
@@ -8,10 +8,10 @@ import type { SqlFragment } from '../types.js';
 
 export interface ValueField {
   field: string;
-  agg: 'sum' | 'avg' | 'count' | 'min' | 'max' | 'median' | 'count_distinct';
+  agg: "sum" | "avg" | "count" | "min" | "max" | "median" | "count_distinct";
   label?: string;
   format?: string;
-  yAxis?: 'left' | 'right';
+  yAxis?: "left" | "right";
 }
 
 // ---------------------------------------------------------------------------
@@ -19,16 +19,16 @@ export interface ValueField {
 // ---------------------------------------------------------------------------
 
 export type ChartType =
-  | 'bar'
-  | 'line'
-  | 'area'
-  | 'scatter'
-  | 'pie'
-  | 'donut'
-  | 'histogram'
-  | 'heatmap'
-  | 'treemap'
-  | 'funnel';
+  | "bar"
+  | "line"
+  | "area"
+  | "scatter"
+  | "pie"
+  | "donut"
+  | "histogram"
+  | "heatmap"
+  | "treemap"
+  | "funnel";
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -50,7 +50,7 @@ function whereClause(filters?: SqlFragment[], extra?: string): string {
   if (extra) {
     parts.push(extra);
   }
-  return parts.length > 0 ? ` WHERE ${parts.join(' AND ')}` : '';
+  return parts.length > 0 ? ` WHERE ${parts.join(" AND ")}` : "";
 }
 
 function normalizeY(y: ValueField | ValueField[]): ValueField[] {
@@ -69,7 +69,7 @@ export interface BarLineSqlOpts {
   filters?: SqlFragment[];
   where?: string;
   limit?: number;
-  sort?: 'asc' | 'desc' | 'value';
+  sort?: "asc" | "desc" | "value";
 }
 
 /**
@@ -90,13 +90,13 @@ export function barLineSql(opts: BarLineSqlOpts): string {
     selects.push(`${aggExpr(vf)} AS ${quoteIdent(aggAlias(vf))}`);
   }
 
-  let sql = `SELECT ${selects.join(', ')} FROM ${quoteIdent(table)}`;
+  let sql = `SELECT ${selects.join(", ")} FROM ${quoteIdent(table)}`;
   sql += whereClause(filters, where);
-  sql += ` GROUP BY ${groupBys.join(', ')}`;
+  sql += ` GROUP BY ${groupBys.join(", ")}`;
 
-  if (sort === 'value' && y.length > 0) {
+  if (sort === "value" && y.length > 0) {
     sql += ` ORDER BY ${quoteIdent(aggAlias(y[0]))} DESC`;
-  } else if (sort === 'desc') {
+  } else if (sort === "desc") {
     sql += ` ORDER BY ${quoteIdent(x)} DESC`;
   } else {
     sql += ` ORDER BY ${quoteIdent(x)} ASC`;
@@ -135,9 +135,9 @@ export function pieSql(opts: PieSqlOpts): string {
 
   selects.push(`${aggExpr(value)} AS ${quoteIdent(aggAlias(value))}`);
 
-  let sql = `SELECT ${selects.join(', ')} FROM ${quoteIdent(table)}`;
+  let sql = `SELECT ${selects.join(", ")} FROM ${quoteIdent(table)}`;
   sql += whereClause(filters, where);
-  sql += ` GROUP BY ${groupBys.join(', ')}`;
+  sql += ` GROUP BY ${groupBys.join(", ")}`;
   sql += ` ORDER BY ${quoteIdent(aggAlias(value))} DESC`;
   if (limit != null && limit > 0) {
     sql += ` LIMIT ${limit}`;
@@ -165,7 +165,7 @@ export function scatterSql(opts: ScatterSqlOpts): string {
   if (size) cols.push(quoteIdent(size));
   if (series) cols.push(quoteIdent(series));
 
-  let sql = `SELECT ${cols.join(', ')} FROM ${quoteIdent(table)}`;
+  let sql = `SELECT ${cols.join(", ")} FROM ${quoteIdent(table)}`;
   sql += whereClause(filters, where);
   sql += ` LIMIT ${limit ?? 5000}`;
   return sql;
@@ -232,7 +232,7 @@ export interface ChartSqlConfig {
   filters?: SqlFragment[];
   where?: string;
   limit?: number;
-  sort?: 'asc' | 'desc' | 'value';
+  sort?: "asc" | "desc" | "value";
 }
 
 /**
@@ -243,18 +243,18 @@ export function buildChartSql(table: string, config: ChartSqlConfig): string {
   const yArr = normalizeY(y);
 
   switch (type) {
-    case 'bar':
-    case 'line':
-    case 'area':
-    case 'funnel':
+    case "bar":
+    case "line":
+    case "area":
+    case "funnel":
       return barLineSql({ table, x, y: yArr, series, filters, where, limit, sort });
 
-    case 'pie':
-    case 'donut':
-    case 'treemap':
+    case "pie":
+    case "donut":
+    case "treemap":
       return pieSql({ table, label: x, value: yArr[0], series, filters, where, limit });
 
-    case 'scatter':
+    case "scatter":
       return scatterSql({
         table,
         x,
@@ -266,10 +266,10 @@ export function buildChartSql(table: string, config: ChartSqlConfig): string {
         limit: limit ?? 5000,
       });
 
-    case 'histogram':
+    case "histogram":
       return histogramSql({ table, field: x, bins: limit ?? 20, filters, where });
 
-    case 'heatmap':
+    case "heatmap":
       return heatmapSql({
         table,
         x,

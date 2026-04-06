@@ -1,6 +1,6 @@
-import type { QueryEngine } from './engine.js';
-import type { SqlFragment, SortDir } from './types.js';
-import { quoteIdent } from './sql/utils.js';
+import type { QueryEngine } from "./engine.js";
+import type { SqlFragment, SortDir } from "./types.js";
+import { quoteIdent } from "./sql/utils.js";
 
 export interface SortSpec {
   field: string;
@@ -39,16 +39,16 @@ export function buildViewSelect(
 ): string {
   const extras = (extraExpressions ?? [])
     .map((e) => `(${e.expression}) AS ${quoteIdent(e.alias)}`)
-    .join(', ');
-  const selectList = extras ? `*, ${extras}` : '*';
+    .join(", ");
+  const selectList = extras ? `*, ${extras}` : "*";
   let sql = `SELECT ${selectList} FROM ${quoteIdent(table)}`;
 
   if (filters.length > 0) {
-    sql += ` WHERE ${filters.map((f) => f.sql).join(' AND ')}`;
+    sql += ` WHERE ${filters.map((f) => f.sql).join(" AND ")}`;
   }
 
   if (sort.length > 0) {
-    sql += ` ORDER BY ${sort.map((s) => `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`).join(', ')}`;
+    sql += ` ORDER BY ${sort.map((s) => `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`).join(", ")}`;
   }
 
   return sql;
@@ -62,13 +62,9 @@ export function buildViewSelect(
  * from the underlying table. This enables non-destructive editing:
  * writes go to the raw table, the view reflects changes automatically.
  */
-export function createViewManager(
-  engine: QueryEngine,
-  table: string,
-  id: string,
-): ViewManager {
+export function createViewManager(engine: QueryEngine, table: string, id: string): ViewManager {
   const viewName = `__utbl_v_${id}`;
-  let _viewSql = '';
+  let _viewSql = "";
   let _baseTable = table;
   let _extraExpressions: SelectExpression[] = [];
 
@@ -102,7 +98,7 @@ export function createViewManager(
     async drop() {
       try {
         await engine.execute(`DROP VIEW IF EXISTS ${quoteIdent(viewName)}`);
-        _viewSql = '';
+        _viewSql = "";
       } catch (err) {
         const msg = `ViewManager.drop failed for view "${viewName}": ${err instanceof Error ? err.message : err}`;
         throw Object.assign(new Error(msg), { cause: err });

@@ -1,6 +1,6 @@
-import type { DisplayType } from '../display.js';
-import type { ColumnInfo } from '../engine.js';
-import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
+import type { DisplayType } from "../display.js";
+import type { ColumnInfo } from "../engine.js";
+import { quoteIdent, isIdentityColumn, isNumericType } from "../sql/utils.js";
 
 export interface CorrelationDisplayConfig {
   /** Numeric columns to include. Empty = auto-select all numeric columns. */
@@ -12,7 +12,7 @@ export interface CorrelationDisplayConfig {
   /** Show correlation values as text inside cells. Default true. */
   showValues: boolean;
   /** Color scheme: 'diverging' (red-white-blue) or 'sequential' (white-blue). */
-  colorScheme: 'diverging' | 'sequential';
+  colorScheme: "diverging" | "sequential";
 }
 
 function resolveColumns(config: CorrelationDisplayConfig, columns: ColumnInfo[]): string[] {
@@ -24,9 +24,9 @@ function resolveColumns(config: CorrelationDisplayConfig, columns: ColumnInfo[])
 }
 
 export const correlationDisplayType: DisplayType<CorrelationDisplayConfig> = {
-  key: 'correlation',
-  label: 'Correlation',
-  description: 'Pairwise Pearson correlation heatmap for numeric columns',
+  key: "correlation",
+  label: "Correlation",
+  description: "Pairwise Pearson correlation heatmap for numeric columns",
 
   buildSql(viewName, config, columns) {
     const cols = resolveColumns(config, columns);
@@ -35,15 +35,13 @@ export const correlationDisplayType: DisplayType<CorrelationDisplayConfig> = {
     for (let i = 0; i < cols.length; i++) {
       for (let j = i + 1; j < cols.length; j++) {
         const alias = `p_${i}_${j}`;
-        pairs.push(
-          `CORR(${quoteIdent(cols[i])}, ${quoteIdent(cols[j])}) AS ${quoteIdent(alias)}`,
-        );
+        pairs.push(`CORR(${quoteIdent(cols[i])}, ${quoteIdent(cols[j])}) AS ${quoteIdent(alias)}`);
       }
     }
 
     if (pairs.length === 0) return `SELECT 1`;
 
-    return `SELECT ${pairs.join(', ')} FROM ${quoteIdent(viewName)}`;
+    return `SELECT ${pairs.join(", ")} FROM ${quoteIdent(viewName)}`;
   },
 
   defaultConfig(columns) {
@@ -55,17 +53,17 @@ export const correlationDisplayType: DisplayType<CorrelationDisplayConfig> = {
       maxAutoColumns: 20,
       highlightThreshold: 0.7,
       showValues: true,
-      colorScheme: 'diverging',
+      colorScheme: "diverging",
     };
   },
 
   validate(config) {
     const errors: string[] = [];
     const cols = config.selectedColumns ?? [];
-    if (cols.length < 2) errors.push('At least 2 numeric columns are required');
-    if (cols.length > 100) errors.push('Maximum 100 columns supported');
+    if (cols.length < 2) errors.push("At least 2 numeric columns are required");
+    if (cols.length > 100) errors.push("Maximum 100 columns supported");
     if (config.highlightThreshold < 0 || config.highlightThreshold > 1) {
-      errors.push('Highlight threshold must be between 0 and 1');
+      errors.push("Highlight threshold must be between 0 and 1");
     }
     return errors.length > 0 ? errors : null;
   },

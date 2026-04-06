@@ -1,5 +1,5 @@
-import type { ColumnType, Row } from './types.js';
-import { quoteIdent, escapeString } from './sql/utils.js';
+import type { ColumnType, Row } from "./types.js";
+import { quoteIdent, escapeString } from "./sql/utils.js";
 
 /**
  * Minimal connection interface — compatible with IDuckDBConnection from @unify/unify-duckdb-common.
@@ -30,28 +30,50 @@ export interface QueryEngine {
   /** Get distinct values for a column (for filter dropdowns). */
   distinct(table: string, column: string, limit?: number): Promise<unknown[]>;
   /** Export a table as a Blob in the given format. */
-  exportBlob(table: string, format: 'csv' | 'parquet' | 'json'): Promise<Blob>;
+  exportBlob(table: string, format: "csv" | "parquet" | "json"): Promise<Blob>;
 }
 
 /** Map DuckDB type strings to our broad ColumnType categories. */
 function mapDuckDBType(duckdbType: string): ColumnType {
   const t = duckdbType.toUpperCase();
-  if (t.includes('BIGINT') || t.includes('HUGEINT')) return 'bigint';
-  if (t.includes('INT') || t.includes('FLOAT') || t.includes('DOUBLE') || t.includes('DECIMAL') || t.includes('NUMERIC'))
-    return 'number';
-  if (t === 'BOOLEAN' || t === 'BOOL') return 'boolean';
-  if (t === 'DATE') return 'date';
-  if (t.includes('TIMESTAMP') || t.includes('TIME')) return 'timestamp';
-  if (t === 'BLOB' || t === 'BYTEA') return 'blob';
-  if (t.startsWith('STRUCT')) return 'struct';
-  if (t.startsWith('MAP') || t.endsWith('[]') || t.startsWith('LIST')) return 'list';
-  if (t.startsWith('ENUM')) return 'enum';
-  if (t === 'VARCHAR' || t === 'TEXT' || t === 'STRING' || t.startsWith('CHAR')) return 'string';
-  return 'unknown';
+  if (t.includes("BIGINT") || t.includes("HUGEINT")) return "bigint";
+  if (
+    t.includes("INT") ||
+    t.includes("FLOAT") ||
+    t.includes("DOUBLE") ||
+    t.includes("DECIMAL") ||
+    t.includes("NUMERIC")
+  )
+    return "number";
+  if (t === "BOOLEAN" || t === "BOOL") return "boolean";
+  if (t === "DATE") return "date";
+  if (t.includes("TIMESTAMP") || t.includes("TIME")) return "timestamp";
+  if (t === "BLOB" || t === "BYTEA") return "blob";
+  if (t.startsWith("STRUCT")) return "struct";
+  if (t.startsWith("MAP") || t.endsWith("[]") || t.startsWith("LIST")) return "list";
+  if (t.startsWith("ENUM")) return "enum";
+  if (t === "VARCHAR" || t === "TEXT" || t === "STRING" || t.startsWith("CHAR")) return "string";
+  return "unknown";
+}
+
+const COLUMNS_CACHE_TTL = 60_000;
+
+interface CacheEntry<T> {
+  result: T;
+  ts: number;
 }
 
 /** Create a QueryEngine from a DuckDB connection (or any TableConnection-compatible object). */
 export function createQueryEngine(connection: TableConnection): QueryEngine {
+  const columnsCache = new Map<string, CacheEntry<ColumnInfo[]>>();
+
+  function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string, ttl: number): T | undefined {
+    const entry = cache.get(key);
+    if (entry && Date.now() - entry.ts < ttl) return entry.result;
+    if (entry) cache.delete(key);
+    return undefined;
+  }
+
   return {
     async query<T = Row>(sql: string): Promise<T[]> {
       return (await connection.runAndRead(sql)) as T[];
@@ -62,15 +84,19 @@ export function createQueryEngine(connection: TableConnection): QueryEngine {
     },
 
     async columns(table: string): Promise<ColumnInfo[]> {
+      const cached = getCached(columnsCache, table, COLUMNS_CACHE_TTL);
+      if (cached) return cached;
       const rows = await connection.runAndRead(
-        `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = ${escapeString(table)}`
+        `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = ${escapeString(table)}`,
       );
-      return rows.map((r) => ({
+      const result = rows.map((r) => ({
         name: r.column_name as string,
         type: r.data_type as string,
         mappedType: mapDuckDBType(r.data_type as string),
-        nullable: (r.is_nullable as string) === 'YES',
+        nullable: (r.is_nullable as string) === "YES",
       }));
+      columnsCache.set(table, { result, ts: Date.now() });
+      return result;
     },
 
     async count(table: string, where?: string): Promise<number> {
@@ -84,14 +110,14 @@ export function createQueryEngine(connection: TableConnection): QueryEngine {
 
     async distinct(table: string, column: string, limit = 50): Promise<unknown[]> {
       const rows = await connection.runAndRead(
-        `SELECT DISTINCT ${quoteIdent(column)} AS val FROM ${quoteIdent(table)} ORDER BY val LIMIT ${limit}`
+        `SELECT DISTINCT ${quoteIdent(column)} AS val FROM ${quoteIdent(table)} ORDER BY val LIMIT ${limit}`,
       );
       return rows.map((r) => r.val);
     },
 
-    async exportBlob(table: string, format: 'csv' | 'parquet' | 'json'): Promise<Blob> {
+    async exportBlob(table: string, format: "csv" | "parquet" | "json"): Promise<Blob> {
       return connection.runAndReadParquetBlob(
-        `COPY (SELECT * FROM ${quoteIdent(table)}) TO '/dev/stdout' (FORMAT ${format})`
+        `COPY (SELECT * FROM ${quoteIdent(table)}) TO '/dev/stdout' (FORMAT ${format})`,
       );
     },
   };

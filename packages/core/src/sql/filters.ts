@@ -1,5 +1,5 @@
-import type { SqlFragment, ColumnType } from '../types.js';
-import { quoteIdent, toSqlLiteral } from './utils.js';
+import type { SqlFragment, ColumnType } from "../types.js";
+import { quoteIdent, toSqlLiteral } from "./utils.js";
 
 function fragment(sql: string): SqlFragment {
   return { sql, toString: () => sql };
@@ -36,25 +36,25 @@ export function lte(field: string, value: unknown): SqlFragment {
 // --- Text filters ---
 
 export function contains(field: string, value: string): SqlFragment {
-  const escaped = value.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+  const escaped = value.replace(/'/g, "''").replace(/%/g, "\\%").replace(/_/g, "\\_");
   return fragment(`${quoteIdent(field)} ILIKE '%${escaped}%' ESCAPE '\\'`);
 }
 
 export function startsWith(field: string, value: string): SqlFragment {
-  const escaped = value.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+  const escaped = value.replace(/'/g, "''").replace(/%/g, "\\%").replace(/_/g, "\\_");
   return fragment(`${quoteIdent(field)} ILIKE '${escaped}%' ESCAPE '\\'`);
 }
 
 export function endsWith(field: string, value: string): SqlFragment {
-  const escaped = value.replace(/'/g, "''").replace(/%/g, '\\%').replace(/_/g, '\\_');
+  const escaped = value.replace(/'/g, "''").replace(/%/g, "\\%").replace(/_/g, "\\_");
   return fragment(`${quoteIdent(field)} ILIKE '%${escaped}' ESCAPE '\\'`);
 }
 
 // --- Set / range filters ---
 
 export function oneOf(field: string, values: unknown[]): SqlFragment {
-  if (values.length === 0) return fragment('FALSE');
-  const literals = values.map(toSqlLiteral).join(', ');
+  if (values.length === 0) return fragment("FALSE");
+  const literals = values.map(toSqlLiteral).join(", ");
   return fragment(`${quoteIdent(field)} IN (${literals})`);
 }
 
@@ -75,15 +75,15 @@ export function isNotNull(field: string): SqlFragment {
 // --- Combinators ---
 
 export function and(...clauses: SqlFragment[]): SqlFragment {
-  if (clauses.length === 0) return fragment('TRUE');
+  if (clauses.length === 0) return fragment("TRUE");
   if (clauses.length === 1) return clauses[0];
-  return fragment(`(${clauses.map((c) => c.sql).join(' AND ')})`);
+  return fragment(`(${clauses.map((c) => c.sql).join(" AND ")})`);
 }
 
 export function or(...clauses: SqlFragment[]): SqlFragment {
-  if (clauses.length === 0) return fragment('FALSE');
+  if (clauses.length === 0) return fragment("FALSE");
   if (clauses.length === 1) return clauses[0];
-  return fragment(`(${clauses.map((c) => c.sql).join(' OR ')})`);
+  return fragment(`(${clauses.map((c) => c.sql).join(" OR ")})`);
 }
 
 export function not(clause: SqlFragment): SqlFragment {
@@ -119,15 +119,19 @@ export function raw(sql: string): SqlFragment {
  *   2024                                            — whole year  (BETWEEN Jan 1..Dec 31)
  *   All comparison / range operators work with date literals too.
  */
-export function parseFilterExpr(field: string, input: string, columnType?: ColumnType): SqlFragment | null {
+export function parseFilterExpr(
+  field: string,
+  input: string,
+  columnType?: ColumnType,
+): SqlFragment | null {
   const trimmed = input.trim();
   if (trimmed.length === 0) return null;
 
-  const isDateCol = columnType === 'date' || columnType === 'timestamp';
+  const isDateCol = columnType === "date" || columnType === "timestamp";
 
   // NULL / !NULL
-  if (trimmed.toUpperCase() === 'NULL') return isNull(field);
-  if (trimmed.toUpperCase() === '!NULL') return isNotNull(field);
+  if (trimmed.toUpperCase() === "NULL") return isNull(field);
+  if (trimmed.toUpperCase() === "!NULL") return isNotNull(field);
 
   // Date-specific: relative keywords & partial dates (before operator parsing so `> today-7` works)
   if (isDateCol) {
@@ -153,12 +157,18 @@ export function parseFilterExpr(field: string, input: string, columnType?: Colum
     const [, op, rawVal] = cmpMatch;
     const value = coerce(rawVal.trim(), isDateCol);
     switch (op) {
-      case '>=': return gte(field, value);
-      case '<=': return lte(field, value);
-      case '>': return gt(field, value);
-      case '<': return lt(field, value);
-      case '!=': return neq(field, value);
-      case '=': return eq(field, value);
+      case ">=":
+        return gte(field, value);
+      case "<=":
+        return lte(field, value);
+      case ">":
+        return gt(field, value);
+      case "<":
+        return lt(field, value);
+      case "!=":
+        return neq(field, value);
+      case "=":
+        return eq(field, value);
     }
   }
 
@@ -171,18 +181,18 @@ export function parseFilterExpr(field: string, input: string, columnType?: Colum
   }
 
   // Comma-separated: val1,val2,val3 (only if no wildcards present)
-  if (trimmed.includes(',') && !trimmed.includes('%')) {
-    const values = trimmed.split(',').map((v) => coerce(v.trim(), isDateCol));
+  if (trimmed.includes(",") && !trimmed.includes("%")) {
+    const values = trimmed.split(",").map((v) => coerce(v.trim(), isDateCol));
     return oneOf(field, values);
   }
 
   // Wildcards: USD%, %USD, %USD%
-  if (trimmed.includes('%')) {
-    const startsW = trimmed.endsWith('%') && !trimmed.startsWith('%');
-    const endsW = trimmed.startsWith('%') && !trimmed.endsWith('%');
+  if (trimmed.includes("%")) {
+    const startsW = trimmed.endsWith("%") && !trimmed.startsWith("%");
+    const endsW = trimmed.startsWith("%") && !trimmed.endsWith("%");
     if (startsW) return startsWith(field, trimmed.slice(0, -1));
     if (endsW) return endsWith(field, trimmed.slice(1));
-    const inner = trimmed.replace(/^%/, '').replace(/%$/, '');
+    const inner = trimmed.replace(/^%/, "").replace(/%$/, "");
     return contains(field, inner);
   }
 
@@ -216,14 +226,14 @@ function resolveRelativeDate(value: string): string | null {
   const base = m[1].toLowerCase();
   let d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  if (base === 'yesterday') d.setDate(d.getDate() - 1);
-  else if (base === 'tomorrow') d.setDate(d.getDate() + 1);
+  if (base === "yesterday") d.setDate(d.getDate() - 1);
+  else if (base === "tomorrow") d.setDate(d.getDate() + 1);
 
   if (m[2]) d.setDate(d.getDate() + Number(m[2]));
 
   const yy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
 
@@ -231,7 +241,7 @@ function resolveRelativeDate(value: string): string | null {
 function lastDayOfMonth(year: number, month: number): string {
   // day 0 of next month = last day of this month
   const day = new Date(year, month, 0).getDate();
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 /** Coerce a string value. When `dateHint` is true, resolves relative dates and keeps date strings. */
@@ -240,7 +250,12 @@ function coerce(value: string, dateHint: boolean): string | number {
     const resolved = resolveRelativeDate(value);
     if (resolved) return resolved;
     // Keep date-like strings as strings (don't Number('2024') → 2024)
-    if (ISO_DATE_RE.test(value) || ISO_DATETIME_RE.test(value) || /^\d{4}$/.test(value) || /^\d{4}-\d{2}$/.test(value)) {
+    if (
+      ISO_DATE_RE.test(value) ||
+      ISO_DATETIME_RE.test(value) ||
+      /^\d{4}$/.test(value) ||
+      /^\d{4}-\d{2}$/.test(value)
+    ) {
       return value;
     }
   }

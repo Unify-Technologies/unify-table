@@ -1,10 +1,10 @@
-import type { QueryEngine, ColumnInfo } from './engine.js';
-import type { Row } from './types.js';
-import { quoteIdent, toSqlLiteral } from './sql/utils.js';
+import type { QueryEngine, ColumnInfo } from "./engine.js";
+import type { Row } from "./types.js";
+import { quoteIdent, toSqlLiteral } from "./sql/utils.js";
 
 export interface DirtyRow {
   rowId: unknown;
-  state: 'edited' | 'added' | 'deleted';
+  state: "edited" | "added" | "deleted";
 }
 
 export interface EditOverlay {
@@ -26,7 +26,7 @@ export interface EditOverlay {
   deleteRow(rowId: unknown): Promise<void>;
 
   /** Restore an added row into the overlay (for undo-delete of an 'added' row). */
-  restoreRow(data: Row, state: 'edited' | 'added'): Promise<void>;
+  restoreRow(data: Row, state: "edited" | "added"): Promise<void>;
 
   /** Revert a specific row back to source (remove from overlay). */
   revert(rowId: unknown): Promise<void>;
@@ -60,7 +60,7 @@ export function createEditOverlay(
   const overlayTable = `__utbl_ov_${id}`;
   const viewName = `__utbl_ev_${id}`;
   let _columns: ColumnInfo[] = [];
-  let _rowIdField = '';
+  let _rowIdField = "";
 
   const qSrc = () => quoteIdent(sourceTable);
   const qOv = () => quoteIdent(overlayTable);
@@ -69,7 +69,7 @@ export function createEditOverlay(
 
   /** Column names from the source (excludes __utbl_state). */
   function sourceColList(): string {
-    return _columns.map((c) => quoteIdent(c.name)).join(', ');
+    return _columns.map((c) => quoteIdent(c.name)).join(", ");
   }
 
   /** Rebuild the merge view: source anti-joined with overlay UNION ALL overlay (non-deleted).
@@ -139,8 +139,8 @@ export function createEditOverlay(
     async addRow(data) {
       try {
         const fields = Object.keys(data);
-        const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(', ');
-        const vals = [...fields.map((f) => toSqlLiteral(data[f])), "'added'"].join(', ');
+        const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(", ");
+        const vals = [...fields.map((f) => toSqlLiteral(data[f])), "'added'"].join(", ");
         await engine.execute(`INSERT INTO ${qOv()} (${cols}) VALUES (${vals})`);
       } catch (err) {
         const msg = `EditOverlay.addRow failed for "${overlayTable}": ${err instanceof Error ? err.message : err}`;
@@ -156,11 +156,9 @@ export function createEditOverlay(
         );
 
         if (existing.length > 0) {
-          if (existing[0].state === 'added') {
+          if (existing[0].state === "added") {
             // Row was added in this session -- truly remove it
-            await engine.execute(
-              `DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-            );
+            await engine.execute(`DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`);
           } else {
             // Row was edited -- mark as deleted
             await engine.execute(
@@ -182,8 +180,8 @@ export function createEditOverlay(
     async restoreRow(data, state) {
       try {
         const fields = Object.keys(data);
-        const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(', ');
-        const vals = [...fields.map((f) => toSqlLiteral(data[f])), toSqlLiteral(state)].join(', ');
+        const cols = [...fields.map(quoteIdent), '"__utbl_state"'].join(", ");
+        const vals = [...fields.map((f) => toSqlLiteral(data[f])), toSqlLiteral(state)].join(", ");
         await engine.execute(`INSERT INTO ${qOv()} (${cols}) VALUES (${vals})`);
       } catch (err) {
         const msg = `EditOverlay.restoreRow failed for rowId=${String(data[_rowIdField])}: ${err instanceof Error ? err.message : err}`;
@@ -193,9 +191,7 @@ export function createEditOverlay(
 
     async revert(rowId) {
       try {
-        await engine.execute(
-          `DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`,
-        );
+        await engine.execute(`DELETE FROM ${qOv()} WHERE ${qRowId()} = ${toSqlLiteral(rowId)}`);
       } catch (err) {
         const msg = `EditOverlay.revert failed for rowId=${String(rowId)}: ${err instanceof Error ? err.message : err}`;
         throw Object.assign(new Error(msg), { cause: err });
@@ -218,7 +214,7 @@ export function createEditOverlay(
         );
         return rows.map((r) => ({
           rowId: r.rowId,
-          state: r.state as DirtyRow['state'],
+          state: r.state as DirtyRow["state"],
         }));
       } catch (err) {
         const msg = `EditOverlay.getDirtyRows failed for "${overlayTable}": ${err instanceof Error ? err.message : err}`;
@@ -232,12 +228,12 @@ export function createEditOverlay(
         const setClauses = _columns
           .filter((c) => c.name !== _rowIdField)
           .map((c) => `${quoteIdent(c.name)} = __ov.${quoteIdent(c.name)}`)
-          .join(', ');
+          .join(", ");
 
         // Apply edits: overwrite source rows with overlay versions
         await engine.execute(
           `UPDATE ${qSrc()} SET ${setClauses} FROM ${qOv()} AS __ov ` +
-          `WHERE ${qSrc()}.${qRowId()} = __ov.${qRowId()} AND __ov."__utbl_state" = 'edited'`,
+            `WHERE ${qSrc()}.${qRowId()} = __ov.${qRowId()} AND __ov."__utbl_state" = 'edited'`,
         );
         // Apply adds: insert new rows into source
         await engine.execute(

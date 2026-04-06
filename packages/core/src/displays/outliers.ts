@@ -1,7 +1,7 @@
-import type { DisplayType } from '../display.js';
-import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
+import type { DisplayType } from "../display.js";
+import { quoteIdent, isIdentityColumn, isNumericType } from "../sql/utils.js";
 
-export type OutlierMethod = 'iqr' | 'zscore';
+export type OutlierMethod = "iqr" | "zscore";
 
 export interface OutliersDisplayConfig {
   /** Numeric column to analyze. */
@@ -17,9 +17,9 @@ export interface OutliersDisplayConfig {
 }
 
 export const outliersDisplayType: DisplayType<OutliersDisplayConfig> = {
-  key: 'outliers',
-  label: 'Outliers',
-  description: 'Detect outliers with box plot and IQR or z-score',
+  key: "outliers",
+  label: "Outliers",
+  description: "Detect outliers with box plot and IQR or z-score",
 
   buildSql(viewName, config) {
     const qf = quoteIdent(config.field);
@@ -27,10 +27,8 @@ export const outliersDisplayType: DisplayType<OutliersDisplayConfig> = {
     const limit = config.limit ?? 100;
     const threshold = config.threshold;
 
-    const labelSelect = config.labelField
-      ? `t.${quoteIdent(config.labelField)} AS "label", `
-      : '';
-    const labelNull = config.labelField ? 'NULL AS "label", ' : '';
+    const labelSelect = config.labelField ? `t.${quoteIdent(config.labelField)} AS "label", ` : "";
+    const labelNull = config.labelField ? 'NULL AS "label", ' : "";
 
     const statsCte =
       `WITH stats AS (` +
@@ -63,7 +61,7 @@ export const outliersDisplayType: DisplayType<OutliersDisplayConfig> = {
       `b.iqr, b.lower_bound, b.upper_bound`;
 
     const whereClause =
-      config.method === 'zscore'
+      config.method === "zscore"
         ? `WHERE ABS(${zscoreExpr}) > ${threshold}`
         : `WHERE t.${qf} < b.lower_bound OR t.${qf} > b.upper_bound`;
 
@@ -79,14 +77,12 @@ export const outliersDisplayType: DisplayType<OutliersDisplayConfig> = {
   },
 
   defaultConfig(columns) {
-    const numCol = columns.find(
-      (c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name),
-    );
-    const labelCol = columns.find((c) => c.mappedType === 'string');
+    const numCol = columns.find((c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name));
+    const labelCol = columns.find((c) => c.mappedType === "string");
 
     return {
-      field: numCol?.name ?? columns[0]?.name ?? '',
-      method: 'iqr',
+      field: numCol?.name ?? columns[0]?.name ?? "",
+      method: "iqr",
       threshold: 1.5,
       labelField: labelCol?.name,
       limit: 100,
@@ -95,8 +91,8 @@ export const outliersDisplayType: DisplayType<OutliersDisplayConfig> = {
 
   validate(config) {
     const errors: string[] = [];
-    if (!config.field) errors.push('Numeric field is required');
-    if (config.threshold <= 0) errors.push('Threshold must be positive');
+    if (!config.field) errors.push("Numeric field is required");
+    if (config.threshold <= 0) errors.push("Threshold must be positive");
     return errors.length > 0 ? errors : null;
   },
 };

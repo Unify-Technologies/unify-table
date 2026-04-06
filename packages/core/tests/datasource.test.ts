@@ -8,8 +8,10 @@ function mockEngine(opts: {
   rows?: Record<string, unknown>[];
   total?: number;
 } = {}): QueryEngine {
-  const rows = opts.rows ?? [{ id: 1 }, { id: 2 }];
-  const total = opts.total ?? rows.length;
+  const baseRows = opts.rows ?? [{ id: 1 }, { id: 2 }];
+  const total = opts.total ?? baseRows.length;
+  // fetch/fetchGroupDetail use COUNT(*) OVER() — inject __total__ into mock rows
+  const rows = baseRows.map((r) => ({ ...r, __total__: total }));
 
   return {
     query: vi.fn().mockResolvedValue(rows),
@@ -122,7 +124,7 @@ describe('DataSource', () => {
       expect(sql).toContain(`"pnl" > 0`);
     });
 
-    it('passes filters to count', async () => {
+    it('includes filters in the combined query (no separate count call)', async () => {
       const engine = mockEngine();
       const ds = createDataSource(engine, 'trades');
 
@@ -130,7 +132,11 @@ describe('DataSource', () => {
       await new Promise((r) => queueMicrotask(r));
 
       await ds.fetch({ offset: 0, limit: 50 });
-      expect(engine.count).toHaveBeenCalledWith('trades', `"region" = 'EMEA'`);
+      // fetch now uses COUNT(*) OVER() instead of a separate count call
+      expect(engine.count).not.toHaveBeenCalled();
+      const sql = (engine.query as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(sql).toContain(`"region" = 'EMEA'`);
+      expect(sql).toContain('COUNT(*) OVER()');
     });
   });
 
@@ -176,7 +182,7 @@ describe('DataSource', () => {
 
     it('emits error on failure', async () => {
       const engine = mockEngine();
-      (engine.count as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+      (engine.query as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
 
       const ds = createDataSource(engine, 'trades');
       const handler = vi.fn();

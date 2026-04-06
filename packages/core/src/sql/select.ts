@@ -1,5 +1,5 @@
-import type { SqlFragment, SortDir } from '../types.js';
-import { quoteIdent, toSqlLiteral } from './utils.js';
+import type { SqlFragment, SortDir } from "../types.js";
+import { quoteIdent, toSqlLiteral } from "./utils.js";
 
 /** Chainable SQL query builder. Immutable — each method returns a new instance. */
 interface Query {
@@ -40,7 +40,7 @@ function createQuery(state: QueryState): Query {
         groupByFields: [...state.groupByFields, ...fields],
       });
     },
-    orderBy(field: string, dir: SortDir = 'asc') {
+    orderBy(field: string, dir: SortDir = "asc") {
       return createQuery({
         ...state,
         orderByClauses: [...state.orderByClauses, `${quoteIdent(field)} ${dir.toUpperCase()}`],
@@ -56,14 +56,15 @@ function createQuery(state: QueryState): Query {
       const parts: string[] = [`SELECT ${state.selectClause}`];
 
       if (state.fromClause) parts.push(`FROM ${state.fromClause}`);
-      if (state.whereClauses.length > 0) parts.push(`WHERE ${state.whereClauses.join(' AND ')}`);
+      if (state.whereClauses.length > 0) parts.push(`WHERE ${state.whereClauses.join(" AND ")}`);
       if (state.groupByFields.length > 0)
-        parts.push(`GROUP BY ${state.groupByFields.map(quoteIdent).join(', ')}`);
-      if (state.orderByClauses.length > 0) parts.push(`ORDER BY ${state.orderByClauses.join(', ')}`);
+        parts.push(`GROUP BY ${state.groupByFields.map(quoteIdent).join(", ")}`);
+      if (state.orderByClauses.length > 0)
+        parts.push(`ORDER BY ${state.orderByClauses.join(", ")}`);
       if (state.limitValue !== null) parts.push(`LIMIT ${state.limitValue}`);
       if (state.offsetValue !== null) parts.push(`OFFSET ${state.offsetValue}`);
 
-      return parts.join(' ');
+      return parts.join(" ");
     },
     toString() {
       return this.sql();
@@ -74,7 +75,7 @@ function createQuery(state: QueryState): Query {
 function emptyState(selectClause: string): QueryState {
   return {
     selectClause,
-    fromClause: '',
+    fromClause: "",
     whereClauses: [],
     groupByFields: [],
     orderByClauses: [],
@@ -85,7 +86,7 @@ function emptyState(selectClause: string): QueryState {
 
 /** Start building a SELECT query. */
 export function select(...fields: string[]): Query {
-  const clause = fields.length === 0 ? '*' : fields.map(quoteIdent).join(', ');
+  const clause = fields.length === 0 ? "*" : fields.map(quoteIdent).join(", ");
   return createQuery(emptyState(clause));
 }
 
@@ -119,10 +120,10 @@ function createUpdateQuery(state: UpdateState): UpdateQuery {
       });
     },
     sql() {
-      if (state.sets.length === 0) throw new Error('UPDATE requires at least one SET clause');
-      const parts = [`UPDATE ${quoteIdent(state.table)} SET ${state.sets.join(', ')}`];
-      if (state.whereClauses.length > 0) parts.push(`WHERE ${state.whereClauses.join(' AND ')}`);
-      return parts.join(' ');
+      if (state.sets.length === 0) throw new Error("UPDATE requires at least one SET clause");
+      const parts = [`UPDATE ${quoteIdent(state.table)} SET ${state.sets.join(", ")}`];
+      if (state.whereClauses.length > 0) parts.push(`WHERE ${state.whereClauses.join(" AND ")}`);
+      return parts.join(" ");
     },
     toString() {
       return this.sql();
@@ -152,12 +153,12 @@ function createInsertQuery(state: InsertState): InsertQuery {
       return createInsertQuery({ ...state, rows: [...state.rows, data] });
     },
     sql() {
-      if (state.rows.length === 0) throw new Error('INSERT requires at least one row');
+      if (state.rows.length === 0) throw new Error("INSERT requires at least one row");
       const columns = Object.keys(state.rows[0]);
-      const colList = columns.map(quoteIdent).join(', ');
+      const colList = columns.map(quoteIdent).join(", ");
       const valuesList = state.rows
-        .map((row) => `(${columns.map((c) => toSqlLiteral(row[c])).join(', ')})`)
-        .join(', ');
+        .map((row) => `(${columns.map((c) => toSqlLiteral(row[c])).join(", ")})`)
+        .join(", ");
       return `INSERT INTO ${quoteIdent(state.table)} (${colList}) VALUES ${valuesList}`;
     },
     toString() {
@@ -192,8 +193,8 @@ function createDeleteQuery(state: DeleteState): DeleteQuery {
     },
     sql() {
       const parts = [`DELETE FROM ${quoteIdent(state.table)}`];
-      if (state.whereClauses.length > 0) parts.push(`WHERE ${state.whereClauses.join(' AND ')}`);
-      return parts.join(' ');
+      if (state.whereClauses.length > 0) parts.push(`WHERE ${state.whereClauses.join(" AND ")}`);
+      return parts.join(" ");
     },
     toString() {
       return this.sql();

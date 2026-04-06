@@ -1,6 +1,6 @@
-import type { ColumnInfo } from './engine.js';
+import type { ColumnInfo } from "./engine.js";
 
-export type CardSize = 'sm' | 'md' | 'lg';
+export type CardSize = "sm" | "md" | "lg";
 
 /**
  * Serializable configuration for a display instance.

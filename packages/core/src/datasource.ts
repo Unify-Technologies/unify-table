@@ -1,7 +1,7 @@
-import type { Row, SortDir, SqlFragment } from './types.js';
-import type { QueryEngine } from './engine.js';
-import type { ViewManager } from './view.js';
-import { quoteIdent, toSqlLiteral } from './sql/utils.js';
+import type { Row, SortDir, SqlFragment } from "./types.js";
+import type { QueryEngine } from "./engine.js";
+import type { ViewManager } from "./view.js";
+import { quoteIdent, toSqlLiteral } from "./sql/utils.js";
 
 export interface SortField {
   field: string;
@@ -20,12 +20,12 @@ export interface DataPage {
   total: number;
 }
 
-type EventType = 'loading' | 'data' | 'error';
+type EventType = "loading" | "data" | "error";
 type EventHandler = (payload?: unknown) => void;
 
 export interface AggregationDef {
   field: string;
-  fn: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  fn: "sum" | "avg" | "count" | "min" | "max";
 }
 
 export interface GroupSummary {
@@ -46,7 +46,11 @@ export interface DataSource {
   fetch(params: GetRowsParams): Promise<DataPage>;
 
   /** Fetch group summaries when groupBy is active, with optional aggregations. */
-  fetchGroups(params: GetRowsParams, aggregations?: AggregationDef[], options?: FetchGroupsOptions): Promise<{ groups: GroupSummary[]; total: number }>;
+  fetchGroups(
+    params: GetRowsParams,
+    aggregations?: AggregationDef[],
+    options?: FetchGroupsOptions,
+  ): Promise<{ groups: GroupSummary[]; total: number }>;
 
   /** Fetch detail rows for a specific group key. */
   fetchGroupDetail(groupKey: Record<string, unknown>, params: GetRowsParams): Promise<DataPage>;
@@ -79,7 +83,11 @@ export interface DataSourceOptions {
   viewManager?: ViewManager;
 }
 
-export function createDataSource(engine: QueryEngine, table: string, options?: DataSourceOptions): DataSource {
+export function createDataSource(
+  engine: QueryEngine,
+  table: string,
+  options?: DataSourceOptions,
+): DataSource {
   let _sort: SortField[] = [];
   let _filters: FilterExpr[] = [];
   let _groupBy: string[] = [];
@@ -110,24 +118,24 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
             // Catch without rethrow is intentional — rethrowing from a microtask
             // would create an unhandled rejection. Errors are emitted to subscribers
             // via the 'error' event.
-            emit('error', err);
+            emit("error", err);
             return;
           }
         }
         _version++;
-        emit('data');
+        emit("data");
       });
     }
   }
 
   function buildWhere(): string {
-    if (_filters.length === 0) return '';
-    return _filters.map((f) => f.sql).join(' AND ');
+    if (_filters.length === 0) return "";
+    return _filters.map((f) => f.sql).join(" AND ");
   }
 
   function buildOrderBy(): string {
-    if (_sort.length === 0) return '';
-    return _sort.map((s) => `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`).join(', ');
+    if (_sort.length === 0) return "";
+    return _sort.map((s) => `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`).join(", ");
   }
 
   // buildGroupBy intentionally removed — grouping is handled by fetchGroups/fetchGroupDetail, not regular fetch
@@ -139,12 +147,12 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
 
   /** Build WHERE/ORDER BY only when querying direct (no view). */
   function buildWhereDirect(): string {
-    if (_viewManager) return ''; // filters are in the view
+    if (_viewManager) return ""; // filters are in the view
     return buildWhere();
   }
 
   function buildOrderByDirect(): string {
-    if (_viewManager) return ''; // sort is in the view
+    if (_viewManager) return ""; // sort is in the view
     return buildOrderBy();
   }
 
@@ -187,12 +195,15 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
       const orderBy = buildOrderByDirect();
 
       if (_groupBy.length > 0) {
-        const groupCols = _groupBy.map(quoteIdent).join(', ');
+        const groupCols = _groupBy.map(quoteIdent).join(", ");
         const groupFieldSet = new Set(_groupBy);
         const sortedFields = new Set<string>();
         const groupOrderParts = _sort
           .filter((s) => groupFieldSet.has(s.field))
-          .map((s) => { sortedFields.add(s.field); return `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`; });
+          .map((s) => {
+            sortedFields.add(s.field);
+            return `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`;
+          });
         // Ensure all groupBy columns are in ORDER BY (default ASC for unsorted ones)
         for (const field of _groupBy) {
           if (!sortedFields.has(field)) groupOrderParts.push(`${quoteIdent(field)} ASC`);
@@ -200,7 +211,7 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
         let sql = `SELECT ${groupCols}, COUNT(*) AS __group_count FROM ${src}`;
         if (where) sql += ` WHERE ${where}`;
         sql += ` GROUP BY ${groupCols}`;
-        sql += ` ORDER BY ${groupOrderParts.join(', ')}`;
+        sql += ` ORDER BY ${groupOrderParts.join(", ")}`;
         sql += ` LIMIT ${params.limit} OFFSET ${params.offset}`;
         return sql;
       }
@@ -212,9 +223,13 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
       return sql;
     },
 
-    async fetchGroups(params: GetRowsParams, aggregations?: AggregationDef[], options?: FetchGroupsOptions): Promise<{ groups: GroupSummary[]; total: number }> {
+    async fetchGroups(
+      params: GetRowsParams,
+      aggregations?: AggregationDef[],
+      options?: FetchGroupsOptions,
+    ): Promise<{ groups: GroupSummary[]; total: number }> {
       if (_groupBy.length === 0) return { groups: [], total: 0 };
-      emit('loading');
+      emit("loading");
       try {
         const src = quoteIdent(source());
         const baseWhere = buildWhereDirect();
@@ -222,7 +237,7 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
         // Depth-aware: only group by columns up to the requested depth
         const depth = options?.depth ?? _groupBy.length - 1;
         const groupFields = _groupBy.slice(0, depth + 1);
-        const groupCols = groupFields.map(quoteIdent).join(', ');
+        const groupCols = groupFields.map(quoteIdent).join(", ");
 
         // Build ancestor key conditions for hierarchical sub-group fetching
         const ancestorConditions = options?.ancestorKeys
@@ -231,11 +246,11 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
                 if (value === null || value === undefined) return `${quoteIdent(field)} IS NULL`;
                 return `${quoteIdent(field)} = ${toSqlLiteral(value)}`;
               })
-              .join(' AND ')
-          : '';
+              .join(" AND ")
+          : "";
 
         // Combine base WHERE with ancestor conditions
-        const where = [baseWhere, ancestorConditions].filter(Boolean).join(' AND ');
+        const where = [baseWhere, ancestorConditions].filter(Boolean).join(" AND ");
 
         let countSql = `SELECT COUNT(*) AS cnt FROM (SELECT ${groupCols} FROM ${src}`;
         if (where) countSql += ` WHERE ${where}`;
@@ -245,8 +260,11 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
 
         // Build aggregation columns
         const aggCols = (aggregations ?? [])
-          .map((a) => `${a.fn.toUpperCase()}(${quoteIdent(a.field)}) AS ${quoteIdent(`__agg_${a.field}`)}`)
-          .join(', ');
+          .map(
+            (a) =>
+              `${a.fn.toUpperCase()}(${quoteIdent(a.field)}) AS ${quoteIdent(`__agg_${a.field}`)}`,
+          )
+          .join(", ");
 
         const selectCols = aggCols
           ? `${groupCols}, COUNT(*) AS __group_count, ${aggCols}`
@@ -263,8 +281,14 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
         const sortedFields = new Set<string>();
         const groupOrderParts: string[] = _sort
           .map((s) => {
-            if (groupFieldSet.has(s.field)) { sortedFields.add(s.field); return `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`; }
-            if (aggFieldSet.has(s.field)) { sortedFields.add(s.field); return `${quoteIdent(`__agg_${s.field}`)} ${s.dir.toUpperCase()}`; }
+            if (groupFieldSet.has(s.field)) {
+              sortedFields.add(s.field);
+              return `${quoteIdent(s.field)} ${s.dir.toUpperCase()}`;
+            }
+            if (aggFieldSet.has(s.field)) {
+              sortedFields.add(s.field);
+              return `${quoteIdent(`__agg_${s.field}`)} ${s.dir.toUpperCase()}`;
+            }
             return null;
           })
           .filter((x): x is string => x !== null);
@@ -272,7 +296,7 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
         for (const field of groupFields) {
           if (!sortedFields.has(field)) groupOrderParts.push(`${quoteIdent(field)} ASC`);
         }
-        sql += ` ORDER BY ${groupOrderParts.join(', ')}`;
+        sql += ` ORDER BY ${groupOrderParts.join(", ")}`;
 
         sql += ` LIMIT ${params.limit} OFFSET ${params.offset}`;
 
@@ -281,20 +305,23 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
           const key: Record<string, unknown> = {};
           for (const field of groupFields) key[field] = row[field];
           const aggs: Record<string, unknown> = {};
-          for (const a of (aggregations ?? [])) {
+          for (const a of aggregations ?? []) {
             aggs[a.field] = row[`__agg_${a.field}`];
           }
           return { key, count: Number(row.__group_count ?? 0), aggs };
         });
         return { groups, total };
       } catch (err) {
-        emit('error', err);
+        emit("error", err);
         throw err;
       }
     },
 
-    async fetchGroupDetail(groupKey: Record<string, unknown>, params: GetRowsParams): Promise<DataPage> {
-      emit('loading');
+    async fetchGroupDetail(
+      groupKey: Record<string, unknown>,
+      params: GetRowsParams,
+    ): Promise<DataPage> {
+      emit("loading");
       try {
         const src = quoteIdent(source());
         const where = buildWhereDirect();
@@ -305,46 +332,46 @@ export function createDataSource(engine: QueryEngine, table: string, options?: D
             if (value === null || value === undefined) return `${quoteIdent(field)} IS NULL`;
             return `${quoteIdent(field)} = ${toSqlLiteral(value)}`;
           })
-          .join(' AND ');
+          .join(" AND ");
 
         const fullWhere = where ? `${keyConditions} AND ${where}` : keyConditions;
 
-        const total = await engine.count(source(), fullWhere);
-
-        let sql = `SELECT * FROM ${src} WHERE ${fullWhere}`;
+        // Single query: COUNT(*) OVER() piggybacks total onto data rows
+        let sql = `SELECT *, COUNT(*) OVER() AS __total__ FROM ${src} WHERE ${fullWhere}`;
         if (orderBy) sql += ` ORDER BY ${orderBy}`;
         sql += ` LIMIT ${params.limit} OFFSET ${params.offset}`;
 
         const rows = await engine.query(sql);
+        const total = rows.length > 0 ? Number((rows[0] as Record<string, unknown>).__total__ ?? 0) : 0;
+        for (const row of rows) delete (row as Record<string, unknown>).__total__;
         return { rows, total };
       } catch (err) {
-        emit('error', err);
+        emit("error", err);
         throw err;
       }
     },
 
     async fetch(params: GetRowsParams): Promise<DataPage> {
-      emit('loading');
+      emit("loading");
       try {
         const src = quoteIdent(source());
         const where = buildWhereDirect();
         const orderBy = buildOrderByDirect();
 
-        // Build count query
-        const total = await engine.count(source(), where || undefined);
-
-        // Build data query — skip GROUP BY in regular fetch (grouping is handled by fetchGroups/fetchGroupDetail)
-        let sql = `SELECT * FROM ${src}`;
+        // Single query: COUNT(*) OVER() piggybacks total onto data rows
+        let sql = `SELECT *, COUNT(*) OVER() AS __total__ FROM ${src}`;
         if (where) sql += ` WHERE ${where}`;
         if (orderBy) sql += ` ORDER BY ${orderBy}`;
         sql += ` LIMIT ${params.limit} OFFSET ${params.offset}`;
 
         const rows = await engine.query(sql);
+        const total = rows.length > 0 ? Number((rows[0] as Record<string, unknown>).__total__ ?? 0) : 0;
+        for (const row of rows) delete (row as Record<string, unknown>).__total__;
         const page: DataPage = { rows, total };
-        emit('data', page);
+        emit("data", page);
         return page;
       } catch (err) {
-        emit('error', err);
+        emit("error", err);
         throw err;
       }
     },

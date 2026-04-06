@@ -1,9 +1,9 @@
-import type { DisplayType } from '../display.js';
-import { quoteIdent, isIdentityColumn, isNumericType } from '../sql/utils.js';
-import { aggToSql } from '../sql/agg.js';
+import type { DisplayType } from "../display.js";
+import { quoteIdent, isIdentityColumn, isNumericType } from "../sql/utils.js";
+import { aggToSql } from "../sql/agg.js";
 
-export type BucketInterval = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
-export type TimelineAgg = 'count' | 'sum' | 'avg' | 'min' | 'max';
+export type BucketInterval = "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
+export type TimelineAgg = "count" | "sum" | "avg" | "min" | "max";
 
 export interface TimelineDisplayConfig {
   /** The timestamp/date column to bucket on. */
@@ -19,19 +19,19 @@ export interface TimelineDisplayConfig {
   /** Limit number of buckets returned. */
   limit?: number;
   /** Rendering: 'bar', 'line', or 'area'. */
-  chartType?: 'bar' | 'line' | 'area';
+  chartType?: "bar" | "line" | "area";
   /** Whether to stack series. */
   stacked?: boolean;
   /** Enable zoom. */
   zoom?: boolean;
   /** Color scheme. */
-  colorScheme?: string[] | 'default' | 'warm' | 'cool' | 'monochrome';
+  colorScheme?: string[] | "default" | "warm" | "cool" | "monochrome";
 }
 
 export const timelineDisplayType: DisplayType<TimelineDisplayConfig> = {
-  key: 'timeline',
-  label: 'Timeline',
-  description: 'Time-bucketed event chart by date or timestamp',
+  key: "timeline",
+  label: "Timeline",
+  description: "Time-bucketed event chart by date or timestamp",
 
   buildSql(viewName, config) {
     const qDate = quoteIdent(config.dateField);
@@ -52,8 +52,8 @@ export const timelineDisplayType: DisplayType<TimelineDisplayConfig> = {
 
     selects.push(`${valueExpr} AS "value"`);
 
-    let sql = `SELECT ${selects.join(', ')} FROM ${qView}`;
-    sql += ` GROUP BY ${groupBys.join(', ')}`;
+    let sql = `SELECT ${selects.join(", ")} FROM ${qView}`;
+    sql += ` GROUP BY ${groupBys.join(", ")}`;
     sql += ` ORDER BY "bucket" ASC`;
 
     if (config.limit && config.limit > 0) {
@@ -64,26 +64,22 @@ export const timelineDisplayType: DisplayType<TimelineDisplayConfig> = {
   },
 
   defaultConfig(columns) {
-    const dateCol = columns.find(
-      (c) => c.mappedType === 'timestamp' || c.mappedType === 'date',
-    );
-    const numCol = columns.find(
-      (c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name),
-    );
+    const dateCol = columns.find((c) => c.mappedType === "timestamp" || c.mappedType === "date");
+    const numCol = columns.find((c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name));
 
     return {
-      dateField: dateCol?.name ?? columns[0]?.name ?? '',
-      bucket: 'day',
-      agg: numCol ? 'sum' : 'count',
+      dateField: dateCol?.name ?? columns[0]?.name ?? "",
+      bucket: "day",
+      agg: numCol ? "sum" : "count",
       valueField: numCol?.name,
-      chartType: 'bar',
+      chartType: "bar",
     };
   },
 
   validate(config) {
     const errors: string[] = [];
-    if (!config.dateField) errors.push('Date/timestamp field is required');
-    if (!config.bucket) errors.push('Bucket interval is required');
+    if (!config.dateField) errors.push("Date/timestamp field is required");
+    if (!config.bucket) errors.push("Bucket interval is required");
     return errors.length > 0 ? errors : null;
   },
 };

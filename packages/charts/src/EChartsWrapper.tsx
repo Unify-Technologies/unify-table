@@ -1,5 +1,5 @@
-import { useRef, useEffect } from 'react';
-import * as echarts from 'echarts';
+import { useRef, useEffect } from "react";
+import * as echarts from "echarts";
 
 export interface EChartsWrapperProps {
   option: echarts.EChartsCoreOption;
@@ -48,7 +48,7 @@ export function EChartsWrapper({ option, className, style }: EChartsWrapperProps
     <div
       ref={containerRef}
       className={className}
-      style={{ width: '100%', height: '100%', minHeight: 200, ...style }}
+      style={{ width: "100%", height: "100%", minHeight: 200, ...style }}
     />
   );
 }

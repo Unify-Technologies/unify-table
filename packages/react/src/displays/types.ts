@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import type { DisplayType, QueryEngine, ColumnInfo, Row } from '@unify/table-core';
+import type { ReactNode } from "react";
+import type { DisplayType, QueryEngine, ColumnInfo, Row } from "@unify/table-core";
 
 /**
  * React-side display descriptor — extends core DisplayType with rendering.

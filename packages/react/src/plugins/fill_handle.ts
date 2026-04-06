@@ -1,6 +1,6 @@
-import { createElement, useCallback, useEffect, useRef, useState } from 'react';
-import type { TablePlugin, TableContext, CellRef, MenuItem } from '../types.js';
-import { getRowId, MENU_SEPARATOR } from '../utils.js';
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
+import type { TablePlugin, TableContext, CellRef, MenuItem } from "../types.js";
+import { getRowId, MENU_SEPARATOR } from "../utils.js";
 
 // ─── Pattern Detection ──────────────────────────────────────
 
@@ -90,105 +90,114 @@ function useFillHandle(ctx: TableContext) {
     };
   }, [ctx.selection, ctx.containerRef, ctx.editing]);
 
-  const findCellFromPoint = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
-    const container = ctx.containerRef.current;
-    if (!container) return null;
-
-    // Find row by querying elements at the y position
-    const elements = document.elementsFromPoint(clientX, clientY);
-    for (const el of elements) {
-      const index = (el as HTMLElement).dataset?.index;
-      if (index !== undefined) {
-        const rowIndex = parseInt(index, 10);
-        // Find column by x position
-        const rowEl = el as HTMLElement;
-        let colIndex = 0;
-        for (let i = 0; i < rowEl.children.length; i++) {
-          const cellRect = rowEl.children[i].getBoundingClientRect();
-          if (clientX >= cellRect.left && clientX <= cellRect.right) {
-            colIndex = i;
-            break;
-          }
-        }
-        return { row: rowIndex, col: colIndex };
-      }
-    }
-    return null;
-  }, [ctx.containerRef]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const sel = ctx.selection.span;
-    if (!sel) return;
-
-    const bounds = spanBounds(sel);
-    setState({ isDragging: true, dragRow: bounds.r1, dragCol: bounds.c1, sourceSpan: bounds });
-
-    const onMouseMove = (me: MouseEvent) => {
-      const cell = findCellFromPoint(me.clientX, me.clientY);
-      if (cell) {
-        setState((prev) => ({ ...prev, dragRow: cell.row, dragCol: cell.col }));
-      }
-
-      // Auto-scroll near edges
+  const findCellFromPoint = useCallback(
+    (clientX: number, clientY: number): { row: number; col: number } | null => {
       const container = ctx.containerRef.current;
-      if (container) {
-        const rect = container.getBoundingClientRect();
-        const scrollMargin = 30;
-        const scrollSpeed = 8;
-        if (me.clientY > rect.bottom - scrollMargin) container.scrollTop += scrollSpeed;
-        else if (me.clientY < rect.top + scrollMargin) container.scrollTop -= scrollSpeed;
-        if (me.clientX > rect.right - scrollMargin) container.scrollLeft += scrollSpeed;
-        else if (me.clientX < rect.left + scrollMargin) container.scrollLeft -= scrollSpeed;
+      if (!container) return null;
+
+      // Find row by querying elements at the y position
+      const elements = document.elementsFromPoint(clientX, clientY);
+      for (const el of elements) {
+        const index = (el as HTMLElement).dataset?.index;
+        if (index !== undefined) {
+          const rowIndex = parseInt(index, 10);
+          // Find column by x position
+          const rowEl = el as HTMLElement;
+          let colIndex = 0;
+          for (let i = 0; i < rowEl.children.length; i++) {
+            const cellRect = rowEl.children[i].getBoundingClientRect();
+            if (clientX >= cellRect.left && clientX <= cellRect.right) {
+              colIndex = i;
+              break;
+            }
+          }
+          return { row: rowIndex, col: colIndex };
+        }
       }
-    };
+      return null;
+    },
+    [ctx.containerRef],
+  );
 
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const sel = ctx.selection.span;
+      if (!sel) return;
 
-      // Execute fill
-      const s = stateRef.current;
-      if (s.sourceSpan && s.dragRow !== null) {
-        executeFill(ctx, s.sourceSpan, s.dragRow, s.dragCol ?? s.sourceSpan.c1);
+      const bounds = spanBounds(sel);
+      setState({ isDragging: true, dragRow: bounds.r1, dragCol: bounds.c1, sourceSpan: bounds });
+
+      const onMouseMove = (me: MouseEvent) => {
+        const cell = findCellFromPoint(me.clientX, me.clientY);
+        if (cell) {
+          setState((prev) => ({ ...prev, dragRow: cell.row, dragCol: cell.col }));
+        }
+
+        // Auto-scroll near edges
+        const container = ctx.containerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const scrollMargin = 30;
+          const scrollSpeed = 8;
+          if (me.clientY > rect.bottom - scrollMargin) container.scrollTop += scrollSpeed;
+          else if (me.clientY < rect.top + scrollMargin) container.scrollTop -= scrollSpeed;
+          if (me.clientX > rect.right - scrollMargin) container.scrollLeft += scrollSpeed;
+          else if (me.clientX < rect.left + scrollMargin) container.scrollLeft -= scrollSpeed;
+        }
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+
+        // Execute fill
+        const s = stateRef.current;
+        if (s.sourceSpan && s.dragRow !== null) {
+          executeFill(ctx, s.sourceSpan, s.dragRow, s.dragCol ?? s.sourceSpan.c1);
+        }
+
+        setState({ isDragging: false, dragRow: null, dragCol: null, sourceSpan: null });
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "crosshair";
+      document.body.style.userSelect = "none";
+    },
+    [ctx, findCellFromPoint],
+  );
+
+  const handleDblClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const sel = ctx.selection.span;
+      if (!sel) return;
+
+      const { r0, r1, c0, c1 } = spanBounds(sel);
+
+      // Auto-fill: find the extent of the adjacent column
+      const refCol = c0 > 0 ? c0 - 1 : c1 + 1;
+      if (refCol < 0 || refCol >= ctx.columns.length) return;
+
+      const refField = ctx.columns[refCol].field;
+      let lastRow = r1;
+      for (let r = r1 + 1; r < ctx.rows.length; r++) {
+        const val = ctx.rows[r]?.[refField];
+        if (val === null || val === undefined || val === "") break;
+        lastRow = r;
       }
 
-      setState({ isDragging: false, dragRow: null, dragCol: null, sourceSpan: null });
-    };
-
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    document.body.style.cursor = 'crosshair';
-    document.body.style.userSelect = 'none';
-  }, [ctx, findCellFromPoint]);
-
-  const handleDblClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const sel = ctx.selection.span;
-    if (!sel) return;
-
-    const { r0, r1, c0, c1 } = spanBounds(sel);
-
-    // Auto-fill: find the extent of the adjacent column
-    const refCol = c0 > 0 ? c0 - 1 : c1 + 1;
-    if (refCol < 0 || refCol >= ctx.columns.length) return;
-
-    const refField = ctx.columns[refCol].field;
-    let lastRow = r1;
-    for (let r = r1 + 1; r < ctx.rows.length; r++) {
-      const val = ctx.rows[r]?.[refField];
-      if (val === null || val === undefined || val === '') break;
-      lastRow = r;
-    }
-
-    if (lastRow > r1) {
-      executeFill(ctx, { r0, r1, c0, c1 }, lastRow, c1);
-    }
-  }, [ctx]);
+      if (lastRow > r1) {
+        executeFill(ctx, { r0, r1, c0, c1 }, lastRow, c1);
+      }
+    },
+    [ctx],
+  );
 
   return { state, getHandlePosition, handleMouseDown, handleDblClick };
 }
@@ -209,7 +218,7 @@ async function executeFill(
   const fillLeft = targetCol < source.c0;
 
   // Emit batch start
-  ctx.emit('editing:batchStart');
+  ctx.emit("editing:batchStart");
 
   try {
     if (fillDown || fillUp) {
@@ -232,7 +241,13 @@ async function executeFill(
           if (!row || row.__placeholder === true || row.__group === true) continue;
           const rowId = getRowId(row, r);
           const value = pattern(r - startRow);
-          const cell: CellRef = { rowIndex: r, colIndex: c, rowId, field: col.field, value: row[col.field] };
+          const cell: CellRef = {
+            rowIndex: r,
+            colIndex: c,
+            rowId,
+            field: col.field,
+            value: row[col.field],
+          };
           await ctx.editing!.commitEdit(cell, value);
         }
       }
@@ -256,19 +271,28 @@ async function executeFill(
           const col = ctx.columns[c];
           if (!col || col.editable === false) continue;
           const value = pattern(c - startCol);
-          const cell: CellRef = { rowIndex: r, colIndex: c, rowId, field: col.field, value: row[col.field] };
+          const cell: CellRef = {
+            rowIndex: r,
+            colIndex: c,
+            rowId,
+            field: col.field,
+            value: row[col.field],
+          };
           await ctx.editing!.commitEdit(cell, value);
         }
       }
     }
   } finally {
-    ctx.emit('editing:batchEnd');
+    ctx.emit("editing:batchEnd");
   }
 }
 
 // ─── Fill Down / Fill Right ─────────────────────────────────
 
-function spanBounds(span: { anchor: { row: number; col: number }; focus: { row: number; col: number } }) {
+function spanBounds(span: {
+  anchor: { row: number; col: number };
+  focus: { row: number; col: number };
+}) {
   return {
     r0: Math.min(span.anchor.row, span.focus.row),
     r1: Math.max(span.anchor.row, span.focus.row),
@@ -277,11 +301,11 @@ function spanBounds(span: { anchor: { row: number; col: number }; focus: { row: 
   };
 }
 
-function fillDirection(ctx: TableContext, dir: 'down' | 'right') {
+function fillDirection(ctx: TableContext, dir: "down" | "right") {
   const sel = ctx.selection.span;
   if (!sel || !ctx.editing) return;
   const { r0, r1, c0, c1 } = spanBounds(sel);
-  if (dir === 'down') {
+  if (dir === "down") {
     if (r1 <= r0) return;
     executeFill(ctx, { r0, r1: r0, c0, c1 }, r1, c1);
   } else {
@@ -302,8 +326,8 @@ function FillHandleOverlay({ ctx }: { ctx: TableContext }) {
     const container = ctx.containerRef.current;
     if (!container) return;
     const onScroll = () => setPos(getHandlePosition());
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => container.removeEventListener('scroll', onScroll);
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
   }, [ctx.selection, ctx.activeCell, getHandlePosition, ctx.containerRef]);
 
   if (!pos || !ctx.editing) return null;
@@ -320,13 +344,25 @@ function FillHandleOverlay({ ctx }: { ctx: TableContext }) {
       // Determine the preview range
       let pR0: number, pR1: number, pC0: number, pC1: number;
       if (dragR > r1) {
-        pR0 = r1 + 1; pR1 = dragR; pC0 = c0; pC1 = c1;
+        pR0 = r1 + 1;
+        pR1 = dragR;
+        pC0 = c0;
+        pC1 = c1;
       } else if (dragR < r0) {
-        pR0 = dragR; pR1 = r0 - 1; pC0 = c0; pC1 = c1;
+        pR0 = dragR;
+        pR1 = r0 - 1;
+        pC0 = c0;
+        pC1 = c1;
       } else if (dragC > c1) {
-        pR0 = r0; pR1 = r1; pC0 = c1 + 1; pC1 = dragC;
+        pR0 = r0;
+        pR1 = r1;
+        pC0 = c1 + 1;
+        pC1 = dragC;
       } else if (dragC < c0) {
-        pR0 = r0; pR1 = r1; pC0 = dragC; pC1 = c0 - 1;
+        pR0 = r0;
+        pR1 = r1;
+        pC0 = dragC;
+        pC1 = c0 - 1;
       } else {
         pR0 = pR1 = pC0 = pC1 = -1;
       }
@@ -341,16 +377,16 @@ function FillHandleOverlay({ ctx }: { ctx: TableContext }) {
           if (startCell && endCell) {
             const startRect = startCell.getBoundingClientRect();
             const endRect = endCell.getBoundingClientRect();
-            previewEl = createElement('div', {
+            previewEl = createElement("div", {
               style: {
-                position: 'fixed',
+                position: "fixed",
                 left: startRect.left,
                 top: startRect.top,
                 width: endRect.right - startRect.left,
                 height: endRect.bottom - startRect.top,
-                backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                border: '2px dashed rgba(59, 130, 246, 0.5)',
-                pointerEvents: 'none',
+                backgroundColor: "rgba(59, 130, 246, 0.12)",
+                border: "2px dashed rgba(59, 130, 246, 0.5)",
+                pointerEvents: "none",
                 zIndex: 10,
               },
             });
@@ -360,20 +396,22 @@ function FillHandleOverlay({ ctx }: { ctx: TableContext }) {
     }
   }
 
-  return createElement('div', null,
+  return createElement(
+    "div",
+    null,
     // The fill handle square
-    createElement('div', {
+    createElement("div", {
       onMouseDown: handleMouseDown,
       onDoubleClick: handleDblClick,
       style: {
-        position: 'absolute',
+        position: "absolute",
         left: pos.left,
         top: pos.top,
         width: 8,
         height: 8,
-        backgroundColor: '#3b82f6',
-        border: '1px solid #fff',
-        cursor: 'crosshair',
+        backgroundColor: "#3b82f6",
+        border: "1px solid #fff",
+        cursor: "crosshair",
         zIndex: 6,
         borderRadius: 1,
       },
@@ -391,8 +429,8 @@ export interface FillHandleOptions {
 
 export function fillHandle(_options?: FillHandleOptions): TablePlugin {
   return {
-    name: 'fillHandle',
-    dependencies: ['selection', 'editing'],
+    name: "fillHandle",
+    dependencies: ["selection", "editing"],
 
     renderOverlay(ctx: TableContext) {
       return createElement(FillHandleOverlay, { ctx });
@@ -407,24 +445,24 @@ export function fillHandle(_options?: FillHandleOptions): TablePlugin {
       items.push(MENU_SEPARATOR);
       if (r1 > r0) {
         items.push({
-          label: 'Fill Down',
-          shortcut: 'Ctrl+D',
-          action: () => fillDirection(ctx.getLatest(), 'down'),
+          label: "Fill Down",
+          shortcut: "Ctrl+D",
+          action: () => fillDirection(ctx.getLatest(), "down"),
         });
       }
       if (c1 > c0) {
         items.push({
-          label: 'Fill Right',
-          shortcut: 'Ctrl+R',
-          action: () => fillDirection(ctx.getLatest(), 'right'),
+          label: "Fill Right",
+          shortcut: "Ctrl+R",
+          action: () => fillDirection(ctx.getLatest(), "right"),
         });
       }
       return items;
     },
 
     shortcuts: {
-      'ctrl+d': (ctx: TableContext) => fillDirection(ctx, 'down'),
-      'ctrl+r': (ctx: TableContext) => fillDirection(ctx, 'right'),
+      "ctrl+d": (ctx: TableContext) => fillDirection(ctx, "down"),
+      "ctrl+r": (ctx: TableContext) => fillDirection(ctx, "right"),
     },
   };
 }

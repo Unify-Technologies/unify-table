@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 import type {
   QueryEngine,
   DataSource,
@@ -8,7 +8,7 @@ import type {
   ColumnInfo,
   Row,
   ViewManager,
-} from '@unify/table-core';
+} from "@unify/table-core";
 
 // --- Column definitions ---
 
@@ -18,8 +18,8 @@ export interface ColumnDef {
   width?: number;
   minWidth?: number;
   maxWidth?: number;
-  align?: 'left' | 'center' | 'right';
-  pin?: 'left' | 'right';
+  align?: "left" | "center" | "right";
+  pin?: "left" | "right";
   hidden?: boolean;
   sortable?: boolean;
   filterable?: boolean;
@@ -28,12 +28,12 @@ export interface ColumnDef {
   format?: string;
   render?: (value: unknown, row: Row) => ReactNode;
   editor?:
-    | 'text'
-    | 'number'
-    | 'date'
-    | 'select'
-    | 'textarea'
-    | 'checkbox'
+    | "text"
+    | "number"
+    | "date"
+    | "select"
+    | "textarea"
+    | "checkbox"
     | ((value: unknown, onChange: (v: unknown) => void) => ReactNode);
   editorOptions?: unknown[];
   editorFreeform?: boolean;
@@ -89,7 +89,7 @@ export interface MenuItem {
   danger?: boolean;
   disabled?: boolean;
   icon?: React.ReactNode;
-  type?: 'item' | 'separator';
+  type?: "item" | "separator";
   children?: MenuItem[];
 }
 
@@ -237,26 +237,26 @@ export interface TableContext {
   setColumnOrder(order: string[]): void;
 
   // Column pin
-  setColumnPin(field: string, pin: 'left' | 'right' | null): void;
+  setColumnPin(field: string, pin: "left" | "right" | null): void;
 }
 
 export type TableEvent =
-  | 'sort'
-  | 'filter'
-  | 'group'
-  | 'select'
-  | 'edit:start'
-  | 'edit:commit'
-  | 'edit:cancel'
-  | 'edit:invalid'
-  | 'row:add'
-  | 'row:delete'
-  | 'data'
-  | 'loading'
-  | 'error'
-  | 'group:expand'
-  | 'group:collapse'
-  | 'column:reorder'
+  | "sort"
+  | "filter"
+  | "group"
+  | "select"
+  | "edit:start"
+  | "edit:commit"
+  | "edit:cancel"
+  | "edit:invalid"
+  | "row:add"
+  | "row:delete"
+  | "data"
+  | "loading"
+  | "error"
+  | "group:expand"
+  | "group:collapse"
+  | "column:reorder"
   | (string & {}); // extensible for plugins
 
 export type TableEventHandler = (payload?: unknown) => void;
@@ -301,7 +301,7 @@ export interface TableProps {
   plugins?: TablePlugin[];
   styles?: TableStyles;
   className?: string;
-  density?: 'compact' | 'comfortable' | 'spacious';
+  density?: "compact" | "comfortable" | "spacious";
   rowId?: string | string[];
   rowStyle?: (row: Row, index: number) => string;
   onRowClick?: (row: Row) => void;
@@ -309,17 +309,21 @@ export interface TableProps {
   height?: number | string;
   pageSize?: number;
   /** Custom footer renderer. Receives totalCount, isLoading, selection. Return null to hide footer. */
-  renderFooter?: (info: { totalCount: number; isLoading: boolean; selection: SelectionState }) => React.ReactNode;
+  renderFooter?: (info: {
+    totalCount: number;
+    isLoading: boolean;
+    selection: SelectionState;
+  }) => React.ReactNode;
   /** Called when totalCount is known/updated — useful for displaying count outside the table. */
   onTotalCount?: (count: number) => void;
   /** Panel configuration. Array of built-in names or custom descriptors. Set to `false` to disable panels. Default: all built-in panels. */
-  panels?: false | import('./panels/types.js').PanelConfig[];
+  panels?: false | import("./panels/types.js").PanelConfig[];
   /** Panel position relative to the table. Default: 'right'. */
-  panelPosition?: 'left' | 'right';
+  panelPosition?: "left" | "right";
   /** Initial display configurations. */
-  displays?: import('@unify/table-core').DisplayConfig[];
+  displays?: import("@unify/table-core").DisplayConfig[];
   /** Called when displays change (add, remove, config update). */
-  onDisplaysChange?: (displays: import('@unify/table-core').DisplayConfig[]) => void;
+  onDisplaysChange?: (displays: import("@unify/table-core").DisplayConfig[]) => void;
   /** Called when the active display changes. `null` means the table view is active. */
   onActiveDisplayChange?: (displayType: string | null) => void;
   /** Initial active display ID (must match an id in `displays`). When set, that display is shown on mount. */
@@ -327,9 +331,9 @@ export interface TableProps {
 
   // ── Persisted table state (sort, filters, groupBy, etc.) ──
   /** Initial sort state. */
-  initialSort?: import('@unify/table-core').SortField[];
+  initialSort?: import("@unify/table-core").SortField[];
   /** Called when sort changes. */
-  onSortChange?: (sort: import('@unify/table-core').SortField[]) => void;
+  onSortChange?: (sort: import("@unify/table-core").SortField[]) => void;
   /** Initial raw filter input values (field → text). */
   initialFilterValues?: Record<string, string>;
   /** Called when filter input values change. */

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown } from "lucide-react";
 import type { DisplayConfig, ColumnInfo } from "@unify/table-core";
@@ -656,6 +656,177 @@ export function Table(props: TableProps) {
 /** Placeholder row for rows not yet fetched */
 const PLACEHOLDER_ROW = { __placeholder: true } as Record<string, unknown>;
 
+// ── Memoized virtual row ────────────────────────────────────
+
+interface VirtualRowItemProps {
+  row: Record<string, unknown>;
+  virtualStart: number;
+  virtualIndex: number;
+  virtualKey: React.Key;
+  isEven: boolean;
+  isPlaceholder: boolean;
+  isGroup: boolean;
+  isSelected: boolean;
+  isGroupSelected: boolean;
+  columns: ResolvedColumn[];
+  groupBy: string[];
+  styles: TableStyles;
+  density: DensityValues;
+  selection: import("../types.js").SelectionState;
+  ctx: TableContext;
+  rowStyleClass: string;
+  measureElement: (el: HTMLElement | null) => void;
+  onRowClick: (row: Record<string, unknown>, index: number, e: React.MouseEvent) => void;
+  onRowDoubleClick: (row: Record<string, unknown>, index: number, e: React.MouseEvent) => void;
+  onGroupToggle: (gk: Record<string, unknown>, depth: number) => void;
+}
+
+const VirtualRowItem = memo(function VirtualRowItem({
+  row,
+  virtualStart,
+  virtualIndex,
+  virtualKey,
+  isEven,
+  isPlaceholder,
+  isGroup,
+  isSelected,
+  isGroupSelected,
+  columns,
+  groupBy,
+  styles,
+  density,
+  selection,
+  ctx,
+  rowStyleClass,
+  measureElement,
+  onRowClick,
+  onRowDoubleClick,
+  onGroupToggle,
+}: VirtualRowItemProps) {
+  const rowClass = [
+    styles.row,
+    isGroup ? "" : isEven ? styles.rowEven : "",
+    isSelected ? styles.rowSelected : "",
+    rowStyleClass,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div
+      key={virtualKey}
+      data-index={virtualIndex}
+      ref={measureElement}
+      role="row"
+      aria-rowindex={virtualIndex + 2}
+      aria-selected={isSelected || isGroupSelected || undefined}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        minWidth: "fit-content",
+        transform: `translateY(${virtualStart}px)`,
+        display: "flex",
+        height: `${density.rowHeight}px`,
+        alignItems: "center",
+        opacity: isPlaceholder ? 0.3 : 1,
+        cursor: isPlaceholder ? undefined : isGroup ? "pointer" : "cell",
+        ...(isSelected ? { backgroundColor: "var(--row-selected-bg, #1e3a5f)" } : {}),
+      }}
+      className={`utbl-vrow ${rowClass}`}
+      onClick={
+        !isPlaceholder ? (e) => onRowClick(row, virtualIndex, e) : undefined
+      }
+      onDoubleClick={
+        !isPlaceholder && !isGroup
+          ? (e) => onRowDoubleClick(row, virtualIndex, e)
+          : undefined
+      }
+    >
+      {isPlaceholder ? (
+        <div
+          className="utbl-placeholder-text"
+          style={{
+            padding: `${density.py}px ${density.px}px`,
+            color: "#666",
+            fontSize: "0.75rem",
+          }}
+        >
+          Loading...
+        </div>
+      ) : isGroup ? (
+        <GroupRow
+          row={row}
+          columns={columns}
+          groupBy={groupBy}
+          styles={styles}
+          density={density}
+          activeCell={ctx.activeCell}
+          virtualIndex={virtualIndex}
+          isGroupSelected={isGroupSelected}
+          onToggle={onGroupToggle}
+        />
+      ) : (
+        columns.map((col, colIdx) => {
+          const inSpan = isInAnySpan(virtualIndex, colIdx, selection);
+          const isActive =
+            ctx.activeCell?.rowIndex === virtualIndex &&
+            ctx.activeCell?.colIndex === colIdx;
+          const isEditingThis =
+            ctx.editing?.editingCell?.rowIndex === virtualIndex &&
+            ctx.editing?.editingCell?.colIndex === colIdx;
+
+          if (isEditingThis) {
+            const isFormulaEdit = col._isFormula && ctx.formulas;
+            const editorCell = isFormulaEdit
+              ? {
+                  ...ctx.editing!.editingCell!,
+                  value: ctx.formulas!.getExpression(col.field) ?? "",
+                }
+              : ctx.editing!.editingCell!;
+            const handleCommit = isFormulaEdit
+              ? (value: unknown) => {
+                  ctx
+                    .formulas!.updateExpression(col.field, String(value))
+                    .then(() => ctx.editing!.cancelEdit())
+                    .catch((err) => ctx.emit("error", err));
+                }
+              : (value: unknown) =>
+                  ctx.editing!.commitEdit(ctx.editing!.editingCell!, value);
+
+            return (
+              <InlineEditor
+                key={col.field}
+                column={isFormulaEdit ? { ...col, editor: "text" } : col}
+                cell={editorCell}
+                styles={styles}
+                px={density.px}
+                py={density.py}
+                onCommit={handleCommit}
+                onCancel={() => ctx.editing!.cancelEdit()}
+              />
+            );
+          }
+
+          return (
+            <TableRow
+              key={col.field}
+              column={col}
+              row={row}
+              styles={styles}
+              px={density.px}
+              py={density.py}
+              isCellSelected={inSpan}
+              isActiveCell={isActive}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+});
+
 export function TableView({
   ctx,
   styles,
@@ -894,6 +1065,13 @@ export function TableView({
     [ctx, findColIndex, columns],
   );
 
+  const handleGroupToggle = useCallback(
+    (gk: Record<string, unknown>, depth: number) => {
+      ctx.emit("group:toggle", { groupKey: gk, depth });
+    },
+    [ctx],
+  );
+
   return (
     <div
       role="grid"
@@ -970,7 +1148,7 @@ export function TableView({
           {virtualRows.map((virtualRow) => {
             const row = rows[virtualRow.index] ?? PLACEHOLDER_ROW;
             const isPlaceholder = row.__placeholder === true;
-            const isEven = virtualRow.index % 2 === 0;
+            const isGroup = !isPlaceholder && isGroupRow(row);
             // Check if entire row is selected (full-row span)
             const allSpans = selection.span
               ? [selection.span, ...selection.additionalSpans]
@@ -981,134 +1159,36 @@ export function TableView({
                 (s) =>
                   isFullRowSpan(s, columns.length) && isInAnySpan(virtualRow.index, 0, selection),
               );
-            const isGroup = !isPlaceholder && isGroupRow(row);
             const isGroupSelected =
               isGroup &&
               selection.selectedGroups.has(
                 serializeGroupKey(row.__groupKey as Record<string, unknown>),
               );
-            const isSelected = isFullRowSelected;
-            const rowClass = [
-              styles.row,
-              isGroup ? "" : isEven ? styles.rowEven : "",
-              isSelected ? styles.rowSelected : "",
-              !isPlaceholder ? (rowStyle?.(row, virtualRow.index) ?? "") : "",
-            ]
-              .filter(Boolean)
-              .join(" ");
 
             return (
-              <div
+              <VirtualRowItem
                 key={virtualRow.key}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-                role="row"
-                aria-rowindex={virtualRow.index + 2}
-                aria-selected={isSelected || isGroupSelected || undefined}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  minWidth: "fit-content",
-                  transform: `translateY(${virtualRow.start}px)`,
-                  display: "flex",
-                  height: `${density.rowHeight}px`,
-                  alignItems: "center",
-                  opacity: isPlaceholder ? 0.3 : 1,
-                  cursor: isPlaceholder ? undefined : isGroup ? "pointer" : "cell",
-                  ...(isSelected ? { backgroundColor: "var(--row-selected-bg, #1e3a5f)" } : {}),
-                }}
-                className={`utbl-vrow ${rowClass}`}
-                onClick={
-                  !isPlaceholder ? (e) => handleRowClick(row, virtualRow.index, e) : undefined
-                }
-                onDoubleClick={
-                  !isPlaceholder && !isGroupRow(row)
-                    ? (e) => handleRowDoubleClick(row, virtualRow.index, e)
-                    : undefined
-                }
-              >
-                {isPlaceholder ? (
-                  <div
-                    className="utbl-placeholder-text"
-                    style={{
-                      padding: `${density.py}px ${density.px}px`,
-                      color: "#666",
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Loading...
-                  </div>
-                ) : isGroupRow(row) ? (
-                  <GroupRow
-                    row={row}
-                    columns={columns}
-                    groupBy={groupBy}
-                    styles={styles}
-                    density={density}
-                    activeCell={ctx.activeCell}
-                    virtualIndex={virtualRow.index}
-                    isGroupSelected={isGroupSelected}
-                    onToggle={(gk, d) => ctx.emit("group:toggle", { groupKey: gk, depth: d })}
-                  />
-                ) : (
-                  columns.map((col, colIdx) => {
-                    const inSpan = isInAnySpan(virtualRow.index, colIdx, selection);
-                    const isActive =
-                      ctx.activeCell?.rowIndex === virtualRow.index &&
-                      ctx.activeCell?.colIndex === colIdx;
-                    const isEditingThis =
-                      ctx.editing?.editingCell?.rowIndex === virtualRow.index &&
-                      ctx.editing?.editingCell?.colIndex === colIdx;
-
-                    if (isEditingThis) {
-                      const isFormulaEdit = col._isFormula && ctx.formulas;
-                      const editorCell = isFormulaEdit
-                        ? {
-                            ...ctx.editing!.editingCell!,
-                            value: ctx.formulas!.getExpression(col.field) ?? "",
-                          }
-                        : ctx.editing!.editingCell!;
-                      const handleCommit = isFormulaEdit
-                        ? (value: unknown) => {
-                            ctx
-                              .formulas!.updateExpression(col.field, String(value))
-                              .then(() => ctx.editing!.cancelEdit())
-                              .catch((err) => ctx.emit("error", err));
-                          }
-                        : (value: unknown) =>
-                            ctx.editing!.commitEdit(ctx.editing!.editingCell!, value);
-
-                      return (
-                        <InlineEditor
-                          key={col.field}
-                          column={isFormulaEdit ? { ...col, editor: "text" } : col}
-                          cell={editorCell}
-                          styles={styles}
-                          px={density.px}
-                          py={density.py}
-                          onCommit={handleCommit}
-                          onCancel={() => ctx.editing!.cancelEdit()}
-                        />
-                      );
-                    }
-
-                    return (
-                      <TableRow
-                        key={col.field}
-                        column={col}
-                        row={row}
-                        styles={styles}
-                        px={density.px}
-                        py={density.py}
-                        isCellSelected={inSpan}
-                        isActiveCell={isActive}
-                      />
-                    );
-                  })
-                )}
-              </div>
+                row={row}
+                virtualStart={virtualRow.start}
+                virtualIndex={virtualRow.index}
+                virtualKey={virtualRow.key}
+                isEven={virtualRow.index % 2 === 0}
+                isPlaceholder={isPlaceholder}
+                isGroup={isGroup}
+                isSelected={isFullRowSelected}
+                isGroupSelected={isGroupSelected}
+                columns={columns}
+                groupBy={groupBy}
+                styles={styles}
+                density={density}
+                selection={selection}
+                ctx={ctx}
+                rowStyleClass={!isPlaceholder ? (rowStyle?.(row, virtualRow.index) ?? "") : ""}
+                measureElement={virtualizer.measureElement}
+                onRowClick={handleRowClick}
+                onRowDoubleClick={handleRowDoubleClick}
+                onGroupToggle={handleGroupToggle}
+              />
             );
           })}
         </div>

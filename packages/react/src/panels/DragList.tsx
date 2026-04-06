@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useCallback, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 export interface DragListItem {
   key: string;
@@ -7,7 +7,7 @@ export interface DragListItem {
 }
 
 /** Data transfer type used to identify cross-zone drags. */
-const DRAG_TYPE = 'application/x-utbl-drag';
+const DRAG_TYPE = "application/x-utbl-drag";
 
 interface DragListProps {
   items: DragListItem[];
@@ -22,7 +22,14 @@ interface DragListProps {
   renderTrailing?: (item: DragListItem, index: number) => ReactNode;
 }
 
-export function DragList({ items, onReorder, onExternalDrop, renderExtra, renderLeading, renderTrailing }: DragListProps) {
+export function DragList({
+  items,
+  onReorder,
+  onExternalDrop,
+  renderExtra,
+  renderLeading,
+  renderTrailing,
+}: DragListProps) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
   const [externalOver, setExternalOver] = useState<number | null>(null);
@@ -31,17 +38,20 @@ export function DragList({ items, onReorder, onExternalDrop, renderExtra, render
   const isExternalDrag = (e: React.DragEvent) =>
     dragIdx === null && e.dataTransfer.types.includes(DRAG_TYPE);
 
-  const handleDragStart = useCallback((idx: number, e: React.DragEvent) => {
-    setDragIdx(idx);
-    dragNode.current = e.currentTarget as HTMLDivElement;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData(DRAG_TYPE, items[idx].key);
-  }, [items]);
+  const handleDragStart = useCallback(
+    (idx: number, e: React.DragEvent) => {
+      setDragIdx(idx);
+      dragNode.current = e.currentTarget as HTMLDivElement;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData(DRAG_TYPE, items[idx].key);
+    },
+    [items],
+  );
 
   const handleDragOver = useCallback(
     (idx: number, e: React.DragEvent) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
       if (dragIdx !== null && idx !== dragIdx) {
         setDropIdx(idx);
       } else if (isExternalDrag(e)) {
@@ -81,7 +91,7 @@ export function DragList({ items, onReorder, onExternalDrop, renderExtra, render
   const handleEndDragOver = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
       if (isExternalDrag(e)) {
         setExternalOver(items.length);
       } else if (dragIdx !== null) {
@@ -110,11 +120,10 @@ export function DragList({ items, onReorder, onExternalDrop, renderExtra, render
     [dragIdx, items, onReorder, onExternalDrop],
   );
 
-  const highlight = (idx: number) =>
-    (dropIdx === idx && dragIdx !== idx) || externalOver === idx;
+  const highlight = (idx: number) => (dropIdx === idx && dragIdx !== idx) || externalOver === idx;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {items.map((item, idx) => (
         <div
           key={item.key}
@@ -124,27 +133,27 @@ export function DragList({ items, onReorder, onExternalDrop, renderExtra, render
           onDrop={(e) => handleDrop(idx, e)}
           onDragEnd={handleDragEnd}
           style={{
-            display: 'flex',
-            alignItems: 'center',
+            display: "flex",
+            alignItems: "center",
             gap: 4,
-            padding: '2px 2px',
-            borderRadius: 'var(--utbl-radius, 3px)',
-            background: highlight(idx) ? 'var(--utbl-accent)' : 'transparent',
+            padding: "2px 2px",
+            borderRadius: "var(--utbl-radius, 3px)",
+            background: highlight(idx) ? "var(--utbl-accent)" : "transparent",
             opacity: dragIdx === idx ? 0.4 : 1,
-            cursor: 'grab',
-            transition: 'background 0.1s, opacity 0.1s',
-            fontSize: '0.625rem',
-            color: highlight(idx) ? '#fff' : 'var(--utbl-text)',
+            cursor: "grab",
+            transition: "background 0.1s, opacity 0.1s",
+            fontSize: "0.625rem",
+            color: highlight(idx) ? "#fff" : "var(--utbl-text)",
           }}
         >
           {/* Drag handle */}
           <span
             style={{
               flexShrink: 0,
-              color: highlight(idx) ? '#fff' : 'var(--utbl-text-muted)',
-              fontSize: '0.55rem',
+              color: highlight(idx) ? "#fff" : "var(--utbl-text-muted)",
+              fontSize: "0.55rem",
               lineHeight: 1,
-              userSelect: 'none',
+              userSelect: "none",
             }}
           >
             ⠿
@@ -157,11 +166,11 @@ export function DragList({ items, onReorder, onExternalDrop, renderExtra, render
           <span
             style={{
               flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
               fontWeight: 600,
-              fontSize: '0.625rem',
+              fontSize: "0.625rem",
             }}
           >
             {item.label}
@@ -180,22 +189,26 @@ export function DragList({ items, onReorder, onExternalDrop, renderExtra, render
         <div
           onDragOver={handleEndDragOver}
           onDrop={handleEndDrop}
-          onDragLeave={() => { setExternalOver(null); setDropIdx(null); }}
+          onDragLeave={() => {
+            setExternalOver(null);
+            setDropIdx(null);
+          }}
           style={{
             minHeight: 24,
-            borderRadius: 'var(--utbl-radius, 3px)',
-            border: externalOver === items.length || dropIdx === items.length
-              ? '1px dashed var(--utbl-accent)'
-              : '1px dashed transparent',
-            transition: 'border-color 0.1s',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '0.5rem',
-            color: 'var(--utbl-text-muted)',
+            borderRadius: "var(--utbl-radius, 3px)",
+            border:
+              externalOver === items.length || dropIdx === items.length
+                ? "1px dashed var(--utbl-accent)"
+                : "1px dashed transparent",
+            transition: "border-color 0.1s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "0.5rem",
+            color: "var(--utbl-text-muted)",
           }}
         >
-          {items.length === 0 ? 'Drop columns here' : ''}
+          {items.length === 0 ? "Drop columns here" : ""}
         </div>
       )}
     </div>
@@ -207,7 +220,7 @@ export function makeDraggable(key: string) {
   return {
     draggable: true,
     onDragStart: (e: React.DragEvent) => {
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData(DRAG_TYPE, key);
     },
   };

@@ -1,9 +1,9 @@
-import type { TablePlugin, TableContext } from '../types.js';
-import { getRowId, normalizeShortcut, normalizeShortcutKey } from '../utils.js';
+import type { TablePlugin, TableContext } from "../types.js";
+import { getRowId, normalizeShortcut, normalizeShortcutKey } from "../utils.js";
 
 export function keyboard(): TablePlugin {
   const plugin: TablePlugin = {
-    name: 'keyboard',
+    name: "keyboard",
     dependencies: [],
     shortcuts: {
       ArrowUp: (ctx) => moveActiveCell(ctx, 0, -1),
@@ -43,19 +43,19 @@ export function keyboard(): TablePlugin {
         }
       }
 
-      const hasSelectionPlugin = !!ctx.getLatest().getPlugin('selection');
+      const hasSelectionPlugin = !!ctx.getLatest().getPlugin("selection");
 
       const handler = (e: KeyboardEvent) => {
         const current = ctx.getLatest();
 
         // Undo / Redo — handled before editingCell check so they work in all states
-        if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
           e.preventDefault();
           if (current.editing?.canUndo) current.editing.undo();
           else if (current.formulas?.canUndo) current.formulas.undo();
           return;
         }
-        if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
           e.preventDefault();
           if (current.editing?.canRedo) current.editing.redo();
           else if (current.formulas?.canRedo) current.formulas.redo();
@@ -65,7 +65,7 @@ export function keyboard(): TablePlugin {
         // When a cell is being edited, let the editor handle all keys
         // except Escape (cancel) and Enter (commit, handled by editor's onKeyDown)
         if (current.editing?.editingCell) {
-          if (e.key === 'Escape') {
+          if (e.key === "Escape") {
             e.preventDefault();
             current.editing.cancelEdit();
           }
@@ -75,7 +75,11 @@ export function keyboard(): TablePlugin {
 
         // Arrow keys are handled by the selection plugin when present
         // to avoid double-movement
-        const isArrow = e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+        const isArrow =
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "ArrowLeft" ||
+          e.key === "ArrowRight";
         if (isArrow && hasSelectionPlugin) return;
 
         // Normalized lookup dispatches all plugin shortcuts (including modifier combos)
@@ -87,8 +91,8 @@ export function keyboard(): TablePlugin {
         }
       };
 
-      el.addEventListener('keydown', handler);
-      return () => el.removeEventListener('keydown', handler);
+      el.addEventListener("keydown", handler);
+      return () => el.removeEventListener("keydown", handler);
     },
   };
   return plugin;
@@ -101,7 +105,7 @@ function moveActiveCell(ctx: TableContext, dx: number, dy: number) {
       ctx.setActiveCell({
         rowIndex: 0,
         colIndex: 0,
-        rowId: '',
+        rowId: "",
         field: columns[0].field,
         value: rows[0][columns[0].field],
       });

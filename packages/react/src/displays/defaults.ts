@@ -7,15 +7,15 @@ import {
   correlationDisplayType,
   timelineDisplayType,
   outliersDisplayType,
-} from '@unify/table-core';
-import { registerDisplay } from './registry.js';
-import { chartDisplay } from './chart_display.js';
-import { statsDisplay } from './stats_display.js';
-import { pivotDisplay } from './pivot_display.js';
-import { summaryDisplay } from './summary_display.js';
-import { correlationDisplay } from './correlation_display.js';
-import { timelineDisplay } from './timeline_display.js';
-import { outliersDisplay } from './outliers_display.js';
+} from "@unify/table-core";
+import { registerDisplay } from "./registry.js";
+import { chartDisplay } from "./chart_display.js";
+import { statsDisplay } from "./stats_display.js";
+import { pivotDisplay } from "./pivot_display.js";
+import { summaryDisplay } from "./summary_display.js";
+import { correlationDisplay } from "./correlation_display.js";
+import { timelineDisplay } from "./timeline_display.js";
+import { outliersDisplay } from "./outliers_display.js";
 
 let initialized = false;
 

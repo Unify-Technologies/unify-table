@@ -1,32 +1,36 @@
-import { useCallback, useState } from 'react';
-import { quoteIdent } from '@unify/table-core';
-import type { TableContext } from '../types.js';
-import { detectIdColumn, downloadBlob } from '../utils.js';
+import { useCallback, useState } from "react";
+import { quoteIdent } from "@unify/table-core";
+import type { TableContext } from "../types.js";
+import { detectIdColumn, downloadBlob } from "../utils.js";
 
-type ExportSource = 'all' | 'selection' | 'filtered';
-type ExportFormat = 'csv' | 'json' | 'parquet';
+type ExportSource = "all" | "selection" | "filtered";
+type ExportFormat = "csv" | "json" | "parquet";
 
 export function ExportPanel({ ctx }: { ctx: TableContext }) {
-  const [source, setSource] = useState<ExportSource>('all');
-  const [format, setFormat] = useState<ExportFormat>('csv');
+  const [source, setSource] = useState<ExportSource>("all");
+  const [format, setFormat] = useState<ExportFormat>("csv");
   const [exporting, setExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
     setExporting(true);
     try {
-      const selectionOnly = source === 'selection';
+      const selectionOnly = source === "selection";
       const filename = `${ctx.table}.${format}`;
 
       if (selectionOnly && ctx.selection.selectedIds.size > 0) {
         const ids = [...ctx.selection.selectedIds];
         const idCol = detectIdColumn(ctx.columns);
-        const idList = ids.map((id) => {
-          const n = Number(id);
-          return Number.isNaN(n) ? `'${String(id).replace(/'/g, "''")}'` : String(n);
-        }).join(',');
+        const idList = ids
+          .map((id) => {
+            const n = Number(id);
+            return Number.isNaN(n) ? `'${String(id).replace(/'/g, "''")}'` : String(n);
+          })
+          .join(",");
 
         const tmpTable = `__export_${Date.now()}`;
-        await ctx.engine.execute(`CREATE TEMP TABLE ${quoteIdent(tmpTable)} AS SELECT * FROM ${quoteIdent(ctx.table)} WHERE ${quoteIdent(idCol)} IN (${idList})`);
+        await ctx.engine.execute(
+          `CREATE TEMP TABLE ${quoteIdent(tmpTable)} AS SELECT * FROM ${quoteIdent(ctx.table)} WHERE ${quoteIdent(idCol)} IN (${idList})`,
+        );
         const blob = await ctx.engine.exportBlob(tmpTable, format);
         await ctx.engine.execute(`DROP TABLE IF EXISTS ${quoteIdent(tmpTable)}`);
         downloadBlob(blob, filename);
@@ -46,15 +50,23 @@ export function ExportPanel({ ctx }: { ctx: TableContext }) {
   const noSelection = ctx.selection.count === 0;
 
   const sources: { key: ExportSource; label: string; dims: string }[] = [
-    { key: 'all', label: 'All', dims: `${ctx.totalCount.toLocaleString()} \u00D7 ${totalCols}` },
-    { key: 'selection', label: 'Selection', dims: selRows > 0 ? `${selRows.toLocaleString()} \u00D7 ${selCols}` : '0' },
-    { key: 'filtered', label: 'Filtered', dims: `${ctx.totalCount.toLocaleString()} \u00D7 ${totalCols}` },
+    { key: "all", label: "All", dims: `${ctx.totalCount.toLocaleString()} \u00D7 ${totalCols}` },
+    {
+      key: "selection",
+      label: "Selection",
+      dims: selRows > 0 ? `${selRows.toLocaleString()} \u00D7 ${selCols}` : "0",
+    },
+    {
+      key: "filtered",
+      label: "Filtered",
+      dims: `${ctx.totalCount.toLocaleString()} \u00D7 ${totalCols}`,
+    },
   ];
 
   const formats: { key: ExportFormat; label: string }[] = [
-    { key: 'csv', label: 'CSV' },
-    { key: 'json', label: 'JSON' },
-    { key: 'parquet', label: 'Parquet' },
+    { key: "csv", label: "CSV" },
+    { key: "json", label: "JSON" },
+    { key: "parquet", label: "Parquet" },
   ];
 
   return (
@@ -66,7 +78,7 @@ export function ExportPanel({ ctx }: { ctx: TableContext }) {
           <label
             key={s.key}
             className="utbl-radio-row"
-            data-disabled={s.key === 'selection' && noSelection}
+            data-disabled={s.key === "selection" && noSelection}
           >
             <input
               type="radio"
@@ -74,7 +86,7 @@ export function ExportPanel({ ctx }: { ctx: TableContext }) {
               name={`export-source-${ctx.table}`}
               checked={source === s.key}
               onChange={() => setSource(s.key)}
-              disabled={s.key === 'selection' && noSelection}
+              disabled={s.key === "selection" && noSelection}
             />
             {s.label}
             <span className="utbl-radio-dims">{s.dims}</span>
@@ -103,9 +115,9 @@ export function ExportPanel({ ctx }: { ctx: TableContext }) {
       <button
         className="utbl-btn"
         onClick={handleExport}
-        disabled={exporting || (source === 'selection' && noSelection)}
+        disabled={exporting || (source === "selection" && noSelection)}
       >
-        {exporting ? 'Exporting...' : 'Download'}
+        {exporting ? "Exporting..." : "Download"}
       </button>
     </div>
   );

@@ -1,13 +1,13 @@
-import type { TablePlugin, TableContext, CellRef } from '../types.js';
-import { ID_CANDIDATES } from '../utils.js';
+import type { TablePlugin, TableContext, CellRef } from "../types.js";
+import { ID_CANDIDATES } from "../utils.js";
 
 export function clipboard(): TablePlugin {
   return {
-    name: 'clipboard',
-    dependencies: ['selection'],
+    name: "clipboard",
+    dependencies: ["selection"],
     shortcuts: {
-      'ctrl+c': (ctx) => copySelection(ctx),
-      'ctrl+v': (ctx) => pasteFromClipboard(ctx),
+      "ctrl+c": (ctx) => copySelection(ctx),
+      "ctrl+v": (ctx) => pasteFromClipboard(ctx),
     },
   };
 }
@@ -15,9 +15,9 @@ export function clipboard(): TablePlugin {
 /** Parse a TSV string into a 2D array of strings. */
 export function parseTSV(text: string): string[][] {
   return text
-    .split('\n')
+    .split("\n")
     .filter((line) => line.trim().length > 0)
-    .map((line) => line.split('\t'));
+    .map((line) => line.split("\t"));
 }
 
 /** Detect whether the first row of parsed TSV matches column fields. */
@@ -43,15 +43,15 @@ async function copySelection(ctx: TableContext) {
     }
     const selectedFields = [...new Set(selection.selectedCells.map((c) => c.field))];
     const cols = columns.filter((c) => selectedFields.includes(c.field));
-    const headers = cols.map((c) => c.field).join('\t');
+    const headers = cols.map((c) => c.field).join("\t");
     const body = [...cellsByRow.entries()]
       .sort(([a], [b]) => a - b)
       .map(([rowIdx, fields]) => {
         const row = rows[rowIdx];
-        if (!row) return '';
-        return cols.map((c) => (fields.has(c.field) ? (row[c.field] ?? '') : '')).join('\t');
+        if (!row) return "";
+        return cols.map((c) => (fields.has(c.field) ? (row[c.field] ?? "") : "")).join("\t");
       })
-      .join('\n');
+      .join("\n");
     await navigator.clipboard.writeText(`${headers}\n${body}`);
     return;
   }
@@ -72,10 +72,10 @@ async function copySelection(ctx: TableContext) {
 
   if (selectedRows.length === 0) return;
 
-  const headers = columns.map((c) => c.field).join('\t');
+  const headers = columns.map((c) => c.field).join("\t");
   const body = selectedRows
-    .map((row) => columns.map((c) => row[c.field] ?? '').join('\t'))
-    .join('\n');
+    .map((row) => columns.map((c) => row[c.field] ?? "").join("\t"))
+    .join("\n");
 
   await navigator.clipboard.writeText(`${headers}\n${body}`);
 }

@@ -1,5 +1,5 @@
-import type { TablePlugin, TableContext } from '../types.js';
-import type { SortField, FilterExpr } from '@unify/table-core';
+import type { TablePlugin, TableContext } from "../types.js";
+import type { SortField, FilterExpr } from "@unify/table-core";
 
 interface ViewState {
   sort: SortField[];
@@ -13,7 +13,7 @@ const savedViews = new Map<string, ViewState>();
 
 export function views(): TablePlugin {
   return {
-    name: 'views',
+    name: "views",
   };
 }
 

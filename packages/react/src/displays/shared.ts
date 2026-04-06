@@ -1,13 +1,13 @@
 export const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '3px 6px',
-  background: 'var(--utbl-input-bg)',
-  border: '1px solid var(--utbl-input-border)',
-  color: 'var(--utbl-text)',
+  width: "100%",
+  padding: "3px 6px",
+  background: "var(--utbl-input-bg)",
+  border: "1px solid var(--utbl-input-border)",
+  color: "var(--utbl-text)",
   borderRadius: 3,
-  fontSize: '0.625rem',
-  fontFamily: 'inherit',
-  boxSizing: 'border-box',
+  fontSize: "0.625rem",
+  fontFamily: "inherit",
+  boxSizing: "border-box",
 };
 
 export function formatCompact(num: number): string {

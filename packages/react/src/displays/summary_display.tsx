@@ -1,18 +1,18 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
-import { summaryDisplayType, isIdentityColumn } from '@unify/table-core';
-import type { SummaryDisplayConfig, CardSize } from '@unify/table-core';
-import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
-import { useDisplayData } from './useDisplayData.js';
-import type { QueryEngine } from '@unify/table-core';
-import { ScanSearch } from 'lucide-react';
-import { formatCompact } from './shared.js';
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { summaryDisplayType, isIdentityColumn } from "@unify/table-core";
+import type { SummaryDisplayConfig, CardSize } from "@unify/table-core";
+import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from "./types.js";
+import { useDisplayData } from "./useDisplayData.js";
+import type { QueryEngine } from "@unify/table-core";
+import { ScanSearch } from "lucide-react";
+import { formatCompact } from "./shared.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function formatNum(v: unknown): string {
-  if (v === null || v === undefined || v === '') return '-';
+  if (v === null || v === undefined || v === "") return "-";
   const num = Number(v);
   if (isNaN(num)) return String(v);
   return formatCompact(num);
@@ -20,17 +20,33 @@ function formatNum(v: unknown): string {
 
 function pctBar(pct: number, color: string, height: number): React.ReactNode {
   return (
-    <div style={{ height, borderRadius: height / 2, background: 'var(--utbl-border)', width: '100%' }}>
-      <div style={{ height: '100%', borderRadius: height / 2, background: color, width: `${Math.min(pct, 100)}%`, transition: 'width 0.2s' }} />
+    <div
+      style={{ height, borderRadius: height / 2, background: "var(--utbl-border)", width: "100%" }}
+    >
+      <div
+        style={{
+          height: "100%",
+          borderRadius: height / 2,
+          background: color,
+          width: `${Math.min(pct, 100)}%`,
+          transition: "width 0.2s",
+        }}
+      />
     </div>
   );
 }
 
 const isNumericType = (t: string) => {
   const upper = t.toUpperCase();
-  return upper.includes('INT') || upper.includes('FLOAT') || upper.includes('DOUBLE') ||
-    upper.includes('DECIMAL') || upper.includes('NUMERIC') || upper.includes('BIGINT') ||
-    upper.includes('HUGEINT');
+  return (
+    upper.includes("INT") ||
+    upper.includes("FLOAT") ||
+    upper.includes("DOUBLE") ||
+    upper.includes("DECIMAL") ||
+    upper.includes("NUMERIC") ||
+    upper.includes("BIGINT") ||
+    upper.includes("HUGEINT")
+  );
 };
 
 // ---------------------------------------------------------------------------
@@ -55,14 +71,14 @@ interface SummarySizes {
 
 const SUMMARY_SIZES: Record<CardSize, SummarySizes> = {
   sm: {
-    gridMin: '200px',
+    gridMin: "200px",
     padding: 10,
     gap: 6,
     borderRadius: 6,
-    headerFont: '0.65rem',
-    badgeFont: '0.5rem',
-    statsFont: '0.55rem',
-    detailFont: '0.55rem',
+    headerFont: "0.65rem",
+    badgeFont: "0.5rem",
+    statsFont: "0.55rem",
+    detailFont: "0.55rem",
     nullBarHeight: 3,
     quartileBarHeight: 4,
     histogramHeight: 24,
@@ -70,14 +86,14 @@ const SUMMARY_SIZES: Record<CardSize, SummarySizes> = {
     hideQuartileBar: true,
   },
   md: {
-    gridMin: '280px',
+    gridMin: "280px",
     padding: 14,
     gap: 8,
     borderRadius: 8,
-    headerFont: '0.75rem',
-    badgeFont: '0.55rem',
-    statsFont: '0.625rem',
-    detailFont: '0.6rem',
+    headerFont: "0.75rem",
+    badgeFont: "0.55rem",
+    statsFont: "0.625rem",
+    detailFont: "0.6rem",
     nullBarHeight: 4,
     quartileBarHeight: 6,
     histogramHeight: 32,
@@ -85,14 +101,14 @@ const SUMMARY_SIZES: Record<CardSize, SummarySizes> = {
     hideQuartileBar: false,
   },
   lg: {
-    gridMin: '360px',
+    gridMin: "360px",
     padding: 20,
     gap: 12,
     borderRadius: 10,
-    headerFont: '0.85rem',
-    badgeFont: '0.6rem',
-    statsFont: '0.7rem',
-    detailFont: '0.7rem',
+    headerFont: "0.85rem",
+    badgeFont: "0.6rem",
+    statsFont: "0.7rem",
+    detailFont: "0.7rem",
     nullBarHeight: 6,
     quartileBarHeight: 8,
     histogramHeight: 48,
@@ -105,7 +121,10 @@ const SUMMARY_SIZES: Record<CardSize, SummarySizes> = {
 // Histogram hook (lazy per-card)
 // ---------------------------------------------------------------------------
 
-interface DistData { label: string; count: number }
+interface DistData {
+  label: string;
+  count: number;
+}
 
 function useDistribution(
   engine: QueryEngine,
@@ -137,7 +156,7 @@ function useDistribution(
       }
 
       const rows = await engine.query<{ label: unknown; count: unknown }>(sql);
-      setData(rows.map((r) => ({ label: String(r.label ?? ''), count: Number(r.count ?? 0) })));
+      setData(rows.map((r) => ({ label: String(r.label ?? ""), count: Number(r.count ?? 0) })));
     } catch {
       setData([]);
     } finally {
@@ -145,7 +164,9 @@ function useDistribution(
     }
   }, [engine, viewName, colName, colType, bins, enabled]);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
 
   return { data, loading };
 }
@@ -186,88 +207,160 @@ function SummaryCard({
 }) {
   const numeric = isNumericType(row.column_type);
   const nullPct = Number(row.null_percentage ?? 0);
-  const { data: dist } = useDistribution(engine, viewName, row.column_name, row.column_type, bins, showDist);
+  const { data: dist } = useDistribution(
+    engine,
+    viewName,
+    row.column_name,
+    row.column_type,
+    bins,
+    showDist,
+  );
   const maxCount = Math.max(...dist.map((d) => d.count), 1);
 
   return (
-    <div style={{
-      padding: sizes.padding,
-      background: 'var(--utbl-surface-alt)',
-      borderRadius: sizes.borderRadius,
-      border: '1px solid var(--utbl-border)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: sizes.gap,
-    }}>
+    <div
+      style={{
+        padding: sizes.padding,
+        background: "var(--utbl-surface-alt)",
+        borderRadius: sizes.borderRadius,
+        border: "1px solid var(--utbl-border)",
+        display: "flex",
+        flexDirection: "column",
+        gap: sizes.gap,
+      }}
+    >
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span style={{ fontWeight: 700, fontSize: sizes.headerFont, color: 'var(--utbl-text)' }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontWeight: 700, fontSize: sizes.headerFont, color: "var(--utbl-text)" }}>
           {row.column_name}
         </span>
-        <span style={{
-          fontSize: sizes.badgeFont,
-          padding: '1px 5px',
-          borderRadius: 3,
-          background: 'color-mix(in srgb, var(--utbl-accent) 15%, transparent)',
-          color: 'var(--utbl-accent)',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-        }}>
+        <span
+          style={{
+            fontSize: sizes.badgeFont,
+            padding: "1px 5px",
+            borderRadius: 3,
+            background: "color-mix(in srgb, var(--utbl-accent) 15%, transparent)",
+            color: "var(--utbl-accent)",
+            fontWeight: 600,
+            textTransform: "uppercase",
+          }}
+        >
           {row.column_type}
         </span>
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'flex', gap: 12, fontSize: sizes.statsFont, color: 'var(--utbl-text-secondary)' }}>
-        <span>Count <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.count)}</strong></span>
-        <span>Unique <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.approx_unique)}</strong></span>
-        <span>Nulls <strong style={{ color: nullPct > 50 ? '#ef4444' : 'var(--utbl-text)' }}>{nullPct.toFixed(1)}%</strong></span>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          fontSize: sizes.statsFont,
+          color: "var(--utbl-text-secondary)",
+        }}
+      >
+        <span>
+          Count <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.count)}</strong>
+        </span>
+        <span>
+          Unique{" "}
+          <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.approx_unique)}</strong>
+        </span>
+        <span>
+          Nulls{" "}
+          <strong style={{ color: nullPct > 50 ? "#ef4444" : "var(--utbl-text)" }}>
+            {nullPct.toFixed(1)}%
+          </strong>
+        </span>
       </div>
 
       {/* Null bar */}
-      {pctBar(nullPct, nullPct > 50 ? '#ef4444' : 'var(--utbl-accent)', sizes.nullBarHeight)}
+      {pctBar(nullPct, nullPct > 50 ? "#ef4444" : "var(--utbl-accent)", sizes.nullBarHeight)}
 
       {/* Min / Max */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: sizes.detailFont, color: 'var(--utbl-text-muted)' }}>
-        <span>min: <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.min)}</strong></span>
-        <span>max: <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.max)}</strong></span>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: sizes.detailFont,
+          color: "var(--utbl-text-muted)",
+        }}
+      >
+        <span>
+          min: <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.min)}</strong>
+        </span>
+        <span>
+          max: <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.max)}</strong>
+        </span>
       </div>
 
       {/* Numeric extras */}
       {numeric && (
-        <div style={{ display: 'flex', gap: 10, fontSize: sizes.detailFont, color: 'var(--utbl-text-muted)', flexWrap: 'wrap' }}>
-          <span>avg: <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.avg)}</strong></span>
-          <span>med: <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.q50)}</strong></span>
-          <span>std: <strong style={{ color: 'var(--utbl-text)' }}>{formatNum(row.std)}</strong></span>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            fontSize: sizes.detailFont,
+            color: "var(--utbl-text-muted)",
+            flexWrap: "wrap",
+          }}
+        >
+          <span>
+            avg: <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.avg)}</strong>
+          </span>
+          <span>
+            med: <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.q50)}</strong>
+          </span>
+          <span>
+            std: <strong style={{ color: "var(--utbl-text)" }}>{formatNum(row.std)}</strong>
+          </span>
         </div>
       )}
 
       {/* Quartile bar for numerics */}
       {numeric && !sizes.hideQuartileBar && row.q25 != null && row.q75 != null && (
-        <div style={{ position: 'relative', height: sizes.quartileBarHeight, borderRadius: sizes.quartileBarHeight / 2, background: 'var(--utbl-border)' }}>
-          <div style={{
-            position: 'absolute',
-            left: '25%',
-            width: '50%',
-            height: '100%',
+        <div
+          style={{
+            position: "relative",
+            height: sizes.quartileBarHeight,
             borderRadius: sizes.quartileBarHeight / 2,
-            background: 'var(--utbl-accent)',
-            opacity: 0.4,
-          }} />
-          <div style={{
-            position: 'absolute',
-            left: '50%',
-            width: 2,
-            height: '100%',
-            background: 'var(--utbl-accent)',
-            transform: 'translateX(-1px)',
-          }} />
+            background: "var(--utbl-border)",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              left: "25%",
+              width: "50%",
+              height: "100%",
+              borderRadius: sizes.quartileBarHeight / 2,
+              background: "var(--utbl-accent)",
+              opacity: 0.4,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              width: 2,
+              height: "100%",
+              background: "var(--utbl-accent)",
+              transform: "translateX(-1px)",
+            }}
+          />
         </div>
       )}
 
       {/* Distribution */}
       {showDist && dist.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1, height: sizes.histogramHeight, marginTop: 2 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: 1,
+            height: sizes.histogramHeight,
+            marginTop: 2,
+          }}
+        >
           {dist.map((d, i) => (
             <div
               key={i}
@@ -275,8 +368,8 @@ function SummaryCard({
               style={{
                 flex: 1,
                 height: `${Math.max((d.count / maxCount) * 100, 2)}%`,
-                background: 'var(--utbl-accent)',
-                borderRadius: '2px 2px 0 0',
+                background: "var(--utbl-accent)",
+                borderRadius: "2px 2px 0 0",
                 opacity: 0.7,
                 minWidth: 2,
               }}
@@ -292,9 +385,14 @@ function SummaryCard({
 // Render
 // ---------------------------------------------------------------------------
 
-function SummaryRender({ config, sql, engine, viewName }: DisplayRenderProps<SummaryDisplayConfig>) {
+function SummaryRender({
+  config,
+  sql,
+  engine,
+  viewName,
+}: DisplayRenderProps<SummaryDisplayConfig>) {
   const { rows, isLoading, error } = useDisplayData(sql, engine);
-  const sizes = SUMMARY_SIZES[config.cardSize ?? 'md'];
+  const sizes = SUMMARY_SIZES[config.cardSize ?? "md"];
 
   const filtered = useMemo(() => {
     const exclude = new Set(config.excludeColumns);
@@ -302,21 +400,26 @@ function SummaryRender({ config, sql, engine, viewName }: DisplayRenderProps<Sum
   }, [rows, config.excludeColumns]);
 
   if (error) return <div className="utbl-display-error">{error.message}</div>;
-  if (isLoading && rows.length === 0) return <div className="utbl-display-loading">Loading summary...</div>;
-  if (filtered.length === 0) return <div className="utbl-display-loading">No columns to profile</div>;
+  if (isLoading && rows.length === 0)
+    return <div className="utbl-display-loading">Loading summary...</div>;
+  if (filtered.length === 0)
+    return <div className="utbl-display-loading">No columns to profile</div>;
 
-  const layout = config.layout ?? 'grid';
+  const layout = config.layout ?? "grid";
 
   return (
-    <div style={{
-      flex: 1,
-      overflow: 'auto',
-      padding: 12,
-      display: layout === 'grid' ? 'grid' : 'flex',
-      flexDirection: layout === 'list' ? 'column' : undefined,
-      gridTemplateColumns: layout === 'grid' ? `repeat(auto-fill, minmax(${sizes.gridMin}, 1fr))` : undefined,
-      gap: sizes.containerGap,
-    }}>
+    <div
+      style={{
+        flex: 1,
+        overflow: "auto",
+        padding: 12,
+        display: layout === "grid" ? "grid" : "flex",
+        flexDirection: layout === "list" ? "column" : undefined,
+        gridTemplateColumns:
+          layout === "grid" ? `repeat(auto-fill, minmax(${sizes.gridMin}, 1fr))` : undefined,
+        gap: sizes.containerGap,
+      }}
+    >
       {filtered.map((row) => (
         <SummaryCard
           key={row.column_name}
@@ -337,8 +440,8 @@ function SummaryRender({ config, sql, engine, viewName }: DisplayRenderProps<Sum
 // ---------------------------------------------------------------------------
 
 function SummaryConfig({ config, onChange, columns }: DisplayConfigProps<SummaryDisplayConfig>) {
-  const currentLayout = config.layout ?? 'grid';
-  const currentSize = config.cardSize ?? 'md';
+  const currentLayout = config.layout ?? "grid";
+  const currentSize = config.cardSize ?? "md";
   const excluded = new Set(config.excludeColumns);
 
   function toggleExclude(name: string) {
@@ -349,21 +452,63 @@ function SummaryConfig({ config, onChange, columns }: DisplayConfigProps<Summary
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.75rem' }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: "0.75rem" }}>
       <div className="utbl-segmented">
-        <button className="utbl-segmented-btn" data-active={currentLayout === 'grid'} onClick={() => onChange({ ...config, layout: 'grid' })}>Grid</button>
-        <button className="utbl-segmented-btn" data-active={currentLayout === 'list'} onClick={() => onChange({ ...config, layout: 'list' })}>List</button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={currentLayout === "grid"}
+          onClick={() => onChange({ ...config, layout: "grid" })}
+        >
+          Grid
+        </button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={currentLayout === "list"}
+          onClick={() => onChange({ ...config, layout: "list" })}
+        >
+          List
+        </button>
       </div>
 
       {/* Card size toggle */}
       <div className="utbl-segmented">
-        <button className="utbl-segmented-btn" data-active={currentSize === 'sm'} onClick={() => onChange({ ...config, cardSize: 'sm' })}>S</button>
-        <button className="utbl-segmented-btn" data-active={currentSize === 'md'} onClick={() => onChange({ ...config, cardSize: 'md' })}>M</button>
-        <button className="utbl-segmented-btn" data-active={currentSize === 'lg'} onClick={() => onChange({ ...config, cardSize: 'lg' })}>L</button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={currentSize === "sm"}
+          onClick={() => onChange({ ...config, cardSize: "sm" })}
+        >
+          S
+        </button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={currentSize === "md"}
+          onClick={() => onChange({ ...config, cardSize: "md" })}
+        >
+          M
+        </button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={currentSize === "lg"}
+          onClick={() => onChange({ ...config, cardSize: "lg" })}
+        >
+          L
+        </button>
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--utbl-text)' }}>
-        <input type="checkbox" checked={config.showDistributions} onChange={() => onChange({ ...config, showDistributions: !config.showDistributions })} />
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          cursor: "pointer",
+          color: "var(--utbl-text)",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={config.showDistributions}
+          onChange={() => onChange({ ...config, showDistributions: !config.showDistributions })}
+        />
         Show Distributions
       </label>
 
@@ -384,13 +529,28 @@ function SummaryConfig({ config, onChange, columns }: DisplayConfigProps<Summary
 
       <div>
         <span className="utbl-field-label">Exclude Columns</span>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 4 }}>
-          {columns.filter((c) => !isIdentityColumn(c.name)).map((c) => (
-            <label key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--utbl-text)' }}>
-              <input type="checkbox" checked={excluded.has(c.name)} onChange={() => toggleExclude(c.name)} />
-              {c.name}
-            </label>
-          ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 4 }}>
+          {columns
+            .filter((c) => !isIdentityColumn(c.name))
+            .map((c) => (
+              <label
+                key={c.name}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: "pointer",
+                  color: "var(--utbl-text)",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={excluded.has(c.name)}
+                  onChange={() => toggleExclude(c.name)}
+                />
+                {c.name}
+              </label>
+            ))}
         </div>
       </div>
     </div>

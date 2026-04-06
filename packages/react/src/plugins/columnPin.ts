@@ -1,19 +1,19 @@
-import { createElement } from 'react';
-import type { TablePlugin, TableContext, ResolvedColumn, MenuItem } from '../types.js';
-import { MENU_SEPARATOR } from '../utils.js';
-import { Pin, PinOff } from 'lucide-react';
+import { createElement } from "react";
+import type { TablePlugin, TableContext, ResolvedColumn, MenuItem } from "../types.js";
+import { MENU_SEPARATOR } from "../utils.js";
+import { Pin, PinOff } from "lucide-react";
 
 export function columnPin(): TablePlugin {
   return {
-    name: 'columnPin',
+    name: "columnPin",
     transformColumns(columns: ResolvedColumn[]): ResolvedColumn[] {
       const left: ResolvedColumn[] = [];
       const center: ResolvedColumn[] = [];
       const right: ResolvedColumn[] = [];
 
       for (const col of columns) {
-        if (col.pin === 'left') left.push(col);
-        else if (col.pin === 'right') right.push(col);
+        if (col.pin === "left") left.push(col);
+        else if (col.pin === "right") right.push(col);
         else center.push(col);
       }
 
@@ -42,29 +42,35 @@ export function columnPin(): TablePlugin {
 
       const children: MenuItem[] = [
         {
-          label: 'Pin Left',
+          label: "Pin Left",
           icon: pinIcon,
-          disabled: column.pin === 'left',
-          action: () => { ctx.getLatest().setColumnPin(column.field, 'left'); },
+          disabled: column.pin === "left",
+          action: () => {
+            ctx.getLatest().setColumnPin(column.field, "left");
+          },
         },
         {
-          label: 'Pin Right',
+          label: "Pin Right",
           icon: pinIcon,
-          disabled: column.pin === 'right',
-          action: () => { ctx.getLatest().setColumnPin(column.field, 'right'); },
+          disabled: column.pin === "right",
+          action: () => {
+            ctx.getLatest().setColumnPin(column.field, "right");
+          },
         },
         {
-          label: 'Unpin',
+          label: "Unpin",
           icon: unpinIcon,
           disabled: !column.pin,
-          action: () => { ctx.getLatest().setColumnPin(column.field, null); },
+          action: () => {
+            ctx.getLatest().setColumnPin(column.field, null);
+          },
         },
       ];
 
       return [
         MENU_SEPARATOR,
         {
-          label: 'Pin',
+          label: "Pin",
           icon: column.pin ? unpinIcon : pinIcon,
           action: () => {},
           children,

@@ -1,8 +1,8 @@
-import type { TablePlugin, TableContext, ResolvedColumn } from '../types.js';
+import type { TablePlugin, TableContext, ResolvedColumn } from "../types.js";
 
 export function columnReorder(): TablePlugin {
   return {
-    name: 'columnReorder',
+    name: "columnReorder",
 
     transformColumns(columns: ResolvedColumn[]): ResolvedColumn[] {
       // Mark all non-pinned columns as draggable
@@ -29,7 +29,7 @@ export function columnReorder(): TablePlugin {
         }
         const header = (e.target as HTMLElement).closest('[role="columnheader"]');
         if (!header) return;
-        const field = (header as HTMLElement).getAttribute('data-field');
+        const field = (header as HTMLElement).getAttribute("data-field");
         if (!field) return;
 
         // Don't allow dragging pinned columns
@@ -42,23 +42,23 @@ export function columnReorder(): TablePlugin {
 
         sourceField = field;
         targetField = null;
-        e.dataTransfer!.effectAllowed = 'move';
-        e.dataTransfer!.setData('text/plain', field);
-        (header as HTMLElement).style.opacity = '0.5';
+        e.dataTransfer!.effectAllowed = "move";
+        e.dataTransfer!.setData("text/plain", field);
+        (header as HTMLElement).style.opacity = "0.5";
       }
 
       function handleDragOver(e: DragEvent) {
         if (!sourceField) return;
         e.preventDefault();
-        e.dataTransfer!.dropEffect = 'move';
+        e.dataTransfer!.dropEffect = "move";
 
         const header = (e.target as HTMLElement).closest('[role="columnheader"]');
         if (!header) return;
-        const field = (header as HTMLElement).getAttribute('data-field');
+        const field = (header as HTMLElement).getAttribute("data-field");
         if (field && field !== sourceField) {
           targetField = field;
           clearDropIndicators(el);
-          (header as HTMLElement).style.borderLeft = '2px solid var(--drop-indicator, #3b82f6)';
+          (header as HTMLElement).style.borderLeft = "2px solid var(--drop-indicator, #3b82f6)";
         }
       }
 
@@ -84,7 +84,7 @@ export function columnReorder(): TablePlugin {
       function handleDragEnd(e: DragEvent) {
         // Reset opacity on the dragged header
         const header = (e.target as HTMLElement).closest('[role="columnheader"]');
-        if (header) (header as HTMLElement).style.opacity = '';
+        if (header) (header as HTMLElement).style.opacity = "";
         cleanup();
       }
 
@@ -94,10 +94,10 @@ export function columnReorder(): TablePlugin {
         clearDropIndicators(el);
       }
 
-      el.addEventListener('dragstart', handleDragStart);
-      el.addEventListener('dragover', handleDragOver);
-      el.addEventListener('drop', handleDrop);
-      el.addEventListener('dragend', handleDragEnd);
+      el.addEventListener("dragstart", handleDragStart);
+      el.addEventListener("dragover", handleDragOver);
+      el.addEventListener("drop", handleDrop);
+      el.addEventListener("dragend", handleDragEnd);
 
       // Make header cells draggable
       function applyDraggable() {
@@ -105,14 +105,16 @@ export function columnReorder(): TablePlugin {
         const pinnedFields = new Set(latest.columns.filter((c) => c.pin).map((c) => c.field));
         const headers = el.querySelectorAll('[role="columnheader"]');
         headers.forEach((h) => {
-          const field = (h as HTMLElement).getAttribute('data-field');
+          const field = (h as HTMLElement).getAttribute("data-field");
           const pinned = field ? pinnedFields.has(field) : false;
           (h as HTMLElement).draggable = !pinned;
-          (h as HTMLElement).style.cursor = pinned ? '' : 'grab';
+          (h as HTMLElement).style.cursor = pinned ? "" : "grab";
         });
         // Prevent resize handles from being draggable
         const separators = el.querySelectorAll('[role="separator"]');
-        separators.forEach((s) => { (s as HTMLElement).draggable = false; });
+        separators.forEach((s) => {
+          (s as HTMLElement).draggable = false;
+        });
       }
 
       const observer = new MutationObserver(applyDraggable);
@@ -120,10 +122,10 @@ export function columnReorder(): TablePlugin {
       applyDraggable();
 
       return () => {
-        el.removeEventListener('dragstart', handleDragStart);
-        el.removeEventListener('dragover', handleDragOver);
-        el.removeEventListener('drop', handleDrop);
-        el.removeEventListener('dragend', handleDragEnd);
+        el.removeEventListener("dragstart", handleDragStart);
+        el.removeEventListener("dragover", handleDragOver);
+        el.removeEventListener("drop", handleDrop);
+        el.removeEventListener("dragend", handleDragEnd);
         observer.disconnect();
       };
     },
@@ -133,6 +135,6 @@ export function columnReorder(): TablePlugin {
 function clearDropIndicators(container: HTMLElement) {
   const headers = container.querySelectorAll('[role="columnheader"]');
   headers.forEach((h) => {
-    (h as HTMLElement).style.borderLeft = '';
+    (h as HTMLElement).style.borderLeft = "";
   });
 }

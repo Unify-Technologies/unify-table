@@ -1,7 +1,14 @@
-import { createEditOverlay } from '@unify/table-core';
-import type { EditOverlay, Row } from '@unify/table-core';
-import type { TablePlugin, TableContext, CellRef, EditBackend, EditingState, MenuItem } from '../types.js';
-import { detectIdColumnByName, MENU_SEPARATOR } from '../utils.js';
+import { createEditOverlay } from "@unify/table-core";
+import type { EditOverlay, Row } from "@unify/table-core";
+import type {
+  TablePlugin,
+  TableContext,
+  CellRef,
+  EditBackend,
+  EditingState,
+  MenuItem,
+} from "../types.js";
+import { detectIdColumnByName, MENU_SEPARATOR } from "../utils.js";
 
 export interface EditingOptions {
   /** Whether editing is initially enabled. Default: true. */
@@ -11,10 +18,14 @@ export interface EditingOptions {
 }
 
 type EditOp =
-  | { type: 'edit'; rowId: string; field: string; oldValue: unknown; newValue: unknown }
-  | { type: 'add'; rowId: string; data: Row }
-  | { type: 'delete'; rowIds: string[]; snapshots: Array<{ rowId: string; data: Row; state: 'edited' | 'added' }> }
-  | { type: 'batch'; ops: EditOp[] };
+  | { type: "edit"; rowId: string; field: string; oldValue: unknown; newValue: unknown }
+  | { type: "add"; rowId: string; data: Row }
+  | {
+      type: "delete";
+      rowIds: string[];
+      snapshots: Array<{ rowId: string; data: Row; state: "edited" | "added" }>;
+    }
+  | { type: "batch"; ops: EditOp[] };
 
 let overlayIdCounter = 0;
 
@@ -22,19 +33,22 @@ export function editing(options: EditingOptions = {}): TablePlugin {
   const { enabled: initialEnabled = true, undoDepth = 50 } = options;
 
   return {
-    name: 'editing',
+    name: "editing",
 
     init(ctx: TableContext) {
       let overlay: EditOverlay | null = null;
       let initialized = false;
       let enabled = initialEnabled;
-      let rowIdField = '';
+      let rowIdField = "";
       let editingCell: CellRef | null = null;
 
       const undoStack: EditOp[] = [];
       const redoStack: EditOp[] = [];
       // Track which cells are dirty: rowId -> Set<field>
-      const dirtyMap = new Map<string, { state: 'edited' | 'added' | 'deleted'; fields: Set<string> }>();
+      const dirtyMap = new Map<
+        string,
+        { state: "edited" | "added" | "deleted"; fields: Set<string> }
+      >();
 
       // Batch editing — suppress individual refresh/undo during batch
       let _batching = false;
@@ -51,7 +65,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           editingCell,
           startEditing(cell: CellRef) {
             editingCell = cell;
-            ctx.getLatest().emit('edit:start', cell);
+            ctx.getLatest().emit("edit:start", cell);
             publishState();
           },
           async commitEdit(cell: CellRef, value: unknown) {
@@ -63,7 +77,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           cancelEdit() {
             editingCell = null;
             refocusContainer();
-            ctx.getLatest().emit('edit:cancel');
+            ctx.getLatest().emit("edit:cancel");
             publishState();
           },
           async addRow(data: Row) {
@@ -95,7 +109,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
 
         // Detect rowIdField
         const cols = await ctx.getLatest().engine.columns(ctx.getLatest().table);
-        rowIdField = detectIdColumnByName(cols) || cols[0]?.name || '';
+        rowIdField = detectIdColumnByName(cols) || cols[0]?.name || "";
 
         await overlay.init(cols, rowIdField);
 
@@ -117,9 +131,13 @@ export function editing(options: EditingOptions = {}): TablePlugin {
         redoStack.length = 0;
       }
 
-      function updateDirtyMap(rowId: string, state: 'edited' | 'added' | 'deleted', field?: string) {
+      function updateDirtyMap(
+        rowId: string,
+        state: "edited" | "added" | "deleted",
+        field?: string,
+      ) {
         const existing = dirtyMap.get(rowId);
-        if (state === 'deleted' || (state === 'edited' && !field)) {
+        if (state === "deleted" || (state === "edited" && !field)) {
           dirtyMap.set(rowId, { state, fields: existing?.fields ?? new Set() });
         } else if (existing) {
           existing.state = state;
@@ -140,7 +158,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           if (column?.validate) {
             const result = column.validate(value);
             if (result !== true) {
-              l.emit('edit:invalid', { cell, value, error: result });
+              l.emit("edit:invalid", { cell, value, error: result });
               return;
             }
           }
@@ -149,15 +167,21 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           const oldValue = cell.value;
 
           await ov.apply(cell.rowId, cell.field, value);
-          const op: EditOp = { type: 'edit', rowId: cell.rowId, field: cell.field, oldValue, newValue: value };
+          const op: EditOp = {
+            type: "edit",
+            rowId: cell.rowId,
+            field: cell.field,
+            oldValue,
+            newValue: value,
+          };
           if (_batching) {
             _batchOps.push(op);
           } else {
             pushUndo(op);
           }
-          updateDirtyMap(cell.rowId, dirtyMap.get(cell.rowId)?.state ?? 'edited', cell.field);
+          updateDirtyMap(cell.rowId, dirtyMap.get(cell.rowId)?.state ?? "edited", cell.field);
 
-          l.emit('edit:commit', { cell, value });
+          l.emit("edit:commit", { cell, value });
           if (!_batching) await l.refresh();
         },
 
@@ -168,11 +192,11 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           const l = ctx.getLatest();
 
           await ov.addRow(data);
-          const rowId = String(data[rowIdField] ?? '');
-          pushUndo({ type: 'add', rowId, data });
-          updateDirtyMap(rowId, 'added');
+          const rowId = String(data[rowIdField] ?? "");
+          pushUndo({ type: "add", rowId, data });
+          updateDirtyMap(rowId, "added");
 
-          l.emit('row:add', data);
+          l.emit("row:add", data);
           await l.refresh();
         },
 
@@ -183,7 +207,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           const l = ctx.getLatest();
 
           // Snapshot rows before deleting (for undo)
-          const snapshots: Array<{ rowId: string; data: Row; state: 'edited' | 'added' }> = [];
+          const snapshots: Array<{ rowId: string; data: Row; state: "edited" | "added" }> = [];
           for (const rid of ids) {
             const existing = dirtyMap.get(rid);
             const currentRows = l.rows.filter((r) => String(r[rowIdField]) === rid);
@@ -191,18 +215,18 @@ export function editing(options: EditingOptions = {}): TablePlugin {
             snapshots.push({
               rowId: rid,
               data: rowData,
-              state: existing?.state === 'added' ? 'added' : 'edited',
+              state: existing?.state === "added" ? "added" : "edited",
             });
             await ov.deleteRow(rid);
-            if (existing?.state === 'added') {
+            if (existing?.state === "added") {
               dirtyMap.delete(rid);
             } else {
-              updateDirtyMap(rid, 'deleted');
+              updateDirtyMap(rid, "deleted");
             }
           }
-          pushUndo({ type: 'delete', rowIds: ids, snapshots });
+          pushUndo({ type: "delete", rowIds: ids, snapshots });
 
-          l.emit('row:delete', ids);
+          l.emit("row:delete", ids);
           await l.refresh();
         },
 
@@ -212,38 +236,38 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           const l = ctx.getLatest();
 
           async function undoSingle(sop: EditOp): Promise<void> {
-            if (sop.type === 'edit') {
+            if (sop.type === "edit") {
               await overlay!.apply(sop.rowId, sop.field, sop.oldValue);
               const dirty = dirtyMap.get(sop.rowId);
               if (dirty) {
                 dirty.fields.delete(sop.field);
-                if (dirty.fields.size === 0 && dirty.state === 'edited') {
+                if (dirty.fields.size === 0 && dirty.state === "edited") {
                   await overlay!.revert(sop.rowId);
                   dirtyMap.delete(sop.rowId);
                 }
               }
-            } else if (sop.type === 'add') {
+            } else if (sop.type === "add") {
               await overlay!.deleteRow(sop.rowId);
               dirtyMap.delete(sop.rowId);
-            } else if (sop.type === 'batch') {
+            } else if (sop.type === "batch") {
               for (const sub of [...sop.ops].reverse()) await undoSingle(sub);
             }
           }
 
-          if (op.type === 'edit' || op.type === 'add' || op.type === 'batch') {
+          if (op.type === "edit" || op.type === "add" || op.type === "batch") {
             await undoSingle(op);
-          } else if (op.type === 'delete') {
+          } else if (op.type === "delete") {
             for (const snap of op.snapshots) {
-              if (snap.state === 'added') {
-                await overlay.restoreRow(snap.data, 'added');
-                updateDirtyMap(snap.rowId, 'added');
+              if (snap.state === "added") {
+                await overlay.restoreRow(snap.data, "added");
+                updateDirtyMap(snap.rowId, "added");
               } else {
                 await overlay.revert(snap.rowId);
                 dirtyMap.delete(snap.rowId);
                 const hasNonIdFields = Object.keys(snap.data).some((k) => k !== rowIdField);
                 if (hasNonIdFields) {
-                  await overlay.restoreRow(snap.data, 'edited');
-                  updateDirtyMap(snap.rowId, 'edited');
+                  await overlay.restoreRow(snap.data, "edited");
+                  updateDirtyMap(snap.rowId, "edited");
                 }
               }
             }
@@ -259,22 +283,22 @@ export function editing(options: EditingOptions = {}): TablePlugin {
           const l = ctx.getLatest();
 
           async function redoSingle(sop: EditOp): Promise<void> {
-            if (sop.type === 'edit') {
+            if (sop.type === "edit") {
               await overlay!.apply(sop.rowId, sop.field, sop.newValue);
-              updateDirtyMap(sop.rowId, dirtyMap.get(sop.rowId)?.state ?? 'edited', sop.field);
-            } else if (sop.type === 'add') {
+              updateDirtyMap(sop.rowId, dirtyMap.get(sop.rowId)?.state ?? "edited", sop.field);
+            } else if (sop.type === "add") {
               await overlay!.addRow(sop.data);
-              updateDirtyMap(sop.rowId, 'added');
-            } else if (sop.type === 'batch') {
+              updateDirtyMap(sop.rowId, "added");
+            } else if (sop.type === "batch") {
               for (const sub of sop.ops) await redoSingle(sub);
-            } else if (sop.type === 'delete') {
+            } else if (sop.type === "delete") {
               for (const rid of sop.rowIds) {
                 await overlay!.deleteRow(rid);
                 const snap = sop.snapshots.find((s) => s.rowId === rid);
-                if (snap?.state === 'added') {
+                if (snap?.state === "added") {
                   dirtyMap.delete(rid);
                 } else {
-                  updateDirtyMap(rid, 'deleted');
+                  updateDirtyMap(rid, "deleted");
                 }
               }
             }
@@ -298,12 +322,12 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       publishState();
 
       // Listen for toggle events
-      const offToggle = ctx.on('editing:toggle', () => {
+      const offToggle = ctx.on("editing:toggle", () => {
         enabled = !enabled;
       });
 
       // Listen for save events
-      const offSave = ctx.on('editing:save', async () => {
+      const offSave = ctx.on("editing:save", async () => {
         if (!overlay) return;
         await overlay.save();
         undoStack.length = 0;
@@ -314,14 +338,14 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       });
 
       // Listen for batch start/end events (used by fillHandle plugin)
-      const offBatchStart = ctx.on('editing:batchStart', () => {
+      const offBatchStart = ctx.on("editing:batchStart", () => {
         _batching = true;
         _batchOps = [];
       });
-      const offBatchEnd = ctx.on('editing:batchEnd', async () => {
+      const offBatchEnd = ctx.on("editing:batchEnd", async () => {
         _batching = false;
         if (_batchOps.length > 0) {
-          pushUndo({ type: 'batch', ops: _batchOps });
+          pushUndo({ type: "batch", ops: _batchOps });
           _batchOps = [];
         }
         await ctx.getLatest().refresh();
@@ -329,7 +353,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       });
 
       // Listen for discard events
-      const offDiscard = ctx.on('editing:discard', async () => {
+      const offDiscard = ctx.on("editing:discard", async () => {
         if (!overlay) return;
         await overlay.revertAll();
         undoStack.length = 0;
@@ -358,7 +382,7 @@ export function editing(options: EditingOptions = {}): TablePlugin {
       const items: MenuItem[] = [];
       items.push(MENU_SEPARATOR);
       items.push({
-        label: 'Delete row',
+        label: "Delete row",
         action: () => ctx.editing?.deleteRows([cell.rowId]),
         danger: true,
       });

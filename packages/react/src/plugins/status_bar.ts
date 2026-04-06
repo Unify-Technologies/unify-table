@@ -1,9 +1,9 @@
-import { createElement, useState, useEffect, useRef } from 'react';
-import type { TablePlugin, TableContext } from '../types.js';
-import { quoteIdent, toSqlLiteral } from '@unify/table-core';
-import { detectIdColumn, spanDims } from '../utils.js';
+import { createElement, useState, useEffect, useRef } from "react";
+import type { TablePlugin, TableContext } from "../types.js";
+import { quoteIdent, toSqlLiteral } from "@unify/table-core";
+import { detectIdColumn, spanDims } from "../utils.js";
 
-type AggKind = 'sum' | 'avg' | 'min' | 'max' | 'count';
+type AggKind = "sum" | "avg" | "min" | "max" | "count";
 
 export interface StatusBarOptions {
   /** Which aggregations to show. Default: ['sum', 'avg', 'min', 'max'] */
@@ -16,8 +16,8 @@ interface AggResult {
   [key: string]: number | null;
 }
 
-const DEFAULT_AGGS: AggKind[] = ['sum', 'avg', 'min', 'max'];
-const NUMERIC_TYPES = new Set(['number', 'bigint']);
+const DEFAULT_AGGS: AggKind[] = ["sum", "avg", "min", "max"];
+const NUMERIC_TYPES = new Set(["number", "bigint"]);
 
 /** Build aggregation SQL for selected numeric fields. */
 export function buildAggSql(
@@ -28,11 +28,15 @@ export function buildAggSql(
   rowIds: string[] | null,
 ): string {
   const aggCols = numericFields.flatMap((field) =>
-    aggs.map((agg) => `${agg.toUpperCase()}(${quoteIdent(field)}) AS ${quoteIdent(`${agg}_${field}`)}`),
+    aggs.map(
+      (agg) => `${agg.toUpperCase()}(${quoteIdent(field)}) AS ${quoteIdent(`${agg}_${field}`)}`,
+    ),
   );
-  const select = `SELECT ${aggCols.join(', ')} FROM ${quoteIdent(viewName)}`;
+  const select = `SELECT ${aggCols.join(", ")} FROM ${quoteIdent(viewName)}`;
   if (!rowIds) return select;
-  const idList = rowIds.map((id) => toSqlLiteral(Number.isNaN(Number(id)) ? id : Number(id))).join(', ');
+  const idList = rowIds
+    .map((id) => toSqlLiteral(Number.isNaN(Number(id)) ? id : Number(id)))
+    .join(", ");
   return `${select} WHERE ${quoteIdent(idCol)} IN (${idList})`;
 }
 
@@ -52,21 +56,21 @@ export function getNumericFields(ctx: TableContext): string[] {
 export const getSelectionDims = spanDims;
 
 function formatAgg(value: number | null): string {
-  if (value === null || value === undefined) return '-';
-  if (typeof value === 'bigint') return Number(value).toLocaleString();
-  return typeof value === 'number'
-    ? (Math.abs(value) >= 1000 || (Math.abs(value) > 0 && Math.abs(value) < 0.01))
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "bigint") return Number(value).toLocaleString();
+  return typeof value === "number"
+    ? Math.abs(value) >= 1000 || (Math.abs(value) > 0 && Math.abs(value) < 0.01)
       ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
       : value.toLocaleString(undefined, { maximumFractionDigits: 4 })
     : String(value);
 }
 
 const AGG_LABELS: Record<AggKind, string> = {
-  sum: 'Sum',
-  avg: 'Avg',
-  min: 'Min',
-  max: 'Max',
-  count: 'Count',
+  sum: "Sum",
+  avg: "Avg",
+  min: "Min",
+  max: "Max",
+  count: "Count",
 };
 
 function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusBarOptions }) {
@@ -97,9 +101,10 @@ function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusB
     timerRef.current = setTimeout(async () => {
       try {
         const idCol = detectIdColumn(ctx.columns);
-        const rowIds = selection.count <= 1000 && selection.count < totalCount
-          ? [...selection.selectedIds]
-          : null;
+        const rowIds =
+          selection.count <= 1000 && selection.count < totalCount
+            ? [...selection.selectedIds]
+            : null;
         const sql = buildAggSql(ctx.viewName, numericFields, aggs, idCol, rowIds);
         const rows = await ctx.engine.query<AggResult>(sql);
         if (abortRef.current !== queryId) return;
@@ -115,16 +120,27 @@ function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusB
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection.count, selection.span?.anchor.row, selection.span?.focus.row, numericFields.join(',')]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selection.count,
+    selection.span?.anchor.row,
+    selection.span?.focus.row,
+    numericFields.join(","),
+  ]);
 
   // Left: total rows + selection dims
   const leftParts: React.ReactNode[] = [
-    createElement('span', { key: 'total' }, isLoading ? 'Loading...' : `${totalCount.toLocaleString()} rows`),
+    createElement(
+      "span",
+      { key: "total" },
+      isLoading ? "Loading..." : `${totalCount.toLocaleString()} rows`,
+    ),
   ];
   if (hasSel) {
     leftParts.push(
-      createElement('span', { key: 'sel', style: { opacity: 0.7 } },
+      createElement(
+        "span",
+        { key: "sel", style: { opacity: 0.7 } },
         `${dims.rows.toLocaleString()} rows \u00D7 ${dims.cols} cols`,
       ),
     );
@@ -134,7 +150,11 @@ function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusB
   let rightSection: React.ReactNode = null;
   if (hasSel && numericFields.length > 0) {
     if (computing && !aggResult) {
-      rightSection = createElement('span', { key: 'computing', style: { opacity: 0.5 } }, 'computing...');
+      rightSection = createElement(
+        "span",
+        { key: "computing", style: { opacity: 0.5 } },
+        "computing...",
+      );
     } else if (aggResult) {
       const parts: React.ReactNode[] = [];
       if (numericFields.length === 1) {
@@ -143,9 +163,13 @@ function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusB
           const val = aggResult[`${agg}_${field}`];
           if (val !== null && val !== undefined) {
             parts.push(
-              createElement('span', { key: `${agg}_${field}` }, [
+              createElement("span", { key: `${agg}_${field}` }, [
                 `${AGG_LABELS[agg]}: `,
-                createElement('span', { key: 'v', 'data-agg-value': true }, formatAgg(val as number)),
+                createElement(
+                  "span",
+                  { key: "v", "data-agg-value": true },
+                  formatAgg(val as number),
+                ),
               ]),
             );
           }
@@ -163,35 +187,47 @@ function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusB
           }
           if (hasValue) {
             parts.push(
-              createElement('span', { key: agg }, [
+              createElement("span", { key: agg }, [
                 `${AGG_LABELS[agg]}: `,
-                createElement('span', { key: 'v', 'data-agg-value': true }, formatAgg(agg === 'avg' ? combined / numericFields.length : combined)),
+                createElement(
+                  "span",
+                  { key: "v", "data-agg-value": true },
+                  formatAgg(agg === "avg" ? combined / numericFields.length : combined),
+                ),
               ]),
             );
           }
         }
       }
       rightSection = createElement(
-        'span',
-        { key: 'aggs', style: { display: 'flex', gap: 12, opacity: computing ? 0.5 : 1, transition: 'opacity 0.15s' } },
+        "span",
+        {
+          key: "aggs",
+          style: {
+            display: "flex",
+            gap: 12,
+            opacity: computing ? 0.5 : 1,
+            transition: "opacity 0.15s",
+          },
+        },
         parts,
       );
     }
   }
 
   return createElement(
-    'div',
+    "div",
     {
       style: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        width: "100%",
         gap: 16,
       },
     },
     [
-      createElement('span', { key: 'left', style: { display: 'flex', gap: 16 } }, leftParts),
+      createElement("span", { key: "left", style: { display: "flex", gap: 16 } }, leftParts),
       rightSection,
     ].filter(Boolean),
   );
@@ -199,7 +235,7 @@ function StatusBarFooter({ ctx, options }: { ctx: TableContext; options: StatusB
 
 export function statusBar(options?: StatusBarOptions): TablePlugin {
   return {
-    name: 'statusBar',
+    name: "statusBar",
     renderFooter(ctx: TableContext) {
       return createElement(StatusBarFooter, { ctx, options: options ?? {} });
     },

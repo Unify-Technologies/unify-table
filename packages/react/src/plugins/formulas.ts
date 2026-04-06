@@ -1,4 +1,4 @@
-import type { TablePlugin, TableContext, ResolvedColumn, FormulasState } from '../types.js';
+import type { TablePlugin, TableContext, ResolvedColumn, FormulasState } from "../types.js";
 
 export interface FormulaColumnDef {
   name: string;
@@ -8,7 +8,7 @@ export interface FormulaColumnDef {
   /** Column width. Default: 150. */
   width?: number;
   /** Column alignment. Default: inferred or 'left'. */
-  align?: 'left' | 'center' | 'right';
+  align?: "left" | "center" | "right";
   /** Number format applied to the computed value. */
   format?: string;
   /** Allow users to edit this formula's expression at runtime. Default: false. */
@@ -29,7 +29,7 @@ export function formulas(config: FormulasConfig): TablePlugin {
   const formulaColumns = config.columns.map((c) => ({ ...c }));
 
   return {
-    name: 'formulas',
+    name: "formulas",
 
     transformColumns(columns: ResolvedColumn[]): ResolvedColumn[] {
       return [
@@ -55,9 +55,11 @@ export function formulas(config: FormulasConfig): TablePlugin {
       const redoStack: FormulaOp[] = [];
 
       function syncExpressions() {
-        ctx.getLatest().viewManager.setSelectExpressions(
-          formulaColumns.map((fc) => ({ expression: fc.expression, alias: fc.name })),
-        );
+        ctx
+          .getLatest()
+          .viewManager.setSelectExpressions(
+            formulaColumns.map((fc) => ({ expression: fc.expression, alias: fc.name })),
+          );
       }
 
       async function applyExpression(name: string, expression: string) {
@@ -124,10 +126,12 @@ export function formulas(config: FormulasConfig): TablePlugin {
 
       // Trigger a sync so the view includes formula columns immediately
       const ds = ctx.getLatest().datasource;
-      ctx.viewManager.sync(
-        ds.filters,
-        ds.sort.map((s) => ({ field: s.field, dir: s.dir })),
-      ).then(() => ctx.getLatest().refresh());
+      ctx.viewManager
+        .sync(
+          ds.filters,
+          ds.sort.map((s) => ({ field: s.field, dir: s.dir })),
+        )
+        .then(() => ctx.getLatest().refresh());
 
       publishState();
 

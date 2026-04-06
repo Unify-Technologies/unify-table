@@ -35,8 +35,12 @@
   align-items: center;
 }
 
-.utbl-vrow--placeholder { opacity: 0.3; }
-.utbl-vrow--clickable { cursor: pointer; }
+.utbl-vrow--placeholder {
+  opacity: 0.3;
+}
+.utbl-vrow--clickable {
+  cursor: pointer;
+}
 
 /* Placeholder loading text */
 .utbl-placeholder-text {
@@ -57,8 +61,12 @@
   margin: -4px;
   border-radius: 3px;
 }
-.utbl-group-toggle--expanded { transform: rotate(90deg); }
-.utbl-group-toggle--collapsed { transform: rotate(0deg); }
+.utbl-group-toggle--expanded {
+  transform: rotate(90deg);
+}
+.utbl-group-toggle--collapsed {
+  transform: rotate(0deg);
+}
 
 /* Group cell content */
 .utbl-group-value {
@@ -75,7 +83,9 @@
 }
 
 /* Muted cell (grouped columns / empty agg) */
-.utbl-cell-muted { opacity: 0.25; }
+.utbl-cell-muted {
+  opacity: 0.25;
+}
 
 /* Active cell outline (use CSS var for themability) */
 .utbl-cell-active {

@@ -40,7 +40,9 @@
   cursor: pointer;
   white-space: nowrap;
   border-radius: 4px 4px 0 0;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   position: relative;
 }
 
@@ -55,7 +57,7 @@
 }
 
 .utbl-display-tab--active::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -1px;
   left: 0;
@@ -105,7 +107,9 @@
   color: var(--utbl-text-muted);
   cursor: pointer;
   border-radius: 2px;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 }
 
 .utbl-display-tab__action:hover {
@@ -204,7 +208,7 @@
   color: var(--utbl-text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
-  font-family: ui-monospace, 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-family: ui-monospace, "SF Mono", Monaco, "Cascadia Code", monospace;
 }
 
 /* Config panel */

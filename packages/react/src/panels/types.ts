@@ -1,8 +1,8 @@
-import type { ReactNode } from 'react';
-import type { TableContext, ColumnDef } from '../types.js';
+import type { ReactNode } from "react";
+import type { TableContext, ColumnDef } from "../types.js";
 
 /** Built-in panel identifiers. */
-export type BuiltInPanel = 'filters' | 'groupBy' | 'columns' | 'export' | 'debug' | 'displays';
+export type BuiltInPanel = "filters" | "groupBy" | "columns" | "export" | "debug" | "displays";
 
 /** Descriptor for a custom panel section. */
 export interface PanelDescriptor {
@@ -16,7 +16,22 @@ export interface PanelDescriptor {
 export type PanelConfig = BuiltInPanel | PanelDescriptor;
 
 /** Aggregation function type. */
-export type AggFn = 'sum' | 'avg' | 'count' | 'min' | 'max' | 'count_distinct' | 'median' | 'first' | 'last' | 'any' | 'mode' | 'stddev' | 'variance' | 'string_agg' | '';
+export type AggFn =
+  | "sum"
+  | "avg"
+  | "count"
+  | "min"
+  | "max"
+  | "count_distinct"
+  | "median"
+  | "first"
+  | "last"
+  | "any"
+  | "mode"
+  | "stddev"
+  | "variance"
+  | "string_agg"
+  | "";
 
 /** Props shared by all built-in panel components. */
 export interface BuiltInPanelProps {

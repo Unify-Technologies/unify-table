@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { parseFilterExpr } from '@unify/table-core';
-import type { DisplayConfig, ColumnInfo, ColumnType } from '@unify/table-core';
-import type { TableContext, ColumnDef } from '../types.js';
-import type { PanelConfig, BuiltInPanel, BuiltInPanelProps, AggFn } from './types.js';
-import { FilterPanel } from './FilterPanel.js';
-import { GroupByPanel } from './GroupByPanel.js';
-import { ColumnsPanel } from './ColumnsPanel.js';
-import { ExportPanel } from './ExportPanel.js';
-import { DebugPanel } from './DebugPanel.js';
-import { DisplayPanel } from './DisplayPanel.js';
-import { Filter, LayoutGrid, Columns2, Download, Bug, Monitor, Eraser, Search } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { parseFilterExpr } from "@unify/table-core";
+import type { DisplayConfig, ColumnInfo, ColumnType } from "@unify/table-core";
+import type { TableContext, ColumnDef } from "../types.js";
+import type { PanelConfig, BuiltInPanel, BuiltInPanelProps, AggFn } from "./types.js";
+import { FilterPanel } from "./FilterPanel.js";
+import { GroupByPanel } from "./GroupByPanel.js";
+import { ColumnsPanel } from "./ColumnsPanel.js";
+import { ExportPanel } from "./ExportPanel.js";
+import { DebugPanel } from "./DebugPanel.js";
+import { DisplayPanel } from "./DisplayPanel.js";
+import { Filter, LayoutGrid, Columns2, Download, Bug, Monitor, Eraser, Search } from "lucide-react";
 
 /* ── Built-in panel registry ────────────────────────────── */
 
@@ -21,12 +21,37 @@ interface BuiltInEntry {
 }
 
 const BUILT_IN_PANELS: BuiltInEntry[] = [
-  { key: 'columns', label: 'Columns', icon: <Columns2 size={12} strokeWidth={2.5} />, render: (props) => <ColumnsPanel {...props} /> },
-  { key: 'filters', label: 'Filters', icon: <Filter size={12} strokeWidth={2.5} />, render: (props) => <FilterPanel {...props} /> },
-  { key: 'groupBy', label: 'Group By', icon: <LayoutGrid size={12} strokeWidth={2.5} />, render: (props) => <GroupByPanel {...props} /> },
-  { key: 'displays', label: 'Displays', icon: <Monitor size={12} strokeWidth={2.5} />, render: () => null /* handled separately */ },
-  { key: 'export', label: 'Export', icon: <Download size={12} strokeWidth={2.5} />, render: () => null },
-  { key: 'debug', label: 'Debug', icon: <Bug size={12} strokeWidth={2.5} />, render: () => null },
+  {
+    key: "columns",
+    label: "Columns",
+    icon: <Columns2 size={12} strokeWidth={2.5} />,
+    render: (props) => <ColumnsPanel {...props} />,
+  },
+  {
+    key: "filters",
+    label: "Filters",
+    icon: <Filter size={12} strokeWidth={2.5} />,
+    render: (props) => <FilterPanel {...props} />,
+  },
+  {
+    key: "groupBy",
+    label: "Group By",
+    icon: <LayoutGrid size={12} strokeWidth={2.5} />,
+    render: (props) => <GroupByPanel {...props} />,
+  },
+  {
+    key: "displays",
+    label: "Displays",
+    icon: <Monitor size={12} strokeWidth={2.5} />,
+    render: () => null /* handled separately */,
+  },
+  {
+    key: "export",
+    label: "Export",
+    icon: <Download size={12} strokeWidth={2.5} />,
+    render: () => null,
+  },
+  { key: "debug", label: "Debug", icon: <Bug size={12} strokeWidth={2.5} />, render: () => null },
 ];
 
 /* ── PanelShell ─────────────────────────────────────────── */
@@ -55,13 +80,30 @@ export interface PanelShellProps {
 }
 
 export function PanelShell({
-  ctx, columns, panels, hiddenCols, setHiddenCols, groupByCols, setGroupByCols, aggFns, setAggFns,
-  initialFilterValues, onFilterValuesChange,
-  displays = [], activeDisplay = null, onActivateDisplay, onAddDisplay, onRemoveDisplay, onDisplayConfigChange, schemaColumns = [],
+  ctx,
+  columns,
+  panels,
+  hiddenCols,
+  setHiddenCols,
+  groupByCols,
+  setGroupByCols,
+  aggFns,
+  setAggFns,
+  initialFilterValues,
+  onFilterValuesChange,
+  displays = [],
+  activeDisplay = null,
+  onActivateDisplay,
+  onAddDisplay,
+  onRemoveDisplay,
+  onDisplayConfigChange,
+  schemaColumns = [],
 }: PanelShellProps) {
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [filterValues, setFilterValues] = useState<Record<string, string>>(initialFilterValues ?? {});
+  const [search, setSearch] = useState("");
+  const [filterValues, setFilterValues] = useState<Record<string, string>>(
+    initialFilterValues ?? {},
+  );
 
   // Apply initial filter values once columns (with type info) are available
   const appliedInitialFilters = useRef(false);
@@ -82,13 +124,16 @@ export function PanelShell({
     if (exprs.length > 0) ctx.setFilters(exprs);
   }, [ctx.columns, ctx.setFilters, initialFilterValues]);
 
-  const wrappedSetFilterValues: typeof setFilterValues = useCallback((action) => {
-    setFilterValues((prev) => {
-      const next = typeof action === 'function' ? action(prev) : action;
-      onFilterValuesChange?.(next);
-      return next;
-    });
-  }, [onFilterValuesChange]);
+  const wrappedSetFilterValues: typeof setFilterValues = useCallback(
+    (action) => {
+      setFilterValues((prev) => {
+        const next = typeof action === "function" ? action(prev) : action;
+        onFilterValuesChange?.(next);
+        return next;
+      });
+    },
+    [onFilterValuesChange],
+  );
 
   const handleClearFilters = useCallback(() => {
     wrappedSetFilterValues({});
@@ -100,51 +145,79 @@ export function PanelShell({
   }, [setGroupByCols]);
 
   const toggle = useCallback((key: string) => {
-    setActiveKey((prev) => prev === key ? null : key);
-    setSearch('');
+    setActiveKey((prev) => (prev === key ? null : key));
+    setSearch("");
   }, []);
 
-  type ResolvedEntry = BuiltInEntry | { key: string; label: string; icon: React.ReactNode; render: null; custom: { render: (ctx: TableContext) => React.ReactNode } };
+  type ResolvedEntry =
+    | BuiltInEntry
+    | {
+        key: string;
+        label: string;
+        icon: React.ReactNode;
+        render: null;
+        custom: { render: (ctx: TableContext) => React.ReactNode };
+      };
 
-  const resolved: ResolvedEntry[] = panels.map((p): ResolvedEntry | null => {
-    if (typeof p === 'string') {
-      return BUILT_IN_PANELS.find((b) => b.key === p) ?? null;
-    }
-    return { key: p.key, label: p.label, icon: p.icon ? <p.icon size={12} strokeWidth={2.5} /> : null, render: null, custom: p };
-  }).filter((x): x is ResolvedEntry => x !== null);
+  const resolved: ResolvedEntry[] = panels
+    .map((p): ResolvedEntry | null => {
+      if (typeof p === "string") {
+        return BUILT_IN_PANELS.find((b) => b.key === p) ?? null;
+      }
+      return {
+        key: p.key,
+        label: p.label,
+        icon: p.icon ? <p.icon size={12} strokeWidth={2.5} /> : null,
+        render: null,
+        custom: p,
+      };
+    })
+    .filter((x): x is ResolvedEntry => x !== null);
 
   const panelOpen = activeKey !== null;
   const activeEntry = panelOpen ? resolved.find((e) => e.key === activeKey) : null;
 
-  const [tooltip, setTooltip] = useState<{ label: string; top: number; right?: number; left?: number } | null>(null);
+  const [tooltip, setTooltip] = useState<{
+    label: string;
+    top: number;
+    right?: number;
+    left?: number;
+  } | null>(null);
   const tooltipTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const showTooltip = useCallback((e: React.MouseEvent, label: string, pos?: { top: number; left: number }) => {
-    clearTimeout(tooltipTimer.current);
-    if (pos) {
-      setTooltip({ label, top: pos.top, left: pos.left });
-    } else {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setTooltip({ label, top: rect.top + rect.height / 2, right: window.innerWidth - rect.left + 6 });
-    }
-  }, []);
+  const showTooltip = useCallback(
+    (e: React.MouseEvent, label: string, pos?: { top: number; left: number }) => {
+      clearTimeout(tooltipTimer.current);
+      if (pos) {
+        setTooltip({ label, top: pos.top, left: pos.left });
+      } else {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setTooltip({
+          label,
+          top: rect.top + rect.height / 2,
+          right: window.innerWidth - rect.left + 6,
+        });
+      }
+    },
+    [],
+  );
 
   const hideTooltip = useCallback(() => {
     tooltipTimer.current = setTimeout(() => setTooltip(null), 50);
   }, []);
 
-  const getBadge = (key: string): { type: 'dot' | 'count'; value?: number } | null => {
+  const getBadge = (key: string): { type: "dot" | "count"; value?: number } | null => {
     switch (key) {
-      case 'columns':
-        return hiddenCols.size > 0 ? { type: 'dot' } : null;
-      case 'filters': {
+      case "columns":
+        return hiddenCols.size > 0 ? { type: "dot" } : null;
+      case "filters": {
         const count = Object.values(filterValues).filter(Boolean).length;
-        return count > 0 ? { type: 'count', value: count } : null;
+        return count > 0 ? { type: "count", value: count } : null;
       }
-      case 'groupBy':
-        return groupByCols.length > 0 ? { type: 'dot' } : null;
-      case 'displays':
-        return activeDisplay != null ? { type: 'dot' } : null;
+      case "groupBy":
+        return groupByCols.length > 0 ? { type: "dot" } : null;
+      case "displays":
+        return activeDisplay != null ? { type: "dot" } : null;
       default:
         return null;
     }
@@ -183,8 +256,14 @@ export function PanelShell({
             >
               {entry.icon}
               {badge && (
-                <span className={badge.type === 'count' ? 'utbl-tab-badge utbl-tab-badge--count' : 'utbl-tab-badge utbl-tab-badge--dot'}>
-                  {badge.type === 'count' ? badge.value : null}
+                <span
+                  className={
+                    badge.type === "count"
+                      ? "utbl-tab-badge utbl-tab-badge--count"
+                      : "utbl-tab-badge utbl-tab-badge--dot"
+                  }
+                >
+                  {badge.type === "count" ? badge.value : null}
                 </span>
               )}
             </button>
@@ -194,12 +273,15 @@ export function PanelShell({
 
       {/* Fixed tooltip */}
       {tooltip && (
-        <div className="utbl-tooltip--fixed" style={{
-          top: tooltip.top,
-          right: tooltip.right,
-          left: tooltip.left,
-          transform: tooltip.left != null ? 'translateY(-100%)' : 'translateY(-50%)',
-        }}>
+        <div
+          className="utbl-tooltip--fixed"
+          style={{
+            top: tooltip.top,
+            right: tooltip.right,
+            left: tooltip.left,
+            transform: tooltip.left != null ? "translateY(-100%)" : "translateY(-50%)",
+          }}
+        >
           {tooltip.label}
         </div>
       )}
@@ -208,14 +290,28 @@ export function PanelShell({
       {panelOpen && activeEntry && (
         <div className="utbl-panel-content">
           {/* Search — only for panels that filter by column name */}
-          {(activeKey === 'filters' || activeKey === 'groupBy' || activeKey === 'columns' || activeKey === 'displays') && (
-            <div className="utbl-panel-search" style={{ position: 'relative' }}>
-              <Search size={10} strokeWidth={2.5} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--utbl-text-muted)', pointerEvents: 'none' }} />
+          {(activeKey === "filters" ||
+            activeKey === "groupBy" ||
+            activeKey === "columns" ||
+            activeKey === "displays") && (
+            <div className="utbl-panel-search" style={{ position: "relative" }}>
+              <Search
+                size={10}
+                strokeWidth={2.5}
+                style={{
+                  position: "absolute",
+                  left: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--utbl-text-muted)",
+                  pointerEvents: "none",
+                }}
+              />
               <input
                 type="text"
                 className="utbl-input"
                 style={{ paddingLeft: 24 }}
-                placeholder={activeKey === 'displays' ? 'Search displays...' : 'Search...'}
+                placeholder={activeKey === "displays" ? "Search displays..." : "Search..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -226,24 +322,48 @@ export function PanelShell({
           <div className="utbl-panel-header">
             {activeEntry.icon}
             <span>{activeEntry.label}</span>
-            {activeKey === 'filters' && Object.values(filterValues).some(Boolean) && (
+            {activeKey === "filters" && Object.values(filterValues).some(Boolean) && (
               <button
                 className="utbl-panel-header-clear"
                 onClick={handleClearFilters}
-                onMouseEnter={(e) => showTooltip(e, 'Clear filters')}
+                onMouseEnter={(e) => showTooltip(e, "Clear filters")}
                 onMouseLeave={hideTooltip}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--utbl-text-muted)', lineHeight: 0, borderRadius: 'var(--utbl-radius, 3px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  marginLeft: "auto",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 2,
+                  color: "var(--utbl-text-muted)",
+                  lineHeight: 0,
+                  borderRadius: "var(--utbl-radius, 3px)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <Eraser size={10} strokeWidth={2.5} />
               </button>
             )}
-            {activeKey === 'groupBy' && groupByCols.length > 0 && (
+            {activeKey === "groupBy" && groupByCols.length > 0 && (
               <button
                 className="utbl-panel-header-clear"
                 onClick={handleClearGroupBy}
-                onMouseEnter={(e) => showTooltip(e, 'Clear grouping')}
+                onMouseEnter={(e) => showTooltip(e, "Clear grouping")}
                 onMouseLeave={hideTooltip}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--utbl-text-muted)', lineHeight: 0, borderRadius: 'var(--utbl-radius, 3px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{
+                  marginLeft: "auto",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 2,
+                  color: "var(--utbl-text-muted)",
+                  lineHeight: 0,
+                  borderRadius: "var(--utbl-radius, 3px)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
               >
                 <Eraser size={10} strokeWidth={2.5} />
               </button>
@@ -254,7 +374,7 @@ export function PanelShell({
           {resolved.map((entry) => {
             if (entry.key !== activeKey) return null;
 
-            if (entry.key === 'displays') {
+            if (entry.key === "displays") {
               return (
                 <DisplayPanel
                   key={entry.key}
@@ -272,15 +392,15 @@ export function PanelShell({
               );
             }
 
-            if (entry.key === 'export') {
+            if (entry.key === "export") {
               return <ExportPanel key={entry.key} ctx={ctx} />;
             }
 
-            if (entry.key === 'debug') {
+            if (entry.key === "debug") {
               return <DebugPanel key={entry.key} ctx={ctx} />;
             }
 
-            if ('custom' in entry && entry.custom) {
+            if ("custom" in entry && entry.custom) {
               return <div key={entry.key}>{entry.custom.render(ctx)}</div>;
             }
 

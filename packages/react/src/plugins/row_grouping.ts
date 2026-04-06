@@ -1,9 +1,9 @@
-import type { TablePlugin, TableContext } from '../types.js';
-import type { GroupSummary, Row } from '@unify/table-core';
+import type { TablePlugin, TableContext } from "../types.js";
+import type { GroupSummary, Row } from "@unify/table-core";
 
 export interface AggregationDef {
   field: string;
-  fn: 'sum' | 'avg' | 'count' | 'min' | 'max';
+  fn: "sum" | "avg" | "count" | "min" | "max";
 }
 
 export interface GroupRow {
@@ -61,7 +61,7 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
   }
 
   return {
-    name: 'rowGrouping',
+    name: "rowGrouping",
 
     shortcuts: {
       ArrowRight: (ctx) => {
@@ -69,7 +69,7 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
         if (!cell) return;
         const row = ctx.rows[cell.rowIndex];
         if (row && isGroupRow(row) && !row.__expanded) {
-          ctx.emit('group:toggle', { groupKey: row.__groupKey, depth: row.__depth ?? 0 });
+          ctx.emit("group:toggle", { groupKey: row.__groupKey, depth: row.__depth ?? 0 });
         }
       },
       ArrowLeft: (ctx) => {
@@ -77,7 +77,7 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
         if (!cell) return;
         const row = ctx.rows[cell.rowIndex];
         if (row && isGroupRow(row) && row.__expanded) {
-          ctx.emit('group:toggle', { groupKey: row.__groupKey, depth: row.__depth ?? 0 });
+          ctx.emit("group:toggle", { groupKey: row.__groupKey, depth: row.__depth ?? 0 });
         }
       },
     },
@@ -119,7 +119,7 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
         }
       }
 
-      const unsub = ctx.on('group', (payload: unknown) => {
+      const unsub = ctx.on("group", (payload: unknown) => {
         const newGroupBy = payload as string[];
         currentGroupBy = newGroupBy;
         expandedGroups.clear();
@@ -129,7 +129,7 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
         fetchGroupSummaries(newGroupBy);
       });
 
-      const unsubData = ctx.on('data', async () => {
+      const unsubData = ctx.on("data", async () => {
         if (currentGroupBy.length > 0 && groupSummaries.length === 0) {
           fetchGroupSummaries(currentGroupBy);
         }
@@ -145,11 +145,11 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
         }
       }
 
-      const unsubSort = ctx.on('sort', refetchGroups);
-      const unsubFilter = ctx.on('filter', refetchGroups);
+      const unsubSort = ctx.on("sort", refetchGroups);
+      const unsubFilter = ctx.on("filter", refetchGroups);
 
       // Listen for aggregation changes — re-fetch with new aggs, keep current view while loading
-      const unsubAgg = ctx.on('group:aggregations', (payload: unknown) => {
+      const unsubAgg = ctx.on("group:aggregations", (payload: unknown) => {
         currentAggregations = payload as AggregationDef[];
         if (currentGroupBy.length > 0) {
           // Clear sub-group caches since agg values changed
@@ -160,7 +160,7 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
         }
       });
 
-      const unsubToggle = ctx.on('group:toggle', (payload: unknown) => {
+      const unsubToggle = ctx.on("group:toggle", (payload: unknown) => {
         const { groupKey, depth } = payload as { groupKey: Record<string, unknown>; depth: number };
         const key = serializeGroupKey(groupKey);
         if (expandedGroups.has(key)) {
@@ -177,14 +177,15 @@ export function rowGrouping(options: RowGroupingOptions = {}): TablePlugin {
 
           if (depth < maxDepth) {
             // Fetch sub-groups at next depth level
-            ctx.datasource.fetchGroups(
-              { offset: 0, limit: 1000 },
-              currentAggregations,
-              { depth: depth + 1, ancestorKeys: groupKey },
-            ).then((result) => {
-              groupChildrenCache.set(key, result.groups);
-              ctx.refresh();
-            });
+            ctx.datasource
+              .fetchGroups({ offset: 0, limit: 1000 }, currentAggregations, {
+                depth: depth + 1,
+                ancestorKeys: groupKey,
+              })
+              .then((result) => {
+                groupChildrenCache.set(key, result.groups);
+                ctx.refresh();
+              });
           } else {
             // Fetch detail rows (leaf level)
             ctx.datasource.fetchGroupDetail(groupKey, { offset: 0, limit: 200 }).then((page) => {

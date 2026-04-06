@@ -23,6 +23,8 @@ function mockDb(opts: {
     run: vi.fn().mockResolvedValue(undefined),
     runAndRead: vi.fn().mockImplementation((sql: string) => {
       if (sql.includes('information_schema.columns')) return Promise.resolve(columns);
+      // COUNT(*) OVER() is the combined data+count query — return rows with __total__
+      if (sql.includes('COUNT(*) OVER()')) return Promise.resolve(rows.map((r) => ({ ...r, __total__: rows.length })));
       if (sql.includes('COUNT(*)')) return Promise.resolve([{ cnt: rows.length }]);
       if (sql.includes('DISTINCT')) return Promise.resolve(rows.map((r) => ({ val: r.region })));
       return Promise.resolve(rows);

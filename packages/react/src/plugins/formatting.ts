@@ -1,5 +1,5 @@
-import type { TablePlugin, ResolvedColumn, CellStyleValue } from '../types.js';
-import type { Row } from '@unify/table-core';
+import type { TablePlugin, ResolvedColumn, CellStyleValue } from "../types.js";
+import type { Row } from "@unify/table-core";
 
 export interface ConditionalRule {
   when: (value: unknown, row: Row) => boolean;
@@ -18,11 +18,11 @@ type RulesMap = Record<string, ConditionalRule[]>;
  */
 export function formatting(rules: RulesMap = {}): TablePlugin {
   return {
-    name: 'formatting',
+    name: "formatting",
 
     transformColumns(columns: ResolvedColumn[]): ResolvedColumn[] {
       return columns.map((col) => {
-        const columnRules = [...(rules[col.field] ?? []), ...(rules['*'] ?? [])];
+        const columnRules = [...(rules[col.field] ?? []), ...(rules["*"] ?? [])];
         if (columnRules.length === 0) return col;
 
         const originalCellStyle = col.cellStyle;
@@ -34,15 +34,16 @@ export function formatting(rules: RulesMap = {}): TablePlugin {
             const inlineStyles: Record<string, string> = {};
 
             // Apply original cellStyle
-            if (typeof originalCellStyle === 'function') {
+            if (typeof originalCellStyle === "function") {
               const result = originalCellStyle(value, row);
-              if (typeof result === 'object' && result !== null) {
+              if (typeof result === "object" && result !== null) {
                 if (result.className) classes.push(result.className);
-                if (result.style) Object.assign(inlineStyles, result.style as Record<string, string>);
-              } else if (typeof result === 'string' && result) {
+                if (result.style)
+                  Object.assign(inlineStyles, result.style as Record<string, string>);
+              } else if (typeof result === "string" && result) {
                 classes.push(result);
               }
-            } else if (typeof originalCellStyle === 'string' && originalCellStyle) {
+            } else if (typeof originalCellStyle === "string" && originalCellStyle) {
               classes.push(originalCellStyle);
             }
 
@@ -54,7 +55,7 @@ export function formatting(rules: RulesMap = {}): TablePlugin {
               }
             }
 
-            const classStr = classes.join(' ');
+            const classStr = classes.join(" ");
             const hasStyles = Object.keys(inlineStyles).length > 0;
             if (!hasStyles) return classStr;
             return { className: classStr, style: inlineStyles };
@@ -73,18 +74,18 @@ export function threshold(
 ): ConditionalRule[] {
   const sorted = [...ranges].sort((a, b) => a.max - b.max);
   return sorted.map((range) => ({
-    when: (value) => typeof value === 'number' && value < range.max,
+    when: (value) => typeof value === "number" && value < range.max,
     className: range.className,
     style: range.style,
   }));
 }
 
 /** Highlight negative values. */
-export function negative(color = '#ef4444'): ConditionalRule[] {
-  return [{ when: (value) => typeof value === 'number' && value < 0, style: { color } }];
+export function negative(color = "#ef4444"): ConditionalRule[] {
+  return [{ when: (value) => typeof value === "number" && value < 0, style: { color } }];
 }
 
 /** Highlight positive values. */
-export function positive(color = '#22c55e'): ConditionalRule[] {
-  return [{ when: (value) => typeof value === 'number' && value > 0, style: { color } }];
+export function positive(color = "#22c55e"): ConditionalRule[] {
+  return [{ when: (value) => typeof value === "number" && value > 0, style: { color } }];
 }

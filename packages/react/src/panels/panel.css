@@ -63,7 +63,9 @@
   cursor: pointer;
   border-bottom: 1px solid var(--utbl-border);
   padding: 8px 0;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   line-height: 0;
   overflow: visible;
   position: relative;
@@ -120,7 +122,6 @@
   background: #fff;
   color: var(--utbl-accent);
 }
-
 
 /* ── Panel content area ───────────────────────────────── */
 .utbl-panel-content {
@@ -328,7 +329,10 @@
   background: var(--utbl-input-bg);
   color: var(--utbl-text);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
   font-family: inherit;
 }
 
@@ -382,7 +386,10 @@
   background: transparent;
   color: var(--utbl-text-muted);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
   font-family: inherit;
   white-space: nowrap;
 }
@@ -413,7 +420,9 @@
   border-radius: 2px;
   line-height: 1;
   opacity: 0.5;
-  transition: opacity 0.15s, background 0.15s;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
   cursor: pointer;
 }
 
@@ -514,5 +523,5 @@ input[type="range"].utbl-range::-moz-range-thumb {
 }
 
 .utbl-space-y-sm > * + * {
-margin-top: 4px;
+  margin-top: 4px;
 }

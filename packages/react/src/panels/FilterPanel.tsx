@@ -1,20 +1,27 @@
-import { useCallback, useRef, useMemo } from 'react';
-import { parseFilterExpr } from '@unify/table-core';
-import type { ColumnType } from '@unify/table-core';
-import type { BuiltInPanelProps } from './types.js';
+import { useCallback, useRef, useMemo } from "react";
+import { parseFilterExpr } from "@unify/table-core";
+import type { ColumnType } from "@unify/table-core";
+import type { BuiltInPanelProps } from "./types.js";
 
 const PLACEHOLDERS: Partial<Record<ColumnType, string>> = {
-  number:    '>10  <=5  1..100  1,2,3  NULL',
-  bigint:    '>10  <=5  1..100  1,2,3  NULL',
-  string:    'USD%  %USD  a,b,c  !=x  NULL',
-  date:      '>2024-01-01  today  today-7  2024-03  2024',
-  timestamp: '>2024-01-01  today  today-7  2024-03  2024',
-  boolean:   '= true  = false  NULL',
-  enum:      'a,b,c  !=x  NULL',
+  number: ">10  <=5  1..100  1,2,3  NULL",
+  bigint: ">10  <=5  1..100  1,2,3  NULL",
+  string: "USD%  %USD  a,b,c  !=x  NULL",
+  date: ">2024-01-01  today  today-7  2024-03  2024",
+  timestamp: ">2024-01-01  today  today-7  2024-03  2024",
+  boolean: "= true  = false  NULL",
+  enum: "a,b,c  !=x  NULL",
 };
-const FALLBACK_PLACEHOLDER = '>x  <=x  a%  a,b,c  NULL';
+const FALLBACK_PLACEHOLDER = ">x  <=x  a%  a,b,c  NULL";
 
-export function FilterPanel({ ctx, columns, search, hiddenCols, filterValues, setFilterValues }: BuiltInPanelProps) {
+export function FilterPanel({
+  ctx,
+  columns,
+  search,
+  hiddenCols,
+  filterValues,
+  setFilterValues,
+}: BuiltInPanelProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const ctxRef = useRef(ctx);
   ctxRef.current = ctx;
@@ -39,17 +46,21 @@ export function FilterPanel({ ctx, columns, search, hiddenCols, filterValues, se
     ctxRef.current.setFilters(exprs);
   }, []);
 
-  const handleChange = useCallback((field: string, value: string) => {
-    setFilterValues((prev) => {
-      const next = { ...prev, [field]: value };
-      clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => applyFilters(next), 300);
-      return next;
-    });
-  }, [applyFilters, setFilterValues]);
+  const handleChange = useCallback(
+    (field: string, value: string) => {
+      setFilterValues((prev) => {
+        const next = { ...prev, [field]: value };
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => applyFilters(next), 300);
+        return next;
+      });
+    },
+    [applyFilters, setFilterValues],
+  );
 
   const filtered = columns.filter(
-    (c) => !hiddenCols.has(c.field) && (c.label ?? c.field).toLowerCase().includes(search.toLowerCase()),
+    (c) =>
+      !hiddenCols.has(c.field) && (c.label ?? c.field).toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -61,7 +72,7 @@ export function FilterPanel({ ctx, columns, search, hiddenCols, filterValues, se
             type="text"
             className="utbl-input"
             placeholder={PLACEHOLDERS[typeMap[col.field]] ?? FALLBACK_PLACEHOLDER}
-            value={filterValues[col.field] ?? ''}
+            value={filterValues[col.field] ?? ""}
             onChange={(e) => handleChange(col.field, e.target.value)}
           />
         </div>

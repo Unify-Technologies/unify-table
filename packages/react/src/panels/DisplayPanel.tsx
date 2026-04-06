@@ -1,7 +1,7 @@
-import type { DisplayConfig, ColumnInfo } from '@unify/table-core';
-import type { ComponentType } from 'react';
-import { listDisplays, getDisplay } from '../displays/registry.js';
-import { Table2, X } from 'lucide-react';
+import type { DisplayConfig, ColumnInfo } from "@unify/table-core";
+import type { ComponentType } from "react";
+import { listDisplays, getDisplay } from "../displays/registry.js";
+import { Table2, X } from "lucide-react";
 
 export interface DisplayPanelProps {
   displays: DisplayConfig[];
@@ -35,27 +35,37 @@ export function DisplayPanel({
   const DisplayIcon: ComponentType<{ size?: number }> | undefined = descriptor?.icon;
 
   if (!currentDisplay) {
-    const query = (search ?? '').toLowerCase();
+    const query = (search ?? "").toLowerCase();
     const filtered = query
-      ? availableTypes.filter((d) => d.type.label.toLowerCase().includes(query) || d.type.key.toLowerCase().includes(query))
+      ? availableTypes.filter(
+          (d) =>
+            d.type.label.toLowerCase().includes(query) || d.type.key.toLowerCase().includes(query),
+        )
       : availableTypes;
 
     // Catalogue mode — no display selected yet
     return (
       <div className="utbl-panel-section utbl-space-y">
-        <div className="utbl-toggle-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div className="utbl-toggle-group" style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {filtered.map((desc) => {
             const Icon = desc.icon;
             return (
               <button
                 key={desc.type.key}
                 className="utbl-toggle-btn"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
                 onClick={() => onAdd(desc.type.key)}
-                onMouseEnter={showTooltip ? (e) => {
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  showTooltip(e, desc.type.description ?? desc.type.label, { top: rect.top - 6, left: rect.left });
-                } : undefined}
+                onMouseEnter={
+                  showTooltip
+                    ? (e) => {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        showTooltip(e, desc.type.description ?? desc.type.label, {
+                          top: rect.top - 6,
+                          left: rect.left,
+                        });
+                      }
+                    : undefined
+                }
                 onMouseLeave={hideTooltip}
               >
                 {Icon && <Icon size={12} />}
@@ -64,7 +74,11 @@ export function DisplayPanel({
             );
           })}
           {filtered.length === 0 && (
-            <span style={{ fontSize: '0.65rem', color: 'var(--utbl-text-muted)', padding: '4px 0' }}>No matching displays</span>
+            <span
+              style={{ fontSize: "0.65rem", color: "var(--utbl-text-muted)", padding: "4px 0" }}
+            >
+              No matching displays
+            </span>
           )}
         </div>
       </div>
@@ -98,7 +112,10 @@ export function DisplayPanel({
             role="button"
             className="utbl-segmented-close"
             title="Remove display"
-            onClick={(e) => { e.stopPropagation(); onRemove(currentDisplay.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(currentDisplay.id);
+            }}
           >
             <X size={10} strokeWidth={2.5} />
           </span>
@@ -110,7 +127,8 @@ export function DisplayPanel({
         <div style={{ marginTop: 6, marginBottom: 4 }}>
           {descriptor.renderConfig({
             config: currentDisplay.config as never,
-            onChange: (config: unknown) => onConfigChange(currentDisplay.id, config as Record<string, unknown>),
+            onChange: (config: unknown) =>
+              onConfigChange(currentDisplay.id, config as Record<string, unknown>),
             columns: schemaColumns,
           })}
         </div>

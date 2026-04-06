@@ -1,6 +1,6 @@
-import { useCallback, useMemo } from 'react';
-import type { DisplayConfig, QueryEngine, ColumnInfo } from '@unify/table-core';
-import { getDisplay } from './registry.js';
+import { useCallback, useMemo } from "react";
+import type { DisplayConfig, QueryEngine, ColumnInfo } from "@unify/table-core";
+import { getDisplay } from "./registry.js";
 
 export interface DisplayRendererProps {
   display: DisplayConfig;
@@ -29,18 +29,14 @@ export function DisplayRenderer({
   }, [descriptor, display.config]);
 
   const sql = useMemo(() => {
-    if (!descriptor || validationErrors) return '';
+    if (!descriptor || validationErrors) return "";
     return descriptor.type.buildSql(viewName, display.config, columns);
   }, [descriptor, viewName, display.config, columns, validationErrors]);
 
   const refresh = useCallback(() => {}, []);
 
   if (!descriptor) {
-    return (
-      <div className="utbl-display-error">
-        Unknown display type: {display.type}
-      </div>
-    );
+    return <div className="utbl-display-error">Unknown display type: {display.type}</div>;
   }
 
   return (
@@ -66,8 +62,11 @@ export function DisplayRenderer({
       {/* Display content */}
       <div className="utbl-display-content">
         {validationErrors ? (
-          <div className="utbl-display-loading" style={{ padding: 24, textAlign: 'center', color: 'var(--utbl-text-muted)' }}>
-            {validationErrors.join('. ')}
+          <div
+            className="utbl-display-loading"
+            style={{ padding: 24, textAlign: "center", color: "var(--utbl-text-muted)" }}
+          >
+            {validationErrors.join(". ")}
           </div>
         ) : (
           descriptor.render({

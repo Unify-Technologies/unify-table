@@ -1,4 +1,4 @@
-import type { Row } from '@unify/table-core';
+import type { Row } from "@unify/table-core";
 
 const MAX_CACHED_PAGES = 10;
 
@@ -14,6 +14,8 @@ export interface PageCache {
 export function createPageCache(): PageCache {
   const pages = new Map<number, Row[]>();
   const accessOrder: number[] = [];
+  let _flat: Row[] = [];
+  let _flatDirty = true;
 
   function touch(pageIdx: number) {
     const i = accessOrder.indexOf(pageIdx);
@@ -31,6 +33,7 @@ export function createPageCache(): PageCache {
     set(pageIdx: number, rows: Row[]) {
       pages.set(pageIdx, rows);
       touch(pageIdx);
+      _flatDirty = true;
       while (accessOrder.length > MAX_CACHED_PAGES) {
         const oldest = accessOrder.shift()!;
         pages.delete(oldest);
@@ -39,16 +42,25 @@ export function createPageCache(): PageCache {
     clear() {
       pages.clear();
       accessOrder.length = 0;
+      _flat = [];
+      _flatDirty = true;
     },
     flatten(totalCount: number, pageSize: number): Row[] {
-      const result: Row[] = new Array(totalCount);
-      for (const [pageIdx, rows] of pages) {
-        const offset = pageIdx * pageSize;
-        for (let i = 0; i < rows.length; i++) {
-          result[offset + i] = rows[i];
-        }
+      // Reuse the existing array when possible to avoid O(totalCount) allocation per call
+      if (_flat.length !== totalCount) {
+        _flat = new Array(totalCount);
+        _flatDirty = true;
       }
-      return result;
+      if (_flatDirty) {
+        for (const [pageIdx, rows] of pages) {
+          const offset = pageIdx * pageSize;
+          for (let i = 0; i < rows.length; i++) {
+            _flat[offset + i] = rows[i];
+          }
+        }
+        _flatDirty = false;
+      }
+      return _flat;
     },
   };
 }

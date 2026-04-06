@@ -1,17 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createQueryEngine,
   createDataSource,
   createViewManager,
   isNumericType,
-} from '@unify/table-core';
-import type {
-  TableConnection,
-  SortField,
-  FilterExpr,
-  Row,
-  ColumnInfo,
-} from '@unify/table-core';
+} from "@unify/table-core";
+import type { TableConnection, SortField, FilterExpr, Row, ColumnInfo } from "@unify/table-core";
 import type {
   TableContext,
   TablePlugin,
@@ -23,9 +17,9 @@ import type {
   ColumnDef,
   EditingState,
   FormulasState,
-} from '../types.js';
-import { createPageCache } from '../page_cache.js';
-import { emptySelection } from '../utils.js';
+} from "../types.js";
+import { createPageCache } from "../page_cache.js";
+import { emptySelection } from "../utils.js";
 
 const DEFAULT_PAGE_SIZE = 200;
 const DEFAULT_WIDTH = 150;
@@ -41,7 +35,7 @@ interface UseTableContextOptions {
 }
 
 function normalizeColumn(col: ColumnDef | string): ColumnDef {
-  return typeof col === 'string' ? { field: col } : col;
+  return typeof col === "string" ? { field: col } : col;
 }
 
 function resolveColumn(def: ColumnDef, info?: ColumnInfo): ResolvedColumn {
@@ -53,7 +47,7 @@ function resolveColumn(def: ColumnDef, info?: ColumnInfo): ResolvedColumn {
     resizable: def.resizable ?? true,
     currentWidth: def.width ?? DEFAULT_WIDTH,
     columnInfo: info,
-    align: def.align ?? (info && isNumericType(info.mappedType) ? 'right' : 'left'),
+    align: def.align ?? (info && isNumericType(info.mappedType) ? "right" : "left"),
   };
 }
 
@@ -65,12 +59,20 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   const engine = useMemo(() => createQueryEngine(db), [db]);
 
   // Create a ViewManager per table instance. The view reflects filters + sort.
-  const viewManager = useMemo(() => createViewManager(engine, table, String(viewIdCounter++)), [engine, table]);
-  const datasource = useMemo(() => createDataSource(engine, table, { viewManager }), [engine, table, viewManager]);
+  const viewManager = useMemo(
+    () => createViewManager(engine, table, String(viewIdCounter++)),
+    [engine, table],
+  );
+  const datasource = useMemo(
+    () => createDataSource(engine, table, { viewManager }),
+    [engine, table, viewManager],
+  );
 
   // Cleanup view on unmount
   useEffect(() => {
-    return () => { viewManager.drop().catch(() => {}); };
+    return () => {
+      viewManager.drop().catch(() => {});
+    };
   }, [viewManager]);
 
   // Page cache
@@ -118,12 +120,16 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       if (columnsProp && columnsProp.length > 0) {
         const defs = columnsProp.map(normalizeColumn);
         const infoMap = new Map(schemaColumns.map((c) => [c.name, c]));
-        setResolvedColumns(defs.filter((d) => !d.hidden).map((d) => resolveColumn(d, infoMap.get(d.field))));
+        setResolvedColumns(
+          defs.filter((d) => !d.hidden).map((d) => resolveColumn(d, infoMap.get(d.field))),
+        );
       } else {
         setResolvedColumns(schemaColumns.map((info) => resolveColumn({ field: info.name }, info)));
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [engine, table, columnsProp]);
 
   // ── Fetch a specific page ────────────────────────────────
@@ -143,7 +149,7 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
         inflightRef.current.delete(pageIdx);
       }
     },
-    [datasource, pageSize]
+    [datasource, pageSize],
   );
 
   // ── Request visible range — called by Table on scroll ────
@@ -160,7 +166,7 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
         fetchPage(p);
       }
     },
-    [fetchPage, pageSize]
+    [fetchPage, pageSize],
   );
 
   // ── Initial load ──────────────────────────────────────────
@@ -173,13 +179,13 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
         cacheRef.current.set(0, page.rows);
         setTotalCount(page.total);
         setRows(cacheRef.current.flatten(page.total, pageSize));
-        emit('data', page);
+        emit("data", page);
         // Prefetch page 1
         if (page.total > pageSize) {
           fetchPage(1);
         }
       } catch (err) {
-        emit('error', err);
+        emit("error", err);
       } finally {
         setIsLoading(false);
       }
@@ -189,7 +195,7 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   // ── Re-fetch on sort/filter/group change ──────────────────
   const versionRef = useRef(datasource.version);
   useEffect(() => {
-    const unsub = datasource.on('data', () => {
+    const unsub = datasource.on("data", () => {
       if (datasource.version !== versionRef.current) {
         versionRef.current = datasource.version;
         // Invalidate cache, re-fetch from scratch
@@ -202,9 +208,9 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
             cacheRef.current.set(0, page.rows);
             setTotalCount(page.total);
             setRows(cacheRef.current.flatten(page.total, pageSize));
-            emit('data', page);
+            emit("data", page);
           } catch (err) {
-            emit('error', err);
+            emit("error", err);
           } finally {
             setIsLoading(false);
           }
@@ -215,69 +221,91 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
   }, [datasource, pageSize, emit]);
 
   // ── Sort/filter/group handlers ────────────────────────────
-  const handleSetSort = useCallback((newSort: SortField[]) => {
-    // Translate synthetic __group__ column to all groupBy fields (cumulative, in column order)
-    const resolved = newSort.flatMap((s) =>
-      s.field === '__group__' && groupBy.length > 0
-        ? groupBy.map((field) => ({ field, dir: s.dir }))
-        : [s],
-    );
-    setSort(resolved);
-    datasource.setSort(resolved);
-    emit('sort', resolved);
-  }, [datasource, emit, groupBy]);
+  const handleSetSort = useCallback(
+    (newSort: SortField[]) => {
+      // Translate synthetic __group__ column to all groupBy fields (cumulative, in column order)
+      const resolved = newSort.flatMap((s) =>
+        s.field === "__group__" && groupBy.length > 0
+          ? groupBy.map((field) => ({ field, dir: s.dir }))
+          : [s],
+      );
+      setSort(resolved);
+      datasource.setSort(resolved);
+      emit("sort", resolved);
+    },
+    [datasource, emit, groupBy],
+  );
 
-  const handleSetFilters = useCallback((newFilters: FilterExpr[]) => {
-    setFilters(newFilters);
-    datasource.setFilters(newFilters);
-    emit('filter', newFilters);
-  }, [datasource, emit]);
+  const handleSetFilters = useCallback(
+    (newFilters: FilterExpr[]) => {
+      setFilters(newFilters);
+      datasource.setFilters(newFilters);
+      emit("filter", newFilters);
+    },
+    [datasource, emit],
+  );
 
-  const handleSetGroupBy = useCallback((newGroupBy: string[]) => {
-    groupColWidthRef.current = null; // Reset merged column width for new grouping
-    setGroupBy(newGroupBy);
-    datasource.setGroupBy(newGroupBy);
-    emit('group', newGroupBy);
-  }, [datasource, emit]);
+  const handleSetGroupBy = useCallback(
+    (newGroupBy: string[]) => {
+      groupColWidthRef.current = null; // Reset merged column width for new grouping
+      setGroupBy(newGroupBy);
+      datasource.setGroupBy(newGroupBy);
+      emit("group", newGroupBy);
+    },
+    [datasource, emit],
+  );
 
   // ── Column resize ──────────────────────────────────────────
   const setColumnWidth = useCallback((field: string, width: number) => {
-    if (field === '__group__') {
-      groupColWidthRef.current = Math.max(width, 50);
-      // Force re-render by touching resolvedColumns identity
+    if (field === "__group__") {
+      const newW = Math.max(width, 50);
+      if (groupColWidthRef.current === newW) return;
+      groupColWidthRef.current = newW;
       setResolvedColumns((prev) => [...prev]);
       return;
     }
-    setResolvedColumns((prev) =>
-      prev.map((col) => col.field === field ? { ...col, currentWidth: Math.max(width, col.minWidth ?? 50) } : col)
-    );
+    setResolvedColumns((prev) => {
+      const idx = prev.findIndex((c) => c.field === field);
+      if (idx === -1) return prev;
+      const newWidth = Math.max(width, prev[idx].minWidth ?? 50);
+      if (prev[idx].currentWidth === newWidth) return prev;
+      const next = [...prev];
+      next[idx] = { ...prev[idx], currentWidth: newWidth };
+      return next;
+    });
   }, []);
 
   // ── Column reorder ─────────────────────────────────────────
-  const setColumnOrder = useCallback((order: string[]) => {
-    setResolvedColumns((prev) => {
-      const byField = new Map(prev.map((col) => [col.field, col]));
-      const reordered: ResolvedColumn[] = [];
-      for (const field of order) {
-        const col = byField.get(field);
-        if (col) reordered.push(col);
-      }
-      // Append any columns not in the order (e.g. newly added)
-      for (const col of prev) {
-        if (!order.includes(col.field)) reordered.push(col);
-      }
-      return reordered;
-    });
-    emit('column:reorder', order);
-  }, [emit]);
+  const setColumnOrder = useCallback(
+    (order: string[]) => {
+      setResolvedColumns((prev) => {
+        const byField = new Map(prev.map((col) => [col.field, col]));
+        const reordered: ResolvedColumn[] = [];
+        for (const field of order) {
+          const col = byField.get(field);
+          if (col) reordered.push(col);
+        }
+        // Append any columns not in the order (e.g. newly added)
+        for (const col of prev) {
+          if (!order.includes(col.field)) reordered.push(col);
+        }
+        return reordered;
+      });
+      emit("column:reorder", order);
+    },
+    [emit],
+  );
 
   // ── Column pin ─────────────────────────────────────────────
-  const setColumnPin = useCallback((field: string, pin: 'left' | 'right' | null) => {
-    setResolvedColumns((prev) =>
-      prev.map((col) => col.field === field ? { ...col, pin: pin ?? undefined } : col)
-    );
-    emit('column:pin', { field, pin });
-  }, [emit]);
+  const setColumnPin = useCallback(
+    (field: string, pin: "left" | "right" | null) => {
+      setResolvedColumns((prev) =>
+        prev.map((col) => (col.field === field ? { ...col, pin: pin ?? undefined } : col)),
+      );
+      emit("column:pin", { field, pin });
+    },
+    [emit],
+  );
 
   const fetchData = useCallback(async () => {
     cacheRef.current.clear();
@@ -304,7 +332,7 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
           const col = cols.find((c) => c.field === f);
           return (col?.label ?? f).toUpperCase();
         })
-        .join(' \u2022 ');
+        .join(" \u2022 ");
 
       const defaultWidth = groupBy.reduce((sum, f) => {
         const col = cols.find((c) => c.field === f);
@@ -312,13 +340,13 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       }, 0);
 
       const mergedCol: ResolvedColumn = {
-        field: '__group__',
+        field: "__group__",
         label: mergedLabel,
         sortable: true,
         filterable: false,
         resizable: true,
         currentWidth: groupColWidthRef.current ?? Math.max(200, defaultWidth),
-        align: 'left',
+        align: "left",
       };
 
       cols = [mergedCol, ...nonGroupedCols];
@@ -341,15 +369,33 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
 
   const ctx: TableContext = useMemo(
     () => ({
-      datasource, engine, table, viewName: viewManager.viewName, viewManager,
-      columns: transformedColumns, rows: transformedRows, sort, filters, groupBy,
-      totalCount, isLoading, selection, activeCell,
-      editing: editingExt, _setEditing: setEditingExt,
-      formulas: formulasExt, _setFormulas: setFormulasExt,
-      setSort: handleSetSort, setFilters: handleSetFilters, setGroupBy: handleSetGroupBy,
-      setSelection, setActiveCell,
-      on, emit,
-      getPlugin: <T extends TablePlugin>(name: string) => pluginMap.current.get(name) as T | undefined,
+      datasource,
+      engine,
+      table,
+      viewName: viewManager.viewName,
+      viewManager,
+      columns: transformedColumns,
+      rows: transformedRows,
+      sort,
+      filters,
+      groupBy,
+      totalCount,
+      isLoading,
+      selection,
+      activeCell,
+      editing: editingExt,
+      _setEditing: setEditingExt,
+      formulas: formulasExt,
+      _setFormulas: setFormulasExt,
+      setSort: handleSetSort,
+      setFilters: handleSetFilters,
+      setGroupBy: handleSetGroupBy,
+      setSelection,
+      setActiveCell,
+      on,
+      emit,
+      getPlugin: <T extends TablePlugin>(name: string) =>
+        pluginMap.current.get(name) as T | undefined,
       /** @internal All registered plugins — used by keyboard plugin for shortcut collection. */
       _allPlugins: () => [...pluginMap.current.values()],
       getLatest: () => ctxRef.current!,
@@ -361,11 +407,32 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       setColumnPin,
     }),
     [
-      datasource, engine, table, viewManager, transformedColumns, transformedRows, sort, filters, groupBy,
-      totalCount, isLoading, selection, activeCell, editingExt, formulasExt,
-      handleSetSort, handleSetFilters, handleSetGroupBy,
-      on, emit, fetchData, requestRange, setColumnWidth, setColumnOrder, setColumnPin,
-    ]
+      datasource,
+      engine,
+      table,
+      viewManager,
+      transformedColumns,
+      transformedRows,
+      sort,
+      filters,
+      groupBy,
+      totalCount,
+      isLoading,
+      selection,
+      activeCell,
+      editingExt,
+      formulasExt,
+      handleSetSort,
+      handleSetFilters,
+      handleSetGroupBy,
+      on,
+      emit,
+      fetchData,
+      requestRange,
+      setColumnWidth,
+      setColumnOrder,
+      setColumnPin,
+    ],
   );
 
   // Keep ref updated so plugins always see latest state via getLatest()
@@ -382,9 +449,13 @@ export function useTableContext(options: UseTableContextOptions): TableContext {
       if (plugin.dependencies) {
         for (const dep of plugin.dependencies) {
           if (!allNames.has(dep)) {
-            console.error(`[unify-table] Plugin "${plugin.name}" requires "${dep}" which is not registered.`);
+            console.error(
+              `[unify-table] Plugin "${plugin.name}" requires "${dep}" which is not registered.`,
+            );
           } else if (!initialized.has(dep)) {
-            console.warn(`[unify-table] Plugin "${plugin.name}" depends on "${dep}" which has not been initialized yet. Move "${dep}" before "${plugin.name}" in the plugins array.`);
+            console.warn(
+              `[unify-table] Plugin "${plugin.name}" depends on "${dep}" which has not been initialized yet. Move "${dep}" before "${plugin.name}" in the plugins array.`,
+            );
           }
         }
       }

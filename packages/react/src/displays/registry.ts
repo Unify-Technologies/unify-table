@@ -1,4 +1,4 @@
-import type { DisplayDescriptor } from './types.js';
+import type { DisplayDescriptor } from "./types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const descriptors = new Map<string, DisplayDescriptor<any>>();

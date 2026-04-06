@@ -1,25 +1,33 @@
-import { useMemo } from 'react';
-import { correlationDisplayType, isIdentityColumn, isNumericType } from '@unify/table-core';
-import type { CorrelationDisplayConfig } from '@unify/table-core';
-import { EChartsWrapper } from '@unify/table-charts';
-import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from './types.js';
-import { useDisplayData } from './useDisplayData.js';
-import { useChartTheme } from './useChartTheme.js';
-import { Grid3x3 } from 'lucide-react';
+import { useMemo } from "react";
+import { correlationDisplayType, isIdentityColumn, isNumericType } from "@unify/table-core";
+import type { CorrelationDisplayConfig } from "@unify/table-core";
+import { EChartsWrapper } from "@unify/table-charts";
+import type { DisplayDescriptor, DisplayRenderProps, DisplayConfigProps } from "./types.js";
+import { useDisplayData } from "./useDisplayData.js";
+import { useChartTheme } from "./useChartTheme.js";
+import { Grid3x3 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
 
-function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<CorrelationDisplayConfig>) {
+function CorrelationRender({
+  config,
+  sql,
+  engine,
+  columns,
+}: DisplayRenderProps<CorrelationDisplayConfig>) {
   const { rows, isLoading, error } = useDisplayData(sql, engine);
   const { ref, theme: chartTheme } = useChartTheme();
 
   const { matrix, colNames } = useMemo(() => {
-    const cols = config.selectedColumns.length > 0
-      ? config.selectedColumns
-      : columns.filter((c) => isNumericType(c.mappedType))
-        .slice(0, config.maxAutoColumns).map((c) => c.name);
+    const cols =
+      config.selectedColumns.length > 0
+        ? config.selectedColumns
+        : columns
+            .filter((c) => isNumericType(c.mappedType))
+            .slice(0, config.maxAutoColumns)
+            .map((c) => c.name);
 
     const n = cols.length;
     const mat: (number | null)[][] = Array.from({ length: n }, () => Array(n).fill(null));
@@ -52,11 +60,11 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
       }
     }
 
-    const scheme = config.colorScheme ?? 'diverging';
-    const isDiverging = scheme === 'diverging';
+    const scheme = config.colorScheme ?? "diverging";
+    const isDiverging = scheme === "diverging";
 
     return {
-      backgroundColor: 'transparent',
+      backgroundColor: "transparent",
       tooltip: {
         backgroundColor: chartTheme.tooltipBg,
         borderColor: chartTheme.tooltipBorder,
@@ -67,7 +75,7 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
         formatter: (p: { data: [number, number, number | null] }) => {
           const [x, y, val] = p.data;
           const row = colNames.length - 1 - y;
-          return `CORR(${colNames[row]}, ${colNames[x]}) = ${val != null ? val.toFixed(4) : 'N/A'}`;
+          return `CORR(${colNames[row]}, ${colNames[x]}) = ${val != null ? val.toFixed(4) : "N/A"}`;
         },
       },
       grid: {
@@ -78,9 +86,9 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
         containLabel: true,
       },
       xAxis: {
-        type: 'category' as const,
+        type: "category" as const,
         data: colNames,
-        position: 'bottom' as const,
+        position: "bottom" as const,
         axisLine: { show: false },
         axisTick: { show: false },
         axisLabel: {
@@ -92,7 +100,7 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
         splitLine: { show: false },
       },
       yAxis: {
-        type: 'category' as const,
+        type: "category" as const,
         data: [...colNames].reverse(),
         axisLine: { show: false },
         axisTick: { show: false },
@@ -107,56 +115,88 @@ function CorrelationRender({ config, sql, engine, columns }: DisplayRenderProps<
         min: isDiverging ? -1 : 0,
         max: 1,
         calculable: false,
-        orient: 'vertical' as const,
+        orient: "vertical" as const,
         right: 0,
-        top: 'center' as const,
+        top: "center" as const,
         itemHeight: 120,
         inRange: isDiverging
-          ? { color: ['#f87171', chartTheme.surface, '#60a5fa'] }
-          : { color: [chartTheme.surface, '#60a5fa'] },
+          ? { color: ["#f87171", chartTheme.surface, "#60a5fa"] }
+          : { color: [chartTheme.surface, "#60a5fa"] },
         textStyle: { color: chartTheme.textMuted, fontSize: 9 },
       },
-      series: [{
-        type: 'heatmap',
-        data,
-        label: {
-          show: config.showValues,
-          color: chartTheme.text,
-          fontSize: colNames.length > 8 ? 8 : 10,
-          formatter: (p: { data: [number, number, number | null] }) => {
-            const val = p.data[2];
-            return val != null ? val.toFixed(2) : '';
+      series: [
+        {
+          type: "heatmap",
+          data,
+          label: {
+            show: config.showValues,
+            color: chartTheme.text,
+            fontSize: colNames.length > 8 ? 8 : 10,
+            formatter: (p: { data: [number, number, number | null] }) => {
+              const val = p.data[2];
+              return val != null ? val.toFixed(2) : "";
+            },
           },
-        },
-        emphasis: {
+          emphasis: {
+            itemStyle: {
+              borderColor: "var(--utbl-accent, #3b82f6)",
+              borderWidth: 2,
+            },
+          },
           itemStyle: {
-            borderColor: 'var(--utbl-accent, #3b82f6)',
-            borderWidth: 2,
+            borderColor: chartTheme.divider,
+            borderWidth: 1,
+            borderRadius: 2,
           },
         },
-        itemStyle: {
-          borderColor: chartTheme.divider,
-          borderWidth: 1,
-          borderRadius: 2,
-        },
-      }],
+      ],
     };
   }, [matrix, colNames, config.showValues, config.colorScheme, chartTheme]);
 
-  if (error) return <div ref={ref} className="utbl-display-error">{error.message}</div>;
-  if (isLoading && rows.length === 0) return <div ref={ref} className="utbl-display-loading">Loading correlations...</div>;
-  if (colNames.length < 2) return <div ref={ref} className="utbl-display-loading">Need at least 2 numeric columns</div>;
-  if (!option) return <div ref={ref} className="utbl-display-loading">No data</div>;
+  if (error)
+    return (
+      <div ref={ref} className="utbl-display-error">
+        {error.message}
+      </div>
+    );
+  if (isLoading && rows.length === 0)
+    return (
+      <div ref={ref} className="utbl-display-loading">
+        Loading correlations...
+      </div>
+    );
+  if (colNames.length < 2)
+    return (
+      <div ref={ref} className="utbl-display-loading">
+        Need at least 2 numeric columns
+      </div>
+    );
+  if (!option)
+    return (
+      <div ref={ref} className="utbl-display-loading">
+        No data
+      </div>
+    );
 
-  return <div ref={ref} style={{ display: 'flex', flex: 1, minHeight: 300 }}><EChartsWrapper option={option} style={{ flex: 1, minHeight: 300 }} /></div>;
+  return (
+    <div ref={ref} style={{ display: "flex", flex: 1, minHeight: 300 }}>
+      <EChartsWrapper option={option} style={{ flex: 1, minHeight: 300 }} />
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Config panel
 // ---------------------------------------------------------------------------
 
-function CorrelationConfig({ config, onChange, columns }: DisplayConfigProps<CorrelationDisplayConfig>) {
-  const numericCols = columns.filter((c) => (isNumericType(c.mappedType)) && !isIdentityColumn(c.name));
+function CorrelationConfig({
+  config,
+  onChange,
+  columns,
+}: DisplayConfigProps<CorrelationDisplayConfig>) {
+  const numericCols = columns.filter(
+    (c) => isNumericType(c.mappedType) && !isIdentityColumn(c.name),
+  );
   const selected = new Set(config.selectedColumns);
 
   function toggleCol(name: string) {
@@ -175,20 +215,44 @@ function CorrelationConfig({ config, onChange, columns }: DisplayConfigProps<Cor
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: '0.75rem' }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: "0.75rem" }}>
       <div className="utbl-segmented">
-        <button className="utbl-segmented-btn" data-active={config.colorScheme === 'diverging'} onClick={() => onChange({ ...config, colorScheme: 'diverging' })}>Diverging</button>
-        <button className="utbl-segmented-btn" data-active={config.colorScheme === 'sequential'} onClick={() => onChange({ ...config, colorScheme: 'sequential' })}>Sequential</button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={config.colorScheme === "diverging"}
+          onClick={() => onChange({ ...config, colorScheme: "diverging" })}
+        >
+          Diverging
+        </button>
+        <button
+          className="utbl-segmented-btn"
+          data-active={config.colorScheme === "sequential"}
+          onClick={() => onChange({ ...config, colorScheme: "sequential" })}
+        >
+          Sequential
+        </button>
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--utbl-text)' }}>
-        <input type="checkbox" checked={config.showValues} onChange={() => onChange({ ...config, showValues: !config.showValues })} />
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          cursor: "pointer",
+          color: "var(--utbl-text)",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={config.showValues}
+          onChange={() => onChange({ ...config, showValues: !config.showValues })}
+        />
         Show Values
       </label>
 
       <div>
         <span className="utbl-field-label">Highlight Threshold</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <input
             type="range"
             className="utbl-range"
@@ -199,22 +263,68 @@ function CorrelationConfig({ config, onChange, columns }: DisplayConfigProps<Cor
             onChange={(e) => onChange({ ...config, highlightThreshold: Number(e.target.value) })}
             style={{ flex: 1 }}
           />
-          <span style={{ fontSize: '0.625rem', color: 'var(--utbl-text)', fontVariantNumeric: 'tabular-nums', minWidth: 28 }}>
+          <span
+            style={{
+              fontSize: "0.625rem",
+              color: "var(--utbl-text)",
+              fontVariantNumeric: "tabular-nums",
+              minWidth: 28,
+            }}
+          >
             {config.highlightThreshold.toFixed(2)}
           </span>
         </div>
       </div>
 
       <div>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 4 }}>
-          <span className="utbl-field-label" style={{ flex: 1 }}>Columns</span>
-          <button onClick={selectAll} style={{ fontSize: '0.6rem', color: 'var(--utbl-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>All</button>
-          <button onClick={deselectAll} style={{ fontSize: '0.6rem', color: 'var(--utbl-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>None</button>
+        <div style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+          <span className="utbl-field-label" style={{ flex: 1 }}>
+            Columns
+          </span>
+          <button
+            onClick={selectAll}
+            style={{
+              fontSize: "0.6rem",
+              color: "var(--utbl-accent)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            All
+          </button>
+          <button
+            onClick={deselectAll}
+            style={{
+              fontSize: "0.6rem",
+              color: "var(--utbl-accent)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            None
+          </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {numericCols.map((c) => (
-            <label key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--utbl-text)' }}>
-              <input type="checkbox" checked={selected.has(c.name)} onChange={() => toggleCol(c.name)} />
+            <label
+              key={c.name}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                cursor: "pointer",
+                color: "var(--utbl-text)",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(c.name)}
+                onChange={() => toggleCol(c.name)}
+              />
               {c.name}
             </label>
           ))}

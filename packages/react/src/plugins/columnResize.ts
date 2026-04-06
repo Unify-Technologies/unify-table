@@ -1,4 +1,4 @@
-import type { TablePlugin } from '../types.js';
+import type { TablePlugin } from "../types.js";
 
 /**
  * Marker plugin — enables column resize handles in the table header.
@@ -8,6 +8,6 @@ import type { TablePlugin } from '../types.js';
  */
 export function columnResize(): TablePlugin {
   return {
-    name: 'columnResize',
+    name: "columnResize",
   };
 }

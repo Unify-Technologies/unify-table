@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
-import type { DisplayConfig } from '@unify/table-core';
-import { listDisplays, getDisplay } from './registry.js';
-import { Table2, Plus, X, Settings, Code } from 'lucide-react';
+import { useCallback, useRef, useState } from "react";
+import type { DisplayConfig } from "@unify/table-core";
+import { listDisplays, getDisplay } from "./registry.js";
+import { Table2, Plus, X, Settings, Code } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -52,7 +52,7 @@ export function DisplayBar({
 }: DisplayBarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const labelRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
-  const originalLabel = useRef<string>('');
+  const originalLabel = useRef<string>("");
   const availableTypes = listDisplays();
 
   const handleAddClick = useCallback(() => {
@@ -63,36 +63,42 @@ export function DisplayBar({
     }
   }, [availableTypes, onAdd]);
 
-  const handleAddType = useCallback((key: string) => {
-    setMenuOpen(false);
-    onAdd(key);
-  }, [onAdd]);
+  const handleAddType = useCallback(
+    (key: string) => {
+      setMenuOpen(false);
+      onAdd(key);
+    },
+    [onAdd],
+  );
 
   const startEditing = useCallback((id: string) => {
     const el = labelRefs.current.get(id);
     if (!el) return;
-    originalLabel.current = el.textContent ?? '';
-    el.contentEditable = 'true';
+    originalLabel.current = el.textContent ?? "";
+    el.contentEditable = "true";
     el.focus();
     selectAllText(el);
   }, []);
 
-  const commitEdit = useCallback((id: string, el: HTMLSpanElement) => {
-    el.contentEditable = 'false';
-    const value = (el.textContent ?? '').trim();
-    if (value) {
-      onRename(id, value);
-    } else {
-      el.textContent = originalLabel.current;
-    }
-    window.getSelection()?.removeAllRanges();
-  }, [onRename]);
+  const commitEdit = useCallback(
+    (id: string, el: HTMLSpanElement) => {
+      el.contentEditable = "false";
+      const value = (el.textContent ?? "").trim();
+      if (value) {
+        onRename(id, value);
+      } else {
+        el.textContent = originalLabel.current;
+      }
+      window.getSelection()?.removeAllRanges();
+    },
+    [onRename],
+  );
 
   return (
     <div className="utbl-display-bar">
       {/* Table tab — always first */}
       <button
-        className={`utbl-display-tab ${activeDisplay === null ? 'utbl-display-tab--active' : ''}`}
+        className={`utbl-display-tab ${activeDisplay === null ? "utbl-display-tab--active" : ""}`}
         onClick={() => onActivate(null)}
       >
         <span className="utbl-display-tab__icon">{<Table2 size={14} />}</span>
@@ -108,7 +114,7 @@ export function DisplayBar({
         return (
           <div
             key={d.id}
-            className={`utbl-display-tab ${isActive ? 'utbl-display-tab--active' : ''}`}
+            className={`utbl-display-tab ${isActive ? "utbl-display-tab--active" : ""}`}
             onClick={() => onActivate(d.id)}
           >
             {Icon && (
@@ -118,20 +124,31 @@ export function DisplayBar({
             )}
 
             <span
-              ref={(el) => { if (el) labelRefs.current.set(d.id, el); else labelRefs.current.delete(d.id); }}
+              ref={(el) => {
+                if (el) labelRefs.current.set(d.id, el);
+                else labelRefs.current.delete(d.id);
+              }}
               className="utbl-display-tab__label"
-              onDoubleClick={(e) => { e.stopPropagation(); startEditing(d.id); }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                startEditing(d.id);
+              }}
               onBlur={() => commitEdit(d.id, labelRefs.current.get(d.id)!)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') { e.preventDefault(); (e.target as HTMLElement).blur(); }
-                if (e.key === 'Escape') {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  (e.target as HTMLElement).blur();
+                }
+                if (e.key === "Escape") {
                   const el = e.target as HTMLElement;
                   el.textContent = originalLabel.current;
-                  el.contentEditable = 'false';
+                  el.contentEditable = "false";
                   window.getSelection()?.removeAllRanges();
                 }
               }}
-              onClick={(e) => { if ((e.target as HTMLElement).isContentEditable) e.stopPropagation(); }}
+              onClick={(e) => {
+                if ((e.target as HTMLElement).isContentEditable) e.stopPropagation();
+              }}
             >
               {d.label}
             </span>
@@ -140,22 +157,31 @@ export function DisplayBar({
             {isActive && (
               <span className="utbl-display-tab__actions">
                 <button
-                  className={`utbl-display-tab__action ${showConfig === d.id ? 'utbl-display-tab__action--active' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); onToggleConfig(showConfig === d.id ? null : d.id); }}
+                  className={`utbl-display-tab__action ${showConfig === d.id ? "utbl-display-tab__action--active" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleConfig(showConfig === d.id ? null : d.id);
+                  }}
                   title="Configure"
                 >
                   {<Settings size={12} />}
                 </button>
                 <button
-                  className={`utbl-display-tab__action ${showSql === d.id ? 'utbl-display-tab__action--active' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); onToggleSql(showSql === d.id ? null : d.id); }}
+                  className={`utbl-display-tab__action ${showSql === d.id ? "utbl-display-tab__action--active" : ""}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleSql(showSql === d.id ? null : d.id);
+                  }}
                   title="View SQL"
                 >
                   {<Code size={12} />}
                 </button>
                 <button
                   className="utbl-display-tab__action utbl-display-tab__action--close"
-                  onClick={(e) => { e.stopPropagation(); onRemove(d.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(d.id);
+                  }}
                   title="Remove display"
                 >
                   {<X size={10} strokeWidth={2.5} />}

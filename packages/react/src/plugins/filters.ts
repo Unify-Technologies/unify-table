@@ -1,4 +1,4 @@
-import type { TablePlugin } from '../types.js';
+import type { TablePlugin } from "../types.js";
 
 interface FiltersOptions {
   debounce?: number;
@@ -11,6 +11,6 @@ interface FiltersOptions {
  */
 export function filters(_options: FiltersOptions = {}): TablePlugin {
   return {
-    name: 'filters',
+    name: "filters",
   };
 }

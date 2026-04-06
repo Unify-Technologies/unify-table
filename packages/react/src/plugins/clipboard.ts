@@ -119,14 +119,5 @@ async function pasteFromClipboard(ctx: TableContext) {
         await live.editing?.commitEdit(cell, dataRows[r][c]);
       }
     }
-  } else {
-    // No active cell — append as new rows
-    for (const dataRow of dataRows) {
-      const rowData: Record<string, unknown> = {};
-      for (let c = 0; c < dataRow.length && c < headerFields.length; c++) {
-        rowData[headerFields[c]] = dataRow[c];
-      }
-      await live.editing?.addRow(rowData);
-    }
   }
 }

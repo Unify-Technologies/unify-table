@@ -168,17 +168,7 @@ ctx.emit('editing:toggle');`} language="tsx" />
 
       <Heading level={2} id="row-operations">Row Operations</Heading>
       <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        Adding and deleting rows also goes through the overlay:
-      </p>
-      <div className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Add row</strong> — inserted into the overlay with state <code>added</code>. The source table is not modified.</li>
-          <li><strong>Delete row</strong> — marked as <code>deleted</code> in the overlay. The source row is hidden from the merge view but still exists in the source table.</li>
-          <li><strong>Delete an added row</strong> — truly removed from the overlay (it never existed in the source).</li>
-        </ul>
-      </div>
-      <p className="text-[13px] mb-3" style={{ color: "var(--doc-text-secondary)" }}>
-        The right-click context menu includes a <strong>Delete row</strong> action when the editing plugin is active.
+        All edits go through the overlay. The source table is never modified until you explicitly save.
       </p>
 
       <Heading level={2} id="architecture">Architecture</Heading>

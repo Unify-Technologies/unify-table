@@ -137,8 +137,6 @@ export function isFullRowSpan(span: SelectionSpan, colCount: number): boolean {
 
 export interface EditBackend {
   commitEdit(cell: CellRef, value: unknown): Promise<void>;
-  addRow(data: Row): Promise<void>;
-  deleteRows(ids: string[]): Promise<void>;
   undo(): Promise<void>;
   redo(): Promise<void>;
   canUndo(): boolean;
@@ -150,8 +148,6 @@ export interface EditingState {
   startEditing(cell: CellRef): void;
   commitEdit(cell: CellRef, value: unknown): Promise<void>;
   cancelEdit(): void;
-  addRow(data: Row): Promise<void>;
-  deleteRows(ids: string[]): Promise<void>;
   undo(): Promise<void>;
   redo(): Promise<void>;
   canUndo: boolean;
@@ -249,8 +245,6 @@ export type TableEvent =
   | "edit:commit"
   | "edit:cancel"
   | "edit:invalid"
-  | "row:add"
-  | "row:delete"
   | "data"
   | "loading"
   | "error"

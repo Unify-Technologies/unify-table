@@ -9,7 +9,7 @@ const mockOverlay = {
   init: vi.fn().mockResolvedValue(undefined),
   apply: vi.fn().mockResolvedValue(undefined),
   addRow: vi.fn().mockResolvedValue(undefined),
-  deleteRow: vi.fn().mockResolvedValue(undefined),
+  deleteRow: vi.fn().mockResolvedValue(undefined), // used internally for undo of addRow
   revert: vi.fn().mockResolvedValue(undefined),
   revertAll: vi.fn().mockResolvedValue(undefined),
   restoreRow: vi.fn().mockResolvedValue(undefined),
@@ -260,55 +260,6 @@ describe('editing plugin', () => {
     });
   });
 
-  describe('addRow', () => {
-    it('adds row through overlay and emits event', async () => {
-      const ctx = makeCtx();
-      editing().init!(ctx);
-
-      const data = { id: 99, name: 'New', price: 0 };
-      await ctx.editing!.addRow(data);
-
-      expect(ctx.emit).toHaveBeenCalledWith('row:add', data);
-      expect(ctx.refresh).toHaveBeenCalled();
-    });
-
-    it('does nothing when disabled', async () => {
-      const ctx = makeCtx();
-      editing({ enabled: false }).init!(ctx);
-
-      await ctx.editing!.addRow({ id: 99, name: 'New' });
-      expect(ctx.emit).not.toHaveBeenCalledWith('row:add', expect.anything());
-    });
-  });
-
-  describe('deleteRows', () => {
-    it('deletes rows through overlay and emits event', async () => {
-      const ctx = makeCtx();
-      editing().init!(ctx);
-
-      await ctx.editing!.deleteRows(['1']);
-
-      expect(ctx.emit).toHaveBeenCalledWith('row:delete', ['1']);
-      expect(ctx.refresh).toHaveBeenCalled();
-    });
-
-    it('does nothing with empty ids array', async () => {
-      const ctx = makeCtx();
-      editing().init!(ctx);
-
-      await ctx.editing!.deleteRows([]);
-      expect(ctx.emit).not.toHaveBeenCalledWith('row:delete', expect.anything());
-    });
-
-    it('does nothing when disabled', async () => {
-      const ctx = makeCtx();
-      editing({ enabled: false }).init!(ctx);
-
-      await ctx.editing!.deleteRows(['1']);
-      expect(ctx.emit).not.toHaveBeenCalledWith('row:delete', expect.anything());
-    });
-  });
-
   describe('editing:toggle event', () => {
     it('toggles enabled state', async () => {
       const ctx = makeCtx();
@@ -358,19 +309,6 @@ describe('editing plugin', () => {
       // Undo/redo should be cleared
       expect(ctx.editing!.canUndo).toBe(false);
       expect(ctx.editing!.canRedo).toBe(false);
-    });
-  });
-
-  describe('contextMenuItems', () => {
-    it('returns separator and Delete row item', () => {
-      const plugin = editing();
-      const ctx = makeCtx();
-      const cell = { rowIndex: 0, colIndex: 0, rowId: '1', field: 'id', value: 1 };
-      const items = plugin.contextMenuItems!(ctx, cell);
-
-      expect(items[0].type).toBe('separator');
-      expect(items[1].label).toBe('Delete row');
-      expect(items[1].danger).toBe(true);
     });
   });
 

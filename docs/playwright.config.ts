@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: false,
+  fullyParallel: true,
   retries: 0,
   reporter: "list",
   timeout: 120000,
@@ -14,12 +14,16 @@ export default defineConfig({
       args: ["--enable-features=SharedArrayBuffer"],
     },
   },
+  webServer: {
+    command: "pnpm exec vite --port 5173",
+    port: 5173,
+    reuseExistingServer: true,
+    timeout: 30000,
+  },
   projects: [
     {
       name: "chromium",
-      use: {
-        browserName: "chromium",
-      },
+      use: { browserName: "chromium" },
     },
   ],
 });

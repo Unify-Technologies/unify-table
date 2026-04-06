@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "node scripts/generate-llms.mjs && vite build",
     "generate:llms": "node scripts/generate-llms.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.1-dev167.0",
@@ -25,7 +26,7 @@
     "@tailwindcss/vite": "^4.2.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.5.2",
+    "@vitejs/plugin-react": "^6.0.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.8.0",
     "vite": "^8.0.2"

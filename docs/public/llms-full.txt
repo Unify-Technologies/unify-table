@@ -946,9 +946,9 @@ Column definitions specify the editor type and validation rules for each field.
 
 - **Delete** — clear the cell contents
 
-- **Ctrl+Z** — undo the last edit
+- **Ctrl+Z** / **⌘Z** — undo the last edit
 
-- **Ctrl+Y** — redo
+- **Ctrl+Y** / **Ctrl+Shift+Z** / **⌘⇧Z** — redo
 
 ## Validation
 
@@ -981,6 +981,22 @@ typeof value === 'string' && value.includes('@')
 boolean columns toggle directly, and text columns use a standard text field. Type
 coercion happens automatically before validation runs.
 
+## Select Editor
+
+Set `editor: 'select'` with `editorOptions` to restrict a cell to a fixed list of values.
+Add `editorFreeform: true` to also allow arbitrary values — the input becomes a combobox where
+the user can pick from the list or type a new value.
+
+```tsx
+const columns = [
+// Strict: only the listed values are allowed
+{ field: 'status', editor: 'select', editorOptions: ['Open', 'Closed', 'Pending'] },
+
+// Freeform: suggestions from the list, but any value accepted
+{ field: 'category', editor: 'select', editorOptions: ['Bug', 'Feature', 'Chore'], editorFreeform: true },
+];
+```
+
 ## Save & Discard
 
 Edits accumulate in the overlay without touching the source table. You control when
@@ -1009,8 +1025,8 @@ consumers see the original data until you explicitly save.
 
 ## Undo & Redo
 
-Every edit, row addition, and row deletion is tracked in an operation log. `Ctrl+Z` undoes
-the last operation, `Ctrl+Y` redoes it. The undo stack supports all operation types — cell
+Every edit, row addition, and row deletion is tracked in an operation log. `Ctrl+Z` (`⌘Z` on macOS) undoes
+the last operation, `Ctrl+Y` or `Ctrl+Shift+Z` (`⌘⇧Z` on macOS) redoes it. The undo stack supports all operation types — cell
 edits, row additions, and row deletions — and correctly restores the previous state including
 reverting overlay rows back to the source when all edits to a row are undone.
 
@@ -1405,6 +1421,27 @@ plugins={[findReplace(), editing(), keyboard(), selection("range")]}
 />
 ```
 
+## Keyboard Shortcuts
+
+`Ctrl+F` / `⌘F` opens the find bar. `Ctrl+H` / `⌘H` opens find and replace.
+Press `Escape` to close the bar.
+
+## Search Options
+
+The find bar includes toggles for **case-sensitive** matching and **regular expression** mode.
+Use the column dropdown to limit the search to a specific text column, or leave it on "All columns" to search everywhere.
+The match count updates in real time as you type.
+
+## Replacing
+
+Click the expand chevron or press `Ctrl+H` / `⌘H` to reveal the replace row.
+Type the replacement text and click **Replace** to update only the current match and advance
+to the next one, or **Replace All** to update every matching cell at once.
+The affected count is displayed before any replacement is committed, so you can
+review the scope of the change.
+
+> **Tip: Works with Editing** Find & replace pairs naturally with the `editing` plugin — find highlights matches across the table, and replace uses the editing pipeline to commit changes with undo/redo support.
+
 ## Programmatic API
 
 Use the exported helper functions to search and replace from code:
@@ -1415,67 +1452,125 @@ import { findInTable, replaceInTable } from '@unify/table-react';
 // Count matching rows (searches all text columns)
 const count = await findInTable(ctx, 'AAPL');
 
-// Search in a specific column
-const count2 = await findInTable(ctx, 'Trading', 'desk');
+// Search in a specific column, case-sensitive
+const count2 = await findInTable(ctx, 'Trading', 'desk', false, true);
 
 // Replace all occurrences in a column
 const affected = await replaceInTable(ctx, 'AAPL', 'GOOG', 'ticker');
 ```
 
-## Keyboard Shortcuts
-
-`Ctrl+F` opens the find bar. `Ctrl+H` opens find and replace.
-The affected count is displayed before any replacement is committed, so you can
-review the scope of the change.
-
-> **Tip: Works with Editing** Find & replace pairs naturally with the `editing` plugin — find highlights matches across the table, and replace uses the editing pipeline to commit changes with validation.
-
 ---
 
 # Formulas
 
-Add computed columns that evaluate SQL expressions on each row.
+Add computed columns that evaluate SQL expressions on each row. Formula columns are fully reactive &mdash; when you edit a source column, the formula recalculates automatically.
 
-Two computed columns added: **PnL/Unit** (pnl divided by volume) and **Year** (extracted from trade_date). Formulas run as DuckDB expressions in the SELECT clause.</>}
-height={420}
+## How It Works
+
+Formula columns are injected as computed expressions in the DuckDB `SELECT` clause. They run server-side inside DuckDB-WASM, so all DuckDB functions, type casts, and `CASE` expressions are available. Formula columns are **read-only** &mdash; they cannot be directly edited since their value is derived from other columns.
+
+Formula columns are visually indicated with a **&Sigma; icon** in the column header. When a formula is marked `editable: true`, it also shows a **pencil icon** to indicate the user can edit its expression at runtime.
+
+## Example
+
+Three formula columns: **PnL/Unit** (editable), **Year** (read-only), and **Margin %** (editable). Editable formulas show both &Sigma; and pencil icons &mdash; double-click them to modify the expression. Try editing source columns (`pnl`, `volume`, `notional`) to see formulas recalculate.
+
+Full spreadsheet experience with three computed columns. **PnL/Unit** and **Margin %** are editable &mdash; double-click to modify the expression. **Year** is read-only. Edit source columns and watch formulas recalculate.</>}
+height={480}
 />
 
 ## Usage
 
-Register formula columns before mounting, then include the `formulas()` plugin.
+Pass formula column definitions to the `formulas()` plugin. Each column needs a `name` (the output column name) and an `expression` (any valid DuckDB SQL expression).
 
 ```tsx
-import { Table, formulas, addFormulaColumn, removeFormulaColumn } from '@unify/table-react';
+import { Table, formulas, spreadsheet } from '@unify/table-react';
 
-// Register computed columns
-addFormulaColumn('pnl_per_unit', 'ROUND(pnl / NULLIF(volume, 0), 4)');
-addFormulaColumn('trade_year', "DATE_PART('year', trade_date)::INTEGER");
-
-<Table db={db} table="trades" plugins={[formulas()]} />
+<Table
+db={db}
+table="trades"
+plugins={[
+...spreadsheet(),
+formulas({
+columns: [
+{ name: 'margin', expression: 'ROUND(pnl / NULLIF(notional, 0) * 100, 2)', label: 'Margin %', editable: true },
+{ name: 'trade_year', expression: "DATE_PART('year', trade_date)::INTEGER", label: 'Year' },  // read-only (default)
+],
+}),
+]}
+/>
 ```
 
-## Programmatic API
+## Column Options
 
-Add or remove formula columns dynamically. Use `formulaViewSql()` to get the underlying SQL with all computed columns included.
+Each `FormulaColumnDef` supports:
 
 ```tsx
-import { addFormulaColumn, removeFormulaColumn, formulaViewSql } from '@unify/table-react';
-
-addFormulaColumn('margin', 'ROUND(pnl / NULLIF(notional, 0) * 100, 2)');
-
-// Get the generated view SQL
-formulaViewSql('trades');
-// → SELECT *, (ROUND(pnl / NULLIF(notional, 0) * 100, 2)) AS "margin" FROM "trades"
-
-removeFormulaColumn('margin');
+interface FormulaColumnDef {
+name: string;         // Output column name (used as field)
+expression: string;   // DuckDB SQL expression
+label?: string;       // Display label (defaults to name)
+width?: number;       // Column width in px (default: 150)
+align?: 'left' | 'center' | 'right';
+format?: string;      // Number format (e.g. 'number', 'currency', 'percent')
+editable?: boolean;   // Allow users to edit the expression at runtime (default: false)
+}
 ```
+
+## Editing + Formulas
+
+When combined with the editing plugin (or the `spreadsheet()` preset), formula columns are **automatically recalculated** when you edit any source column. The formula expressions run inside DuckDB's view, so edits to the overlay table are reflected immediately on commit.
+
+## Editing Expressions
+
+Formula columns marked with `editable: true` allow users to modify the SQL expression at runtime. Double-click or press **Enter** / **F2** on an editable formula cell to open an inline editor showing the raw SQL expression. Non-editable formulas (the default) cannot be opened for editing.
+
+- **Enter** commits the new expression &mdash; the entire column recalculates instantly
+
+- **Escape** cancels without changes
+
+- **Ctrl+Z** / **Ctrl+Y** undo and redo expression changes (falls back to formula undo when there are no cell edits to undo)
+
+- If the expression is invalid SQL, the change is rolled back and the editor stays open
+
+> **Info: Column-Level Edit** Editing a formula cell changes the expression for the **entire column**, not just one row. This is because formula expressions are DuckDB SQL that applies uniformly to all rows. Source columns (PnL, Volume, etc.) can still be edited per-cell as normal.
+
+## Fill Handle
+
+The `fillHandle()` plugin (included in the `spreadsheet()` preset) adds an Excel-like fill handle &mdash; a small blue square at the bottom-right of the active cell. Drag it to extend values with pattern detection:
+
+- **Numbers**: detects arithmetic progressions (1, 2, 3 &rarr; 4, 5, 6)
+
+- **Dates**: detects intervals and extrapolates
+
+- **Text**: copies or cycles through source values
+
+- **Formula columns**: skipped (they recalculate from source data)
+
+You can also use keyboard shortcuts: **Ctrl+D** (Fill Down) and **Ctrl+R** (Fill Right) when a range is selected. Double-click the handle to auto-fill down to the extent of the adjacent column.
 
 ## Expressions
 
-Any valid DuckDB SQL expression works — built-in functions, CASE statements, arithmetic,
-and type casts. Expressions are injected into the SELECT clause as computed columns.
+Any valid DuckDB SQL expression works &mdash; built-in functions, `CASE` statements, arithmetic, type casts, and string functions.
 
-> **Tip: DuckDB Functions** You have access to the full DuckDB function library — `DATE_PART`, `ROUND`, `NULLIF`, `CASE WHEN`, string functions, and more. Check the DuckDB documentation for available functions.
+```tsx
+// Arithmetic
+{ name: 'total', expression: 'price * quantity' }
+
+// Conditional logic
+{ name: 'status', expression: "CASE WHEN pnl > 0 THEN 'Profit' ELSE 'Loss' END" }
+
+// Date functions
+{ name: 'quarter', expression: "DATE_PART('quarter', trade_date)::INTEGER" }
+
+// String functions
+{ name: 'ticker_lower', expression: 'LOWER(ticker)' }
+
+// Null-safe division
+{ name: 'ratio', expression: 'ROUND(a / NULLIF(b, 0), 4)' }
+```
+
+> **Tip: DuckDB Functions** You have access to the full DuckDB function library &mdash; `DATE_PART`, `ROUND`, `NULLIF`, `CASE WHEN`, `COALESCE`, string functions, and more. Check the DuckDB documentation for available functions.
 
 ---
 

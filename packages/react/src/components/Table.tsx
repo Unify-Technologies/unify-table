@@ -732,7 +732,7 @@ const VirtualRowItem = memo(function VirtualRowItem({
         alignItems: "center",
         opacity: isPlaceholder ? 0.3 : 1,
         cursor: isPlaceholder ? undefined : isGroup ? "pointer" : "cell",
-        ...(isSelected ? { backgroundColor: "var(--row-selected-bg, #1e3a5f)" } : {}),
+        ...(isSelected || isGroupSelected ? { backgroundColor: "var(--row-selected-bg, #1e3a5f)" } : {}),
       }}
       className={`utbl-vrow ${rowClass}`}
       onClick={
@@ -883,6 +883,32 @@ export function TableView({
     return filtered;
   }, [sort, groupBy]);
 
+  // Precompute row indices that are inside (or are) a selected group.
+  // Walk forward from each selected group row, marking all children until
+  // the next group at same-or-lesser depth.
+  const groupSelectedIndices = useMemo(() => {
+    const indices = new Set<number>();
+    if (selection.selectedGroups.size === 0) return indices;
+
+    for (const serialized of selection.selectedGroups) {
+      const gIdx = rows.findIndex(
+        (r) => r && isGroupRow(r) && serializeGroupKey(r.__groupKey) === serialized,
+      );
+      if (gIdx < 0) continue;
+      const gDepth = (rows[gIdx].__depth as number) ?? 0;
+      indices.add(gIdx);
+      for (let i = gIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r) continue;
+        if (isGroupRow(r)) {
+          if ((r.__depth as number) <= gDepth) break;
+        }
+        indices.add(i);
+      }
+    }
+    return indices;
+  }, [rows, selection.selectedGroups]);
+
   // When plugins transform rows (e.g. grouping), use the transformed array length.
   // Otherwise use totalCount for virtual scrolling over the full dataset.
   const displayCount =
@@ -999,8 +1025,20 @@ export function TableView({
         }
       }
 
-      // Set active cell for plugins that read ctx.activeCell
-      if (cell) ctx.setActiveCell(cell);
+      // Simulate a plain left-click so selection aligns with the right-clicked cell
+      if (cell && row && !isGroupRow(row)) {
+        ctx.emit("cell:click", {
+          rowIndex: cell.rowIndex,
+          colIndex: cell.colIndex,
+          field: cell.field,
+          value: cell.value,
+          row,
+          ctrlKey: false,
+          shiftKey: false,
+        });
+      } else if (cell) {
+        ctx.setActiveCell(cell);
+      }
 
       const items = collectMenuItems(cell);
       ctx.emit("contextmenu", { x: e.clientX, y: e.clientY, cell, items });
@@ -1160,10 +1198,7 @@ export function TableView({
                   isFullRowSpan(s, columns.length) && isInAnySpan(virtualRow.index, 0, selection),
               );
             const isGroupSelected =
-              isGroup &&
-              selection.selectedGroups.has(
-                serializeGroupKey(row.__groupKey as Record<string, unknown>),
-              );
+              !isPlaceholder && groupSelectedIndices.has(virtualRow.index);
 
             return (
               <VirtualRowItem

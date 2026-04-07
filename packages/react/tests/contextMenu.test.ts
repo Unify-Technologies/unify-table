@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { contextMenu } from '../src/plugins/contextMenu.js';
 import { emptySelection } from '../src/utils.js';
-import type { TableContext, ResolvedColumn, SelectionState } from '../src/types.js';
+import { serializeGroupKey } from '../src/plugins/row_grouping.js';
+import type { TableContext, ResolvedColumn, SelectionState, CellRef } from '../src/types.js';
 
 function makeCols(...fields: string[]): ResolvedColumn[] {
   return fields.map((f) => ({ field: f, currentWidth: 100, sortable: true })) as ResolvedColumn[];
@@ -12,12 +13,14 @@ function makeCtx(overrides: Record<string, any> = {}): TableContext {
     rows: [],
     columns: makeCols('id', 'name', 'price'),
     selection: emptySelection(),
+    activeCell: null,
     sort: [],
     filters: [],
     groupBy: [],
     totalCount: 100,
     table: 'trades',
-    engine: { exportBlob: vi.fn(), columns: vi.fn() },
+    engine: { exportBlob: vi.fn(), columns: vi.fn(), execute: vi.fn() },
+    datasource: { fetchGroupDetail: vi.fn().mockResolvedValue({ rows: [], total: 0 }) },
     setSelection: vi.fn(),
     setSort: vi.fn(),
     setGroupBy: vi.fn(),
@@ -29,6 +32,22 @@ function makeCtx(overrides: Record<string, any> = {}): TableContext {
     ...overrides,
   };
   return ctx;
+}
+
+function makeGroupRow(key: Record<string, unknown>, expanded: boolean, depth = 0, count = 10): Record<string, unknown> {
+  return {
+    __group: true,
+    __groupKey: key,
+    __groupCount: count,
+    __expanded: expanded,
+    __depth: depth,
+    __aggs: {},
+    ...key,
+  };
+}
+
+function makeCellRef(rowIndex: number, colIndex = 0): CellRef {
+  return { rowIndex, colIndex, rowId: String(rowIndex), field: 'id', value: null };
 }
 
 describe('contextMenu plugin', () => {
@@ -208,6 +227,192 @@ describe('contextMenu plugin', () => {
       const items = contextMenu().headerContextMenuItems!(ctx, col);
       const copyName = items.find((i) => i.label === 'Copy Column Name');
       expect(copyName).toBeDefined();
+    });
+  });
+
+  describe('group row context menu', () => {
+    it('shows Expand Group for collapsed group row', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, false);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([serializeGroupKey({ region: 'US' })]),
+          groupCount: 1,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const expand = items.find((i) => i.label === 'Expand Group');
+      expect(expand).toBeDefined();
+    });
+
+    it('shows Collapse Group for expanded group row', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, true);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([serializeGroupKey({ region: 'US' })]),
+          groupCount: 1,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const collapse = items.find((i) => i.label === 'Collapse Group');
+      expect(collapse).toBeDefined();
+    });
+
+    it('shows Copy Group Data for group row', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, true);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([serializeGroupKey({ region: 'US' })]),
+          groupCount: 1,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const copyGroup = items.find((i) => i.label === 'Copy Group Data');
+      expect(copyGroup).toBeDefined();
+    });
+
+    it('pluralizes labels for multi-group selection', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, false);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([
+            serializeGroupKey({ region: 'US' }),
+            serializeGroupKey({ region: 'EMEA' }),
+          ]),
+          groupCount: 2,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      expect(items.find((i) => i.label === 'Expand Groups')).toBeDefined();
+      expect(items.find((i) => i.label === 'Copy Groups Data')).toBeDefined();
+    });
+
+    it('Expand action emits group:toggle', () => {
+      const groupKey = { region: 'US' };
+      const groupRow = makeGroupRow(groupKey, false);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([serializeGroupKey(groupKey)]),
+          groupCount: 1,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const expand = items.find((i) => i.label === 'Expand Group')!;
+      expand.action();
+      expect(ctx.emit).toHaveBeenCalledWith('group:toggle', { groupKey, depth: 0 });
+    });
+
+    it('includes export items after group actions', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, false);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([serializeGroupKey({ region: 'US' })]),
+          groupCount: 1,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const labels = items.filter((i) => i.type !== 'separator').map((i) => i.label);
+      expect(labels).toContain('Export as CSV');
+      expect(labels).toContain('Export as JSON');
+      expect(labels).toContain('Export as Parquet');
+    });
+
+    it('export Selection child shows group count', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, false);
+      const ctx = makeCtx({
+        rows: [groupRow],
+        groupBy: ['region'],
+        selection: {
+          ...emptySelection(),
+          selectedGroups: new Set([serializeGroupKey({ region: 'US' })]),
+          groupCount: 1,
+        },
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const csv = items.find((i) => i.label === 'Export as CSV')!;
+      const selChild = csv.children!.find((c) => c.label.startsWith('Selection'));
+      expect(selChild).toBeDefined();
+      expect(selChild!.label).toContain('1 group');
+    });
+  });
+
+  describe('data row inside group context menu', () => {
+    it('shows Collapse Group for data row inside expanded group', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, true);
+      const dataRow = { id: 1, region: 'US', name: 'Alice', price: 100 };
+      const ctx = makeCtx({
+        rows: [groupRow, dataRow],
+        groupBy: ['region'],
+      });
+      const cell = makeCellRef(1); // data row
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const collapse = items.find((i) => i.label === 'Collapse Group');
+      expect(collapse).toBeDefined();
+    });
+
+    it('does not show Collapse/Expand when no grouping active', () => {
+      const dataRow = { id: 1, name: 'Alice', price: 100 };
+      const ctx = makeCtx({
+        rows: [dataRow],
+        groupBy: [],
+      });
+      const cell = makeCellRef(0);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      expect(items.find((i) => i.label === 'Collapse Group')).toBeUndefined();
+      expect(items.find((i) => i.label === 'Expand Group')).toBeUndefined();
+    });
+
+    it('Collapse action emits group:toggle for parent group', () => {
+      const groupKey = { region: 'US' };
+      const groupRow = makeGroupRow(groupKey, true);
+      const dataRow = { id: 1, region: 'US', name: 'Alice', price: 100 };
+      const ctx = makeCtx({
+        rows: [groupRow, dataRow],
+        groupBy: ['region'],
+      });
+      const cell = makeCellRef(1);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const collapse = items.find((i) => i.label === 'Collapse Group')!;
+      collapse.action();
+      expect(ctx.emit).toHaveBeenCalledWith('group:toggle', { groupKey, depth: 0 });
+    });
+
+    it('still shows Copy and Select all for data rows inside groups', () => {
+      const groupRow = makeGroupRow({ region: 'US' }, true);
+      const dataRow = { id: 1, region: 'US', name: 'Alice', price: 100 };
+      const ctx = makeCtx({
+        rows: [groupRow, dataRow],
+        groupBy: ['region'],
+      });
+      const cell = makeCellRef(1);
+      const items = contextMenu().contextMenuItems!(ctx, cell);
+      const labels = items.filter((i) => i.type !== 'separator').map((i) => i.label);
+      expect(labels).toContain('Copy');
+      expect(labels).toContain('Select all');
     });
   });
 });

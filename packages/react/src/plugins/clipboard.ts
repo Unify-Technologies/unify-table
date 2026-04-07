@@ -1,5 +1,6 @@
 import type { TablePlugin, TableContext, CellRef } from "../types.js";
 import { ID_CANDIDATES } from "../utils.js";
+import { isGroupRow, serializeGroupKey } from "./row_grouping.js";
 
 export function clipboard(): TablePlugin {
   return {
@@ -56,6 +57,11 @@ async function copySelection(ctx: TableContext) {
     return;
   }
 
+  if (selection.groupCount > 0) {
+    await copyGroupData(ctx);
+    return;
+  }
+
   if (selection.selectedIds.size > 0) {
     // Copy rows matching selected IDs
     selectedRows = rows.filter((row) => {
@@ -74,6 +80,56 @@ async function copySelection(ctx: TableContext) {
 
   const headers = columns.map((c) => c.field).join("\t");
   const body = selectedRows
+    .map((row) => columns.map((c) => row[c.field] ?? "").join("\t"))
+    .join("\n");
+
+  await navigator.clipboard.writeText(`${headers}\n${body}`);
+}
+
+/** Copy data rows for all selected groups to clipboard as TSV. */
+export async function copyGroupData(ctx: TableContext) {
+  const { selection, rows, columns, datasource, groupBy } = ctx.getLatest();
+  if (selection.groupCount === 0) return;
+
+  const allDataRows: Record<string, unknown>[] = [];
+  const maxDepth = groupBy.length - 1;
+
+  for (const serialized of selection.selectedGroups) {
+    // Find the group row in the visible rows array
+    const groupIdx = rows.findIndex(
+      (r) => r && isGroupRow(r) && serializeGroupKey(r.__groupKey) === serialized,
+    );
+
+    if (groupIdx < 0) continue;
+    const groupRow = rows[groupIdx];
+    const expanded = groupRow.__expanded === true;
+    const depth = (groupRow.__depth as number) ?? 0;
+
+    if (expanded && depth === maxDepth) {
+      // Expanded leaf group — collect visible data rows after the group header
+      for (let i = groupIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r) continue;
+        if (isGroupRow(r)) {
+          // Stop at same-or-lesser depth group
+          if ((r.__depth as number) <= depth) break;
+          continue;
+        }
+        if (r.__placeholder === true) continue;
+        allDataRows.push(r);
+      }
+    } else {
+      // Collapsed or non-leaf group — fetch all leaf rows via datasource
+      const groupKey = groupRow.__groupKey as Record<string, unknown>;
+      const page = await datasource.fetchGroupDetail(groupKey, { offset: 0, limit: 10000 });
+      allDataRows.push(...page.rows);
+    }
+  }
+
+  if (allDataRows.length === 0) return;
+
+  const headers = columns.map((c) => c.field).join("\t");
+  const body = allDataRows
     .map((row) => columns.map((c) => row[c.field] ?? "").join("\t"))
     .join("\n");
 

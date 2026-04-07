@@ -4,7 +4,7 @@ DuckDB-native data tables & charts for React.
 
 SQL does the work. React renders the viewport.
 
-Sort, filter, group, and aggregate millions of rows — all in DuckDB-WASM. 16 composable plugins. 7 display types. Zero-config to fully headless.
+Sort, filter, group, and aggregate millions of rows — all in DuckDB-WASM. 17 composable plugins. 7 display types. Zero-config to fully headless.
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ import '@unify/table-react/themes';
 
 **DuckDB-Powered** — Sort, filter, group, aggregate — all in SQL. Handles millions of rows natively in the browser.
 
-**Plugin Composition** — 16 plugins, mix and match. Not a mega-component with 200 props. Start minimal, add what you need.
+**Plugin Composition** — 17 plugins, mix and match. Not a mega-component with 200 props. Start minimal, add what you need.
 
 **7 Display Types** — Charts, stats, pivot, summary, correlation, timeline, and outlier detection. All driven by SQL.
 
@@ -59,6 +59,7 @@ import '@unify/table-react/themes';
 | `rowGrouping()` | Group by columns with aggregations |
 | `formatting()` | Conditional cell formatting rules |
 | `statusBar()` | Aggregation bar for selected cells |
+| `fillHandle()` | Drag fill handle to extend cell values with pattern detection |
 
 **Presets** bundle plugins for common use cases:
 

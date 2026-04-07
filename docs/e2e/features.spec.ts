@@ -81,6 +81,7 @@ test.describe("Row Grouping", () => {
       expect(afterSecondExpand).toBeGreaterThan(afterFirstExpand);
     }
   });
+
 });
 
 // ── Selection ────────────────────────────────────────────────
@@ -454,6 +455,7 @@ test.describe("Context Menu", () => {
       { timeout: 5000 },
     );
   });
+
 });
 
 // ── Clipboard ────────────────────────────────────────────────

@@ -18,7 +18,7 @@ packages/
       displays/     — display type definitions (chart, stats, pivot, etc.)
   react/      @unify/table-react    — React table + 16 plugins + UI panels
     src/
-      components/   — Table, TableRow, HeaderRow, ColumnResizeOverlay, Tooltip
+      components/   — Table, TableRow, HeaderRow, GroupRow, ColumnResizeOverlay, Tooltip
       hooks/        — useTableContext
       plugins/      — 16 feature plugins
       panels/       — side panel components (filter, groupBy, columns, display, export, debug, etc.)
@@ -29,7 +29,7 @@ docs/             Vite + React + Tailwind + DuckDB-WASM docs site + interactive 
   src/
     components/   — Callout, CodeBlock, Example, ExampleRunner, Heading, PageNav, PageTitle, PropTable, SearchDialog
     pages/        — documentation pages (top-level + plugin/ + display/ + demo/)
-    examples/     — 34 interactive example files
+    examples/     — 33 interactive example files
     layout/       — Shell, Sidebar, TopNav, TableOfContents, MobileDrawer, nav
     providers/    — DuckDBProvider, ThemeProvider, useDuckDB, useExampleData
     data/         — sample datasets (employees, orders, products, tasks, trades)
@@ -69,6 +69,7 @@ pnpm test:coverage        # run tests with coverage
 pnpm lint                 # lint all packages (oxlint)
 pnpm lint:fix             # lint + auto-fix
 pnpm format               # format all packages (oxfmt)
+pnpm test:e2e             # run E2E tests (playwright, docs app)
 pnpm type:check           # type check without emitting
 ```
 
@@ -103,7 +104,7 @@ interface TableConnection {
 
 **useTableContext** — headless hook. Returns full `TableContext` for custom rendering.
 
-**Plugins** (16 total):
+**Plugins** (17 total):
 - `filters` — filter state management
 - `selection` — single/multi/range cell selection
 - `editing` — inline cell editing with validation
@@ -120,6 +121,7 @@ interface TableConnection {
 - `rowGrouping` — group by columns, expand/collapse, aggregations
 - `formatting` — conditional cell formatting (threshold, negative, positive rules)
 - `statusBar` — aggregation status bar for selected cells (sum, avg, min, max)
+- `fillHandle` — drag fill handle to extend cell values with pattern detection
 
 **Panels:**
 - `FilterPanel` — filter configuration UI
@@ -132,8 +134,8 @@ interface TableConnection {
 - `DragList` — reorderable list component used by panels
 
 **Presets:**
-- `spreadsheet()` — full editing experience (includes statusBar)
-- `dataViewer()` — analytics-oriented read view (includes statusBar)
+- `spreadsheet()` — full editing experience (includes statusBar + fillHandle)
+- `dataViewer()` — analytics-oriented read view (includes statusBar + rowGrouping + views)
 - `readOnly()` — minimal: filters + columnResize + formatting
 
 **Themes:** Built-in dark/light themes (`darkTheme`, `lightTheme`). Each `Theme` provides `styles` (TableStyles class names), `panelVars` (CSS variable overrides for panels), and `containerClass`. Pure CSS — no Tailwind dependency. Import CSS via sub-paths:

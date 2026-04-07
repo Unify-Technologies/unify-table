@@ -17,7 +17,30 @@ export function ExportPanel({ ctx }: { ctx: TableContext }) {
       const selectionOnly = source === "selection";
       const filename = `${ctx.table}.${format}`;
 
-      if (selectionOnly && ctx.selection.selectedIds.size > 0) {
+      if (selectionOnly && ctx.selection.groupCount > 0) {
+        // Export rows matching selected group keys
+        const conditions: string[] = [];
+        for (const serialized of ctx.selection.selectedGroups) {
+          const entries: [string, unknown][] = JSON.parse(serialized);
+          const clause = entries
+            .map(([field, value]) => {
+              if (value === null || value === undefined) return `${quoteIdent(field)} IS NULL`;
+              const n = Number(value);
+              const literal = Number.isNaN(n) ? `'${String(value).replace(/'/g, "''")}'` : String(n);
+              return `${quoteIdent(field)} = ${literal}`;
+            })
+            .join(" AND ");
+          conditions.push(`(${clause})`);
+        }
+        const where = conditions.join(" OR ");
+        const tmpTable = `__export_${Date.now()}`;
+        await ctx.engine.execute(
+          `CREATE TEMP TABLE ${quoteIdent(tmpTable)} AS SELECT * FROM ${quoteIdent(ctx.table)} WHERE ${where}`,
+        );
+        const blob = await ctx.engine.exportBlob(tmpTable, format);
+        await ctx.engine.execute(`DROP TABLE IF EXISTS ${quoteIdent(tmpTable)}`);
+        downloadBlob(blob, filename);
+      } else if (selectionOnly && ctx.selection.selectedIds.size > 0) {
         const ids = [...ctx.selection.selectedIds];
         const idCol = detectIdColumn(ctx.columns);
         const idList = ids
@@ -47,14 +70,19 @@ export function ExportPanel({ ctx }: { ctx: TableContext }) {
   const selRows = selSpan ? Math.abs(selSpan.focus.row - selSpan.anchor.row) + 1 : 0;
   const selCols = selSpan ? Math.abs(selSpan.focus.col - selSpan.anchor.col) + 1 : 0;
   const totalCols = ctx.columns.length;
-  const noSelection = ctx.selection.count === 0;
+  const noSelection = ctx.selection.count === 0 && ctx.selection.groupCount === 0;
 
   const sources: { key: ExportSource; label: string; dims: string }[] = [
     { key: "all", label: "All", dims: `${ctx.totalCount.toLocaleString()} \u00D7 ${totalCols}` },
     {
       key: "selection",
       label: "Selection",
-      dims: selRows > 0 ? `${selRows.toLocaleString()} \u00D7 ${selCols}` : "0",
+      dims:
+        ctx.selection.groupCount > 0
+          ? `${ctx.selection.groupCount} group${ctx.selection.groupCount > 1 ? "s" : ""}`
+          : selRows > 0
+            ? `${selRows.toLocaleString()} \u00D7 ${selCols}`
+            : "0",
     },
     {
       key: "filtered",

@@ -14,7 +14,11 @@ import {
   ArrowDown,
   Eraser,
   Layers,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
+import { isGroupRow, serializeGroupKey } from "./row_grouping.js";
+import { copyGroupData } from "./clipboard.js";
 
 type MenuItemFactory = (ctx: TableContext) => MenuItem[];
 
@@ -41,13 +45,37 @@ function exportSourceItems(ctx: TableContext, format: "csv" | "json" | "parquet"
   const live = ctx.getLatest();
   const totalCols = live.columns.length;
   const { rows: selRows, cols: selCols } = spanDims(live);
-  const hasSel = live.selection.count > 0;
+  const hasSel = live.selection.count > 0 || live.selection.groupCount > 0;
 
   const doExport = async (selOnly: boolean) => {
     const l = ctx.getLatest();
     const table = l.table;
     const filename = selOnly ? `${table}_selection.${format}` : `${table}.${format}`;
-    if (selOnly && l.selection.selectedIds.size > 0) {
+
+    if (selOnly && l.selection.groupCount > 0) {
+      // Export data rows for selected groups via group key WHERE conditions
+      const conditions: string[] = [];
+      for (const serialized of l.selection.selectedGroups) {
+        const entries: [string, unknown][] = JSON.parse(serialized);
+        const clause = entries
+          .map(([field, value]) => {
+            if (value === null || value === undefined) return `${quoteIdent(field)} IS NULL`;
+            const n = Number(value);
+            const literal = Number.isNaN(n) ? `'${String(value).replace(/'/g, "''")}'` : String(n);
+            return `${quoteIdent(field)} = ${literal}`;
+          })
+          .join(" AND ");
+        conditions.push(`(${clause})`);
+      }
+      const where = conditions.join(" OR ");
+      const tmp = `__ctx_export_${Date.now()}`;
+      await l.engine.execute(
+        `CREATE TEMP TABLE ${quoteIdent(tmp)} AS SELECT * FROM ${quoteIdent(table)} WHERE ${where}`,
+      );
+      const blob = await l.engine.exportBlob(tmp, format);
+      await l.engine.execute(`DROP TABLE IF EXISTS ${quoteIdent(tmp)}`);
+      downloadBlob(blob, filename);
+    } else if (selOnly && l.selection.selectedIds.size > 0) {
       const ids = [...l.selection.selectedIds];
       const idCol = detectIdColumn(l.columns);
       const idList = ids
@@ -76,8 +104,12 @@ function exportSourceItems(ctx: TableContext, format: "csv" | "json" | "parquet"
     },
   ];
   if (hasSel) {
+    const selLabel =
+      live.selection.groupCount > 0
+        ? `${fmt(live.selection.groupCount)} group${live.selection.groupCount > 1 ? "s" : ""}`
+        : `${fmt(selRows)} \u00D7 ${selCols}`;
     items.push({
-      label: `Selection  ${fmt(selRows)} \u00D7 ${selCols}`,
+      label: `Selection  ${selLabel}`,
       action: () => doExport(true),
     });
   }
@@ -90,10 +122,124 @@ function exportSourceItems(ctx: TableContext, format: "csv" | "json" | "parquet"
   return items;
 }
 
-function defaultItems(ctx: TableContext): MenuItem[] {
-  const sel = ctx.getLatest().selection;
-  const hasSel = sel.count > 0 || sel.groupCount > 0;
+function groupMenuItems(ctx: TableContext, cell: import("../types.js").CellRef): MenuItem[] {
+  const live = ctx.getLatest();
+  const sel = live.selection;
+  const activeRow = live.rows[cell.rowIndex] ?? null;
+  if (!activeRow || !isGroupRow(activeRow)) return [];
+
+  const isExpanded = activeRow.__expanded === true;
+  const multiGroup = sel.groupCount > 1;
   const items: MenuItem[] = [];
+
+  // Expand / Collapse
+  items.push({
+    label: isExpanded
+      ? multiGroup
+        ? "Collapse Groups"
+        : "Collapse Group"
+      : multiGroup
+        ? "Expand Groups"
+        : "Expand Group",
+    icon: createElement(isExpanded ? ChevronDown : ChevronRight, { size: 14 }),
+    action: () => {
+      const l = ctx.getLatest();
+      for (const serialized of l.selection.selectedGroups) {
+        const idx = l.rows.findIndex(
+          (r) => r && isGroupRow(r) && serializeGroupKey(r.__groupKey) === serialized,
+        );
+        if (idx >= 0) {
+          const r = l.rows[idx];
+          ctx.emit("group:toggle", {
+            groupKey: r.__groupKey,
+            depth: (r.__depth as number) ?? 0,
+          });
+        }
+      }
+    },
+  });
+
+  items.push(MENU_SEPARATOR);
+
+  // Copy Group Data
+  items.push({
+    label: multiGroup ? "Copy Groups Data" : "Copy Group Data",
+    shortcut: "\u2318C",
+    icon: ICONS.copy,
+    action: () => copyGroupData(ctx),
+  });
+
+  items.push(MENU_SEPARATOR);
+  return items;
+}
+
+/** Find the nearest parent group row above a given row index. */
+function findParentGroup(rows: Record<string, unknown>[], rowIndex: number): (Record<string, unknown> & { __groupKey: Record<string, unknown>; __expanded: boolean; __depth: number }) | null {
+  for (let i = rowIndex - 1; i >= 0; i--) {
+    const r = rows[i];
+    if (r && isGroupRow(r)) return r as Record<string, unknown> & { __groupKey: Record<string, unknown>; __expanded: boolean; __depth: number };
+  }
+  return null;
+}
+
+/** Build Expand/Collapse item for a specific group row. */
+function parentGroupToggleItem(ctx: TableContext, parentGroup: { __groupKey: Record<string, unknown>; __expanded: boolean; __depth: number }): MenuItem {
+  const isExpanded = parentGroup.__expanded === true;
+  return {
+    label: isExpanded ? "Collapse Group" : "Expand Group",
+    icon: createElement(isExpanded ? ChevronDown : ChevronRight, { size: 14 }),
+    action: () => {
+      ctx.emit("group:toggle", {
+        groupKey: parentGroup.__groupKey,
+        depth: parentGroup.__depth ?? 0,
+      });
+    },
+  };
+}
+
+function defaultItems(ctx: TableContext, cell: import("../types.js").CellRef | null): MenuItem[] {
+  const live = ctx.getLatest();
+  const sel = live.selection;
+  const hasSel = sel.count > 0 || sel.groupCount > 0;
+
+  // Detect if the right-clicked row is a group row
+  const clickedRow = cell ? live.rows[cell.rowIndex] ?? null : null;
+  const isGroup = clickedRow && isGroupRow(clickedRow);
+
+  if (isGroup && cell) {
+    const items = groupMenuItems(ctx, cell);
+    // Append export items
+    items.push({
+      label: "Export as CSV",
+      icon: ICONS.csv,
+      action: () => {},
+      children: exportSourceItems(ctx, "csv"),
+    });
+    items.push({
+      label: "Export as JSON",
+      icon: ICONS.json,
+      action: () => {},
+      children: exportSourceItems(ctx, "json"),
+    });
+    items.push({
+      label: "Export as Parquet",
+      icon: ICONS.parquet,
+      action: () => {},
+      children: exportSourceItems(ctx, "parquet"),
+    });
+    return items;
+  }
+
+  const items: MenuItem[] = [];
+
+  // If this data row is inside a group, offer Collapse/Expand for the parent group
+  if (cell && live.groupBy.length > 0) {
+    const parentGroup = findParentGroup(live.rows, cell.rowIndex);
+    if (parentGroup) {
+      items.push(parentGroupToggleItem(ctx, parentGroup));
+      items.push(MENU_SEPARATOR);
+    }
+  }
 
   items.push({
     label: "Copy",
@@ -216,21 +362,23 @@ function defaultHeaderItems(ctx: TableContext, column: ResolvedColumn): MenuItem
     items.push(MENU_SEPARATOR);
   }
 
-  const isGrouped = live.groupBy.includes(column.field);
-  items.push({
-    label: isGrouped ? "Remove Grouping" : "Group by this Column",
-    icon: createElement(Layers, { size: 14 }),
-    action: () => {
-      const l = ctx.getLatest();
-      if (isGrouped) {
-        l.setGroupBy(l.groupBy.filter((f) => f !== column.field));
-      } else {
-        l.setGroupBy([...l.groupBy, column.field]);
-      }
-    },
-  });
-
-  items.push(MENU_SEPARATOR);
+  // Skip group-by option for the synthetic __group__ column
+  if (column.field !== "__group__") {
+    const isGrouped = live.groupBy.includes(column.field);
+    items.push({
+      label: isGrouped ? "Remove Grouping" : "Group by this Column",
+      icon: createElement(Layers, { size: 14 }),
+      action: () => {
+        const l = ctx.getLatest();
+        if (isGrouped) {
+          l.setGroupBy(l.groupBy.filter((f) => f !== column.field));
+        } else {
+          l.setGroupBy([...l.groupBy, column.field]);
+        }
+      },
+    });
+    items.push(MENU_SEPARATOR);
+  }
 
   items.push({
     label: "Copy Column Name",
@@ -448,8 +596,8 @@ function ContextMenuOverlay({ ctx }: { ctx: TableContext }) {
 export function contextMenu(extraItems?: MenuItemFactory): TablePlugin {
   return {
     name: "contextMenu",
-    contextMenuItems(ctx: TableContext) {
-      const items = defaultItems(ctx);
+    contextMenuItems(ctx: TableContext, cell: import("../types.js").CellRef) {
+      const items = defaultItems(ctx, cell);
       if (extraItems) {
         items.push(MENU_SEPARATOR);
         items.push(...extraItems(ctx));

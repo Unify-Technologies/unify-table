@@ -116,8 +116,20 @@ export function createQueryEngine(connection: TableConnection): QueryEngine {
     },
 
     async exportBlob(table: string, format: "csv" | "parquet" | "json"): Promise<Blob> {
+      const qt = quoteIdent(table);
+      const cols = await this.columns(table);
+      const hasFloat = cols.some((c) => c.type.toUpperCase() === "FLOAT" || c.type.toUpperCase() === "REAL");
+      const selectList = hasFloat
+        ? cols
+            .map((c) => {
+              const id = quoteIdent(c.name);
+              const t = c.type.toUpperCase();
+              return t === "FLOAT" || t === "REAL" ? `${id}::DOUBLE AS ${id}` : id;
+            })
+            .join(", ")
+        : "*";
       return connection.runAndReadParquetBlob(
-        `COPY (SELECT * FROM ${quoteIdent(table)}) TO '/dev/stdout' (FORMAT ${format})`,
+        `COPY (SELECT ${selectList} FROM ${qt}) TO '/dev/stdout' (FORMAT ${format})`,
       );
     },
   };

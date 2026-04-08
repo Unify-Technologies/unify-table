@@ -145,13 +145,45 @@ describe('QueryEngine', () => {
   });
 
   describe('exportBlob', () => {
-    it('calls runAndReadParquetBlob with COPY', async () => {
-      const conn = mockConnection();
+    it('uses SELECT * when no FLOAT columns', async () => {
+      const schemaRows = [
+        { column_name: 'id', data_type: 'INTEGER', is_nullable: 'NO' },
+        { column_name: 'price', data_type: 'DOUBLE', is_nullable: 'YES' },
+      ];
+      const conn = mockConnection([schemaRows]);
       const engine = createQueryEngine(conn);
 
       await engine.exportBlob('trades', 'csv');
       expect(conn.runAndReadParquetBlob).toHaveBeenCalledWith(
-        expect.stringContaining('FORMAT csv')
+        `COPY (SELECT * FROM "trades") TO '/dev/stdout' (FORMAT csv)`,
+      );
+    });
+
+    it('casts FLOAT columns to DOUBLE for lossless CSV export', async () => {
+      const schemaRows = [
+        { column_name: 'id', data_type: 'INTEGER', is_nullable: 'NO' },
+        { column_name: 'value', data_type: 'FLOAT', is_nullable: 'YES' },
+        { column_name: 'name', data_type: 'VARCHAR', is_nullable: 'YES' },
+      ];
+      const conn = mockConnection([schemaRows]);
+      const engine = createQueryEngine(conn);
+
+      await engine.exportBlob('trades', 'csv');
+      expect(conn.runAndReadParquetBlob).toHaveBeenCalledWith(
+        `COPY (SELECT "id", "value"::DOUBLE AS "value", "name" FROM "trades") TO '/dev/stdout' (FORMAT csv)`,
+      );
+    });
+
+    it('casts REAL columns to DOUBLE', async () => {
+      const schemaRows = [
+        { column_name: 'x', data_type: 'REAL', is_nullable: 'NO' },
+      ];
+      const conn = mockConnection([schemaRows]);
+      const engine = createQueryEngine(conn);
+
+      await engine.exportBlob('t', 'json');
+      expect(conn.runAndReadParquetBlob).toHaveBeenCalledWith(
+        `COPY (SELECT "x"::DOUBLE AS "x" FROM "t") TO '/dev/stdout' (FORMAT json)`,
       );
     });
   });
